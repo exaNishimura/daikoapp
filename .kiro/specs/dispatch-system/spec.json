@@ -1,0 +1,23 @@
+{
+  "feature_name": "dispatch-system",
+  "created_at": "2025-12-23T20:24:47.028Z",
+  "updated_at": "2025-12-23T20:30:39.972Z",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": false
+    }
+  },
+  "ready_for_implementation": false
+}
+

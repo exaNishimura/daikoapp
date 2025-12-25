@@ -1,0 +1,136 @@
+.dispatch-board {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.dispatch-board.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #fff;
+  background-color: #1a1a1a;
+}
+
+.error-banner {
+  background-color: #ff4444;
+  color: white;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-banner button {
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.error-banner button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #aaa;
+  padding: 2rem;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+}
+
+.dispatch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.business-day {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.new-order-button {
+  padding: 0.6rem 1.2rem;
+  background-color: #646cff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.new-order-button:hover {
+  background-color: #535bf2;
+}
+
+.dispatch-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.order-list-panel {
+  border-bottom: 1px solid #333;
+  overflow-y: auto;
+  background-color: #242424;
+  max-height: 200px;
+  min-height: 150px;
+}
+
+.timeline-panel {
+  flex: 1;
+  overflow: auto;
+  background-color: #1a1a1a;
+}
+
+.detail-panel {
+  border-top: 1px solid #333;
+  background-color: #242424;
+  overflow-y: auto;
+  max-height: 300px;
+  min-height: 200px;
+}
+
+/* スマホ向けレイアウト（デフォルト） */
+@media (min-width: 768px) {
+  .dispatch-content {
+    display: grid;
+    grid-template-columns: 300px 1fr auto;
+    grid-template-rows: 1fr;
+  }
+
+  .order-list-panel {
+    border-right: 1px solid #333;
+    border-bottom: none;
+    max-height: none;
+    min-height: auto;
+  }
+
+  .detail-panel {
+    width: 400px;
+    border-left: 1px solid #333;
+    border-top: none;
+    max-height: none;
+    min-height: auto;
+  }
+}
+

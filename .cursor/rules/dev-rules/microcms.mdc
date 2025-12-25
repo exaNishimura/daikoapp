@@ -1,0 +1,652 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# microCMS 実装ルール
+
+## 1. microCMS クライアントの適切な使用方法
+
+### 基本原則
+- microCMS クライアントは `src/lib/microcms.ts` で一元管理
+- サーバーコンポーネントでのみ使用（`"server-only"` ディレクティブ）
+- `unstable_cache` でキャッシュを活用
+
+### 実装例
+```typescript
+// ✅ 正しいコード：サーバーコンポーネントでの使用
+import { getCompanyList, getCaseStudy } from "@/lib/microcms";
+
+export default async function Page() {
+  const companies = await getCompanyList();
+  const cases = await getCaseStudy();
+  // ...
+}
+```
+
+```typescript
+// ✅ 正しいコード：APIルートでの使用
+import { client } from "@/lib/microcms";
+
+export async function GET(request: NextRequest) {
+  const data = await client.get({
+    endpoint: "company",
+    queries: { limit: 10 },
+  });
+  return NextResponse.json(data);
+}
+```
+
+### 予防チェックリスト
+- [ ] `src/lib/microcms.ts` の関数を使用
+- [ ] サーバーコンポーネントでのみデータ取得
+- [ ] `unstable_cache` でキャッシュを適切に設定
+- [ ] エラーハンドリングを実装（`null` を返す）
+
+### 自動検出方法
+- `"server-only"` ディレクティブの確認
+- クライアントコンポーネントでの microCMS 直接使用を検出
+
+## 2. 関連コンテンツの取得パターン
+
+### 基本原則
+- microCMS では `depth` パラメータで関連コンテンツを取得
+- エラーハンドリングで `null` を返し、デフォルト値を設定
+
+### 実装例
+```typescript
+// ✅ 正しいコード：関連コンテンツの取得
+const data = await client.get({
+  endpoint: "case-study",
+  contentId: id,
+  queries: {
+    depth: 2, // 関連コンテンツを2階層まで取得
+  },
+});
+
+// 関連データの安全な取得
+const industries = (data.company?.industries ?? [])
+  .map((industry) => industry?.child)
+  .filter((child): child is string => Boolean(child));
+```
+
+### 予防チェックリスト
+- [ ] `depth` パラメータを適切に設定
+- [ ] 関連データが存在しない場合のデフォルト値を設定
+- [ ] 型ガードを使用して安全にデータを取得
+- [ ] エラーハンドリングで `null` を返す
+
+### 自動検出方法
+- 型チェックで関連データの存在確認
+- エラーハンドリングの実装確認
+
+## 3. microCMS データモデル設計
+
+### APIエンドポイントとデータ構造
+
+**重要: このプロジェクトで使用するmicroCMSのAPIエンドポイントとフィールド構造**
+
+#### 1. Cases (事例) - エンドポイント: `cases`
+
+**フィールド構造:**
+- `id` (自動, 必須) - ID
+- `slug` (テキストフィールド, 必須) - スラッグ
+- `title` (テキストフィールド, 必須) - タイトル
+- `category` (コンテンツ参照: `categories`, 必須) - カテゴリ
+- `year` (数字, 任意) - 年度
+- `thumbnail` (画像, 任意) - サムネイル画像
+- `body` (リッチエディタ, 必須) - 本文
+- `clientName` (テキストフィールド, 任意) - クライアント名
+- `publishedAt` (自動, 必須) - 公開日
+
+**実装例:**
+```typescript
+// 型定義
+export interface Case {
+  id: string;
+  slug: string;
+  title: string;
+  category: Category; // コンテンツ参照
+  year?: number;
+  thumbnail?: {
+    url: string;
+    width: number;
+    height: number;
+  };
+  body: string; // リッチエディタ（HTML）
+  clientName?: string;
+  publishedAt: string;
+}
+
+// データ取得
+const cases = await client.get({
+  endpoint: "cases",
+  queries: {
+    depth: 2, // カテゴリ情報も取得
+  },
+});
+```
+
+#### 2. Case Categories (事例カテゴリ) - エンドポイント: `categories`
+
+**フィールド構造:**
+- `id` (自動, 必須) - ID
+- `slug` (テキストフィールド, 必須) - スラッグ
+- `name` (テキストフィールド, 必須) - カテゴリ名
+
+**実装例:**
+```typescript
+// 型定義
+export interface Category {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+// データ取得
+const categories = await client.get({
+  endpoint: "categories",
+});
+```
+
+#### 3. News (ニュース) - エンドポイント: `news`
+
+**フィールド構造:**
+- `id` (自動, 必須) - ID
+- `slug` (テキストフィールド, 必須) - スラッグ
+- `title` (テキストフィールド, 必須) - タイトル
+- `publishedAt` (自動, 必須) - 公開日
+- `summary` (テキストエリア, 必須) - 概要
+- `body` (リッチエディタ, 必須) - 本文
+- `tags` (複数コンテンツ参照: `tags`, 任意) - タグ
+- `isPinned` (真偽値, 任意) - ピン留め
+
+**実装例:**
+```typescript
+// 型定義
+export interface News {
+  id: string;
+  slug: string;
+  title: string;
+  publishedAt: string;
+  summary: string;
+  body: string; // リッチエディタ（HTML）
+  tags?: NewsTag[]; // 複数コンテンツ参照
+  isPinned?: boolean;
+}
+
+// データ取得
+const news = await client.get({
+  endpoint: "news",
+  queries: {
+    depth: 2, // タグ情報も取得
+    orders: "-publishedAt", // 公開日の降順
+  },
+});
+```
+
+#### 4. News Tags (ニュースタグ) - エンドポイント: `tags`
+
+**フィールド構造:**
+- `id` (テキストフィールド, 必須) - ID
+- `slug` (テキストフィールド, 必須) - スラッグ
+- `name` (テキストフィールド, 必須) - タグ名
+
+**実装例:**
+```typescript
+// 型定義
+export interface NewsTag {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+// データ取得
+const tags = await client.get({
+  endpoint: "tags",
+});
+```
+
+### データ取得のベストプラクティス
+
+**1. 関連コンテンツの取得**
+```typescript
+// ✅ 正しいコード：depth パラメータで関連コンテンツを取得
+const caseData = await client.get({
+  endpoint: "cases",
+  contentId: slug,
+  queries: {
+    depth: 2, // カテゴリ情報も取得
+  },
+});
+
+// カテゴリ情報への安全なアクセス
+const categoryName = caseData.category?.name ?? "未分類";
+```
+
+**2. エラーハンドリング**
+```typescript
+// ✅ 正しいコード：エラーハンドリングで null を返す
+export async function getCaseBySlug(slug: string): Promise<Case | null> {
+  try {
+    const data = await client.get({
+      endpoint: "cases",
+      contentId: slug,
+      queries: {
+        depth: 2,
+      },
+    });
+    return data;
+  } catch (error) {
+    console.error("Error fetching case:", error);
+    return null;
+  }
+}
+```
+
+**3. リッチエディタの表示**
+```typescript
+// ✅ 正しいコード：リッチエディタのHTMLを表示
+import { parse } from "html-react-parser";
+
+export function CaseBody({ body }: { body: string }) {
+  return <div className="rich-text">{parse(body)}</div>;
+}
+```
+
+### チェックリスト
+- [ ] 各エンドポイントの型定義を作成
+- [ ] `depth` パラメータで関連コンテンツを取得
+- [ ] エラーハンドリングで `null` を返す
+- [ ] リッチエディタのHTMLを適切に表示
+- [ ] 必須フィールドと任意フィールドを区別
+- [ ] コンテンツ参照の安全なアクセス（Optional chaining使用）
+
+## 3.5. APIクエリパラメータ仕様（表示仕様）
+
+### 共通パラメータ
+
+すべてのエンドポイントで使用可能な共通パラメータ：
+
+| パラメータ名 | 種別 | 条件・仕様 |
+|------------|------|-----------|
+| `limit` | 共通 | 1回の取得件数。デフォルト30。 |
+| `offset` | 共通 | 取得開始位置。30刻みで増加。 |
+| `totalCount` | 共通 | 検索・絞り込み後の総件数。必ず返す。 |
+| `hasNext` | ページネーション | `offset + items数 < totalCount` が `true` の時に続きあり。 |
+
+**実装例:**
+```typescript
+// ✅ 正しいコード：共通パラメータの使用
+const response = await client.get({
+  endpoint: "cases",
+  queries: {
+    limit: 30,
+    offset: 0,
+  },
+});
+
+// ページネーション判定
+const hasNext = response.offset + response.contents.length < response.totalCount;
+```
+
+### Cases (事例) エンドポイント - `cases`
+
+| パラメータ名 | 種別 | 条件・仕様 |
+|------------|------|-----------|
+| `category` | 絞り込み | カテゴリslugで絞り込み。 |
+| `year` | 絞り込み | 年度(4桁)で絞り込み。 |
+| `q` | 検索 | タイトルorクライアント名の部分一致検索(OR条件)。 |
+| `limit` | ページネーション | 常に30件取得。 |
+| `offset` | ページネーション | 0, 30, 60･･･と増加。 |
+
+**実装例:**
+```typescript
+// ✅ 正しいコード：Cases エンドポイントのクエリパラメータ
+const cases = await client.get({
+  endpoint: "cases",
+  queries: {
+    limit: 30,           // 常に30件
+    offset: 0,           // 0, 30, 60...
+    category: "security", // カテゴリslugで絞り込み
+    year: 2024,          // 年度(4桁)で絞り込み
+    q: "システム",        // タイトルorクライアント名の部分一致検索
+  },
+});
+
+// レスポンス構造
+interface CasesResponse {
+  contents: Case[];
+  totalCount: number;    // 検索・絞り込み後の総件数
+  offset: number;        // 取得開始位置
+  limit: number;         // 取得件数
+}
+```
+
+### News (ニュース) エンドポイント - `news`
+
+| パラメータ名 | 種別 | 条件・仕様 |
+|------------|------|-----------|
+| `tag` | 絞り込み | タグslugで絞り込み。 |
+| `q` | 検索 | タイトルの部分一致検索。 |
+| `limit` | ページネーション | 常に30件取得。 |
+| `offset` | ページネーション | 0, 30, 60･･･と増加。 |
+
+**実装例:**
+```typescript
+// ✅ 正しいコード：News エンドポイントのクエリパラメータ
+const news = await client.get({
+  endpoint: "news",
+  queries: {
+    limit: 30,        // 常に30件
+    offset: 0,        // 0, 30, 60...
+    tag: "release",   // タグslugで絞り込み
+    q: "新機能",      // タイトルの部分一致検索
+    orders: "-publishedAt", // 公開日の降順
+  },
+});
+
+// レスポンス構造
+interface NewsResponse {
+  contents: News[];
+  totalCount: number;    // 検索・絞り込み後の総件数
+  offset: number;        // 取得開始位置
+  limit: number;         // 取得件数
+}
+```
+
+### ページネーション実装パターン
+
+**1. 基本的なページネーション**
+```typescript
+// ✅ 正しいコード：ページネーションの実装
+export async function getCasesWithPagination(
+  page: number = 1,
+  category?: string,
+  year?: number,
+  searchQuery?: string
+) {
+  const limit = 30;
+  const offset = (page - 1) * limit;
+
+  const response = await client.get({
+    endpoint: "cases",
+    queries: {
+      limit,
+      offset,
+      ...(category && { category }),
+      ...(year && { year }),
+      ...(searchQuery && { q: searchQuery }),
+    },
+  });
+
+  return {
+    contents: response.contents,
+    totalCount: response.totalCount,
+    hasNext: response.offset + response.contents.length < response.totalCount,
+    currentPage: page,
+    totalPages: Math.ceil(response.totalCount / limit),
+  };
+}
+```
+
+**2. 無限スクロール用の実装**
+```typescript
+// ✅ 正しいコード：無限スクロール用の実装
+export async function getCasesForInfiniteScroll(
+  offset: number = 0,
+  category?: string
+) {
+  const limit = 30;
+
+  const response = await client.get({
+    endpoint: "cases",
+    queries: {
+      limit,
+      offset,
+      ...(category && { category }),
+    },
+  });
+
+  return {
+    contents: response.contents,
+    hasNext: response.offset + response.contents.length < response.totalCount,
+    nextOffset: response.offset + response.contents.length,
+  };
+}
+```
+
+### チェックリスト
+
+- [ ] 共通パラメータ（`limit`, `offset`, `totalCount`, `hasNext`）を適切に使用
+- [ ] Cases エンドポイントの絞り込み・検索パラメータを実装
+- [ ] News エンドポイントの絞り込み・検索パラメータを実装
+- [ ] ページネーション判定（`hasNext`）を実装
+- [ ] `limit` は常に30件に設定
+- [ ] `offset` は30刻みで増加
+- [ ] `totalCount` を必ず取得して表示
+
+## 3.6. 件数表示仕様
+
+### 基本原則
+
+**重要: フィルタ状態に応じた件数表示フォーマットを実装すること**
+
+件数表示は、適用されているフィルタ条件に応じて異なるフォーマットを使用します。`{ }` で囲まれた部分は変数として置き換えます。
+
+### Cases (事例) の件数表示
+
+| 条件 (フィルタ状態) | 表示フォーマット | 表示例 |
+|-------------------|----------------|--------|
+| フィルタなし | `全{totalCount}件` | 全128件 |
+| カテゴリのみ指定 | `{categoryName}の事例: 全{totalCount}件` | 自治体の事例: 全24件 |
+| 年のみ指定 | `{year}年の事例: 全{totalCount}件` | 2018年の事例: 全6件 |
+| キーワードのみ (q) | `{keyword}の検索結果: 全{totalCount}件` | 会議室の検索結果: 全5件 |
+| カテゴリ+年 | `{year}年/{categoryName}の事例: 全{totalCount}件` | 2023年/教育の事例: 全3件 |
+| カテゴリ+キーワード | `{categoryName}/{keyword}の事例: 全{totalCount}件` | 自治体/会議室の事例: 全4件 |
+| 年+キーワード | `{year}年/{keyword}の事例: 全{totalCount}件` | 2020年/会議室の事例: 全2件 |
+| カテゴリ+年+キーワード | `{year}年/{categoryName}/{keyword}の事例: 全{totalCount}件` | 2021年/医療/ネットワークの事例: 全1件 |
+| 件数0件 (共通文言) | `条件に一致する事例はありません。` | 条件に一致する事例はありません。 |
+
+**実装例:**
+```typescript
+// ✅ 正しいコード：Cases の件数表示フォーマット生成
+export function formatCasesCount(
+  totalCount: number,
+  category?: string,
+  year?: number,
+  keyword?: string
+): string {
+  // 0件の場合
+  if (totalCount === 0) {
+    return "条件に一致する事例はありません。";
+  }
+
+  // フィルタなし
+  if (!category && !year && !keyword) {
+    return `全${totalCount}件`;
+  }
+
+  // カテゴリ+年+キーワード
+  if (category && year && keyword) {
+    return `${year}年/${category}/${keyword}の事例: 全${totalCount}件`;
+  }
+
+  // カテゴリ+年
+  if (category && year) {
+    return `${year}年/${category}の事例: 全${totalCount}件`;
+  }
+
+  // カテゴリ+キーワード
+  if (category && keyword) {
+    return `${category}/${keyword}の事例: 全${totalCount}件`;
+  }
+
+  // 年+キーワード
+  if (year && keyword) {
+    return `${year}年/${keyword}の事例: 全${totalCount}件`;
+  }
+
+  // カテゴリのみ
+  if (category) {
+    return `${category}の事例: 全${totalCount}件`;
+  }
+
+  // 年のみ
+  if (year) {
+    return `${year}年の事例: 全${totalCount}件`;
+  }
+
+  // キーワードのみ
+  if (keyword) {
+    return `${keyword}の検索結果: 全${totalCount}件`;
+  }
+
+  return `全${totalCount}件`;
+}
+```
+
+### News (ニュース) の件数表示
+
+| 条件 (フィルタ状態) | 表示フォーマット | 表示例 |
+|-------------------|----------------|--------|
+| フィルタなし | `全{totalCount}件` | 全56件 |
+| タグのみ指定 | `{tagName}のニュース: 全{totalCount}件`<br>（複数タグは `/` で区切る） | イベント/採用のニュース: 全8件 |
+| キーワードのみ (q) | `{keyword}の検索結果: 全{totalCount}件` | メンテナンスの検索結果: 全3件 |
+| タグ+キーワード | `{tagName}/{keyword}のニュース: 全{totalCount}件` | プレス/キャンペーンのニュース: 全2件 |
+| 件数0件 (共通文言) | `条件に一致するニュースはありません。` | 条件に一致するニュースはありません。 |
+
+**実装例:**
+```typescript
+// ✅ 正しいコード：News の件数表示フォーマット生成
+export function formatNewsCount(
+  totalCount: number,
+  tags?: string[],
+  keyword?: string
+): string {
+  // 0件の場合
+  if (totalCount === 0) {
+    return "条件に一致するニュースはありません。";
+  }
+
+  // フィルタなし
+  if (!tags?.length && !keyword) {
+    return `全${totalCount}件`;
+  }
+
+  // タグ名を結合（複数タグは / で区切る）
+  const tagNames = tags?.join("/") || "";
+
+  // タグ+キーワード
+  if (tags?.length && keyword) {
+    return `${tagNames}/${keyword}のニュース: 全${totalCount}件`;
+  }
+
+  // タグのみ
+  if (tags?.length) {
+    return `${tagNames}のニュース: 全${totalCount}件`;
+  }
+
+  // キーワードのみ
+  if (keyword) {
+    return `${keyword}の検索結果: 全${totalCount}件`;
+  }
+
+  return `全${totalCount}件`;
+}
+```
+
+### コンポーネント実装例
+
+```typescript
+// ✅ 正しいコード：件数表示コンポーネント
+"use client";
+
+interface CountDisplayProps {
+  totalCount: number;
+  category?: string;
+  year?: number;
+  keyword?: string;
+  type: "cases" | "news";
+  tags?: string[];
+}
+
+export function CountDisplay({
+  totalCount,
+  category,
+  year,
+  keyword,
+  type,
+  tags,
+}: CountDisplayProps) {
+  const countText =
+    type === "cases"
+      ? formatCasesCount(totalCount, category, year, keyword)
+      : formatNewsCount(totalCount, tags, keyword);
+
+  return (
+    <div className="count-display">
+      <p className="count-text">{countText}</p>
+    </div>
+  );
+}
+```
+
+### チェックリスト
+
+- [ ] フィルタ状態に応じた正しいフォーマットを使用
+- [ ] 0件の場合の共通文言を実装
+- [ ] 複数タグの場合は `/` で区切って表示
+- [ ] 変数（`{totalCount}`, `{categoryName}`, `{year}`, `{keyword}`, `{tagName}`）を正しく置き換え
+- [ ] Cases と News で異なるフォーマットを適用
+- [ ] フィルタ条件の組み合わせを正しく判定
+
+## 4. microCMS キャッシュ戦略
+
+### キャッシュと再検証の基本原則
+
+#### 基本原則
+- `unstable_cache` を使用したサーバーサイドキャッシュ
+- タグベースの再検証（`companies`, `cases`, `magazine`, `voices`, `news`, `categories`, `tags`）
+- デフォルト再検証時間: 300 秒
+
+#### 実装例
+```typescript
+// ✅ 正しいコード：unstable_cache の使用
+import { unstable_cache } from "next/cache";
+
+export const getCompanyList = unstable_cache(
+  getCompanyListInternal,
+  ["getCompanyList"],
+  {
+    revalidate: 300,
+    tags: ["companies", "cases"],
+  }
+);
+```
+
+#### 再検証 API の使用
+```typescript
+// ✅ 正しいコード：手動再検証
+// POST /api/revalidate
+// Headers: x-revalidate-token: {REVALIDATE_TOKEN}
+// Body: { tag: "companies" } または { path: "/companies" }
+```
+
+#### 予防チェックリスト
+- [ ] データ取得関数に `unstable_cache` を適用
+- [ ] 適切なタグを設定
+- [ ] 再検証時間を適切に設定
+- [ ] エラーハンドリングで `null` を返す
+
+#### 自動検出方法
+- `unstable_cache` の使用確認
+- タグの設定確認
+- 再検証 API の実装確認

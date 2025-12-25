@@ -1,0 +1,256 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: *.tsx
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# UI/UX 設計・実装ルール
+
+## プロジェクト構造（重要）
+- **UIコンポーネント**: `src/app/components/`に配置（統一済み）
+- **ユーティリティ**: `src/lib/`に配置（`category.ts`, `industryIcons.ts`, `microcms.ts`, `service.ts`など）
+- **型定義**: `src/types/`に配置（各機能ごとに型定義ファイルを分割）
+- **スタイル**: `src/styles/mixins/`に mixin を配置（`_space.scss`, `_typography.scss`）
+
+## 1. デザインシステム
+
+### 重要度: 最高
+
+- **SCSS モジュール（`.module.scss`）をベースとしたコンポーネントスタイリング**
+- **既存の UI は承認なしでの変更を禁止**
+- コンポーネントのカスタマイズは最小限に抑える
+- **既存の mixin を優先的に活用する**（`@/styles/mixins/space`, `@/styles/mixins/typography`）
+
+```typescript
+// ✅ 良い例：SCSS モジュールを使用
+import styles from "./Component.module.scss";
+
+export function Component() {
+  return <div className={styles.container}>...</div>;
+}
+```
+
+```scss
+// ✅ 良い例：既存の mixin を活用
+@use "@/styles/mixins/typography" as typo;
+@use "@/styles/mixins/space" as *;
+
+.container {
+  @include typo.title-l;
+  @include space(gap, md);
+  @include space-x(sm);
+}
+```
+
+## 2. スタイリング規約
+
+### 重要度: 高
+
+### SCSS モジュール + Tailwind CSS のハイブリッド使用
+
+- **コンポーネント単位で SCSS モジュール（`.module.scss`）を使用**（必須）
+- Tailwind CSS のユーティリティクラスを補助的に使用
+- 既存の mixin を優先的に活用
+  - `@/styles/mixins/space`: レスポンシブスペーシング（`space()`, `space-x()`, `space-y()`）
+  - `@/styles/mixins/typography`: フルイドタイポグラフィ（`display`, `headline`, `title-l`, `title-s`, `body-l`, `body-s`, `label-l`, `label-s`）
+- 命名規則は`kebab-case`を使用
+
+```typescript
+// ✅ 良い例：SCSS モジュール + Tailwind の組み合わせ
+import styles from "./Component.module.scss";
+
+<div className={`${styles.container} flex items-center`}>
+```
+
+```scss
+// ✅ 良い例：mixin の活用
+@use "@/styles/mixins/typography" as typo;
+@use "@/styles/mixins/space" as *;
+
+.card {
+  @include typo.body-l;
+  @include space(padding, sm);
+  @include space(gap, xs);
+}
+```
+
+## 3. レスポンシブデザイン
+
+### 重要度: 高
+
+- モバイルファーストアプローチ
+- mixin の `space` が自動的にレスポンシブ対応（PC/SP で異なる値）
+- Tailwind のブレークポイントを使用（補助的に）
+  - sm: 640px
+  - md: 768px
+  - lg: 1024px
+  - xl: 1280px
+  - 2xl: 1536px
+
+```scss
+// ✅ 良い例：mixin が自動的にレスポンシブ対応
+@include space(gap, md); // PC: 40px, SP: 28px
+```
+
+## 4. アクセシビリティ
+
+### 重要度: 高
+
+- WAI-ARIA ガイドラインの遵守
+- キーボード操作のサポート
+- 適切なコントラスト比の確保
+- スクリーンリーダー対応
+
+## 5. アニメーションとトランジション
+
+### 重要度: 中
+
+- SCSS モジュール内で `@keyframes` を定義
+- 過度なアニメーションを避ける
+- 必要な場合のみ `transition` を使用
+
+```scss
+// ✅ 良い例：SCSS モジュール内でアニメーション定義
+@keyframes button-sheen {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(150%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+```
+
+## 6. フォーム設計
+
+### 重要度: 高
+
+- 既存のフォームコンポーネントを再利用（`SelectField`, `SearchInput` など）
+- バリデーションメッセージは明確に表示
+- 入力補助の実装（オートコンプリートなど）
+
+## 7. 重要な制約事項
+
+### 重要度: 最高
+
+1. UI 変更の制限
+
+- **既存の UI コンポーネントやレイアウトの変更は禁止**
+- **変更が必要な場合は必ず事前承認を得ること**
+- レイアウト、色、フォント、間隔などの変更は特に注意
+
+2. コンポーネントの追加
+
+- 新規コンポーネントは既存のコンポーネントパターンに従う
+- 既存のコンポーネントの再利用を優先
+- **SCSS モジュールを使用し、既存の mixin を活用する**
+
+## 8. エラー表示とフィードバック
+
+### 重要度: 高
+
+- エラーメッセージは具体的で分かりやすく
+- ローディング状態の適切な表示（`Loading.tsx` コンポーネントを使用）
+- 既存のコンポーネント（`CheckPopup` など）を活用
+
+## 9. アイコンとイメージ
+
+### 重要度: 中
+
+- 画像ファイルベースのアイコンを使用（`public/icons/` に配置）
+- SVG アイコンの最適化
+- 画像は`next/image`で最適化
+
+```typescript
+// ✅ 良い例：画像ファイルベースのアイコン
+import Image from "next/image";
+
+<Image src="/icons/logo.webp" alt="ロゴ" width={100} height={100} />
+```
+
+## 10. ダークモード対応
+
+### 重要度: 低
+
+- 現在はダークモード対応なし
+- 将来的に必要になった場合は、SCSS モジュール内で `@media (prefers-color-scheme: dark)` を使用
+
+## 11. コンポーネント設計原則
+
+### 重要度: 高
+
+- 単一責任の原則
+- Props 経由での柔軟なカスタマイズ
+- 適切なコンポーネント分割
+- **SCSS モジュールでスタイルを分離**
+
+```typescript
+// ✅ 良い例
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function Card({ title, children, className }: CardProps) {
+  return (
+    <div className={`${styles.card} ${className || ""}`}>
+      <h2 className={styles.title}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+```
+
+```scss
+// ✅ 良い例：対応する SCSS モジュール
+@use "@/styles/mixins/typography" as typo;
+@use "@/styles/mixins/space" as *;
+
+.card {
+  @include space(padding, sm);
+  border: 1px solid #26272a;
+  border-radius: 8px;
+}
+
+.title {
+  @include typo.title-l;
+}
+```
+
+## 注意事項
+
+1. デザインの一貫性
+
+- SCSS モジュールと mixin の一貫した使用
+- 既存の mixin を優先的に活用
+- カスタムカラーパレットの遵守（`tailwind.config.js` で定義）
+
+2. パフォーマンス
+
+- 不要なアニメーションの削除
+- 画像の最適化（`next/image` を使用）
+- バンドルサイズの監視
+
+3. 品質管理
+
+- コンポーネントの型定義
+- SCSS モジュールの命名規則の遵守
+- クロスブラウザテスト
+
+4. ドキュメント
+
+- コンポーネントの使用例
+- Props の型定義
+- SCSS モジュールの構造
+
+これらのルールは、プロジェクトの一貫性と保守性を確保するために重要です。
+変更が必要な場合は、必ずチームでの承認プロセスを経てください。

@@ -1,0 +1,202 @@
+.timeline-grid {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.timeline-header-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: transparent;
+  border-bottom: 2px solid hsl(var(--border));
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+}
+
+.timeline-header {
+  display: flex;
+  width: 100%;
+  min-width: fit-content;
+}
+
+.time-axis-label {
+  width: 20vw;
+
+  background-color: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.vehicles-header {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  min-width: 0;
+  background-color: transparent;
+  width: 100%;
+}
+
+.vehicle-header-label {
+  width: 40vw;
+  background-color: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.timeline-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.empty-timeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: hsl(var(--muted-foreground));
+}
+
+.timeline-content-wrapper {
+  display: flex;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  width: 100%;
+}
+
+.time-axis-column {
+  width: 20vw;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: hsl(var(--background));
+  border-right: 1px solid hsl(var(--border));
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.time-marker-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 0.5rem;
+  font-size: 0.9rem;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  box-sizing: border-box;
+  height: 20px;
+  min-height: 20px;
+}
+
+.time-marker-row span {
+  display: inline-block;
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* 数字の幅を統一 */
+}
+
+.time-marker-row .time-hour {
+  font-weight: 600;
+}
+
+.time-marker-row .time-minute {
+  min-width: 2em;
+  padding-left: 0.5rem; /* インデント */
+  color: hsl(var(--muted-foreground));
+  opacity: 0.8;
+}
+
+.vehicles-columns {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.vehicle-column {
+  width: 40vw;
+  position: relative;
+  border-right: 1px solid hsl(var(--border));
+  background-color: hsl(var(--background));
+  flex-shrink: 0;
+  box-sizing: border-box;
+  min-height: 100%;
+}
+
+.vehicle-column.drag-over {
+  background-color: rgba(100, 108, 255, 0.1);
+  outline: 2px dashed hsl(var(--primary));
+  outline-offset: -2px;
+}
+
+.time-cell-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: hsl(var(--border));
+  pointer-events: none;
+}
+
+.current-time-line {
+  position: absolute;
+  left: 60px; /* 時間軸列の幅分 */
+  right: 0;
+  height: 2px;
+  background-color: hsl(var(--destructive));
+  z-index: 0; /* 依頼カードの下に表示 */
+  pointer-events: none;
+  box-shadow: 0 0 4px hsl(var(--destructive));
+}
+
+.current-time-line::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: -4px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid hsl(var(--destructive));
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+/* ドロップ予定位置のハイライト（行全体） */
+.drop-preview-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: rgba(100, 108, 255, 0.15); /* Primary color with transparency */
+  border-top: 2px solid hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--primary));
+  z-index: 15;
+  pointer-events: none;
+  animation: drop-preview-pulse 1s ease-in-out infinite;
+}
+
+@keyframes drop-preview-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+

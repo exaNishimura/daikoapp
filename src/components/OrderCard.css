@@ -1,0 +1,102 @@
+.order-card {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: grab;
+  transition: all 0.2s;
+}
+
+.order-card:hover {
+  border-color: #646cff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.order-card.selected {
+  border-color: #646cff;
+  background-color: #2f2f3a;
+}
+
+.order-card.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge.status-unassigned {
+  background-color: #666;
+  color: #fff;
+}
+
+.status-badge.status-tentative {
+  background-color: #ffa500;
+  color: #000;
+}
+
+.status-badge.status-confirmed {
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.order-type {
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.order-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.route-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.pickup,
+.dropoff {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  color: #646cff;
+  font-weight: bold;
+}
+
+.duration-info {
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.car-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.note-icon {
+  font-size: 1rem;
+}
+

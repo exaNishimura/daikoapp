@@ -1,0 +1,261 @@
+---
+description: 代行運転配車システム（dispatch-system）の開発ルール
+globs: *.js,*.jsx,*.ts,*.tsx
+alwaysApply: true
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# 代行運転配車システム開発ルール
+
+## 1. アーキテクチャ原則
+
+### SPA + REST API構成
+- フロントエンド: React SPA（Vite）
+- バックエンド: REST API（Next.js API Routes / Express）
+- データベース: Supabase（PostgreSQLベース）
+- 外部API: Google Maps Directions API
+
+### レイヤー分離
+- **UI層**: Reactコンポーネント（表示とユーザーインタラクション）
+- **Service層**: ビジネスロジックとAPI呼び出し
+- **API層**: RESTエンドポイント（データ永続化）
+- **Data層**: データベーススキーマとクエリ
+
+## 2. コンポーネント設計
+
+### UIコンポーネント
+- **DispatchBoard**: メイン画面コンテナ（3ペインレイアウト）
+- **OrderFormModal**: 新規依頼入力モーダル
+- **OrderCardList**: 未割当依頼一覧
+- **OrderCard**: 依頼カード（ドラッグ可能）
+- **TimelineGrid**: タイムライン表示とドロップゾーン
+- **SlotComponent**: タイムライン上の配車枠
+- **OrderDetailPanel**: 依頼詳細パネル（スライドイン）
+
+### 実装パターン
+```javascript
+// ✅ 良い例：コンポーネントとスタイルの分離
+import styles from './OrderCard.module.css';
+
+export function OrderCard({ order, onDragStart }) {
+  return (
+    <div className={styles.card} draggable>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+## 3. Service層設計
+
+### Service実装パターン
+```javascript
+// ✅ 良い例：Service層でのAPI呼び出し
+export const orderService = {
+  async createOrder(request) {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      if (!response.ok) throw new Error('Failed to create order');
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
+  },
+};
+```
+
+### 主要Service
+- **orderService**: 依頼のCRUD操作
+- **slotService**: 配車スロットの作成・更新・確定
+- **routeService**: Google Maps APIを使用したルート計算
+- **conflictDetectionService**: 競合検出ロジック
+
+## 4. ドラッグ&ドロップ実装
+
+### @dnd-kit使用
+```javascript
+// ✅ 良い例：@dnd-kitを使用したドラッグ&ドロップ
+import { DndContext, Draggable, Droppable } from '@dnd-kit/core';
+
+<DndContext onDragEnd={handleDragEnd}>
+  <Draggable id={order.id}>
+    <OrderCard order={order} />
+  </Draggable>
+  <Droppable id={vehicleId}>
+    <TimelineGrid vehicleId={vehicleId} />
+  </Droppable>
+</DndContext>
+```
+
+### スナップ処理
+- 15分刻みでスナップ: `Math.round(minutes / 15) * 15`
+- 時間→px変換: `15分 = 20px`（固定）
+- 18:00〜翌06:00の範囲チェック
+
+## 5. タイムライン実装
+
+### レイアウト
+- CSS Grid + absolute配置
+- 時間軸: 18:00〜翌06:00（12時間 = 48コマ = 960px）
+- 車両レーン: 縦方向に配置
+
+### Slot表示
+```javascript
+// ✅ 良い例：Slotの位置計算
+const slotStyle = {
+  position: 'absolute',
+  left: `${(startMinutes - 1080) / 15 * 20}px`, // 18:00 = 1080分
+  width: `${(endMinutes - startMinutes) / 15 * 20}px`,
+  top: `${vehicleIndex * 60}px`, // レーン高さ60px
+};
+```
+
+## 6. ルート計算とバッファ
+
+### バッファ計算ロジック
+```javascript
+// ✅ 良い例：バッファ計算
+function calculateBuffer(baseDuration) {
+  const pickupWait = 5; // 固定5分
+  const baseBuffer = Math.max(5, Math.ceil(baseDuration * 0.15));
+  return baseBuffer + pickupWait;
+}
+
+// base_durationがnullの場合
+const fallbackBase = 20; // 仮の20分
+```
+
+### Google Maps API呼び出し
+- 依頼作成後にバックグラウンドで実行
+- 失敗時は`base_duration = null`として保存
+- 詳細パネルで「再計算」ボタンを表示
+
+## 7. 競合検出
+
+### 競合判定ロジック
+```javascript
+// ✅ 良い例：競合判定
+function hasConflict(slotA, slotB) {
+  return (
+    slotA.vehicle_id === slotB.vehicle_id &&
+    slotA.start_at < slotB.end_at &&
+    slotA.end_at > slotB.start_at
+  );
+}
+```
+
+### 競合時の処理
+- 重複slotを赤枠＋⚠アイコンで表示
+- 確定ボタンを無効化
+- サーバー側でも確定時に再チェック（必須）
+
+## 8. データモデルとSupabase
+
+### Supabase設定
+- **プロジェクト**: Supabaseプロジェクトを作成
+- **クライアント**: `@supabase/supabase-js`を使用
+- **環境変数**: `VITE_SUPABASE_URL`と`VITE_SUPABASE_ANON_KEY`を設定
+- **Row Level Security**: MVPでは無効化（全アクセス許可）
+
+### 主要テーブル
+- **vehicles**: 車両情報（UUID主キー、自動生成）
+- **orders**: 依頼情報（UUID主キー、自動生成）
+- **dispatch_slots**: 配車スロット（UUID主キー、自動生成）
+
+### Supabaseクライアント使用例
+```javascript
+// ✅ 良い例：Supabaseクライアントの使用
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
+// データ取得
+const { data, error } = await supabase
+  .from('orders')
+  .select('*')
+  .eq('status', 'UNASSIGNED')
+  .order('created_at', { ascending: false });
+```
+
+### ステータス管理
+- **Order Status**: UNASSIGNED → TENTATIVE → CONFIRMED / CANCELLED
+- **Slot Status**: TENTATIVE → CONFIRMED
+
+## 9. エラーハンドリング
+
+### APIエラー
+```javascript
+// ✅ 良い例：エラーハンドリング
+try {
+  const order = await orderService.createOrder(request);
+} catch (error) {
+  if (error.status === 409) {
+    // 競合エラー
+    showToast('競合が検出されました。時間を調整してください。');
+  } else {
+    showToast('エラーが発生しました。');
+  }
+}
+```
+
+### ユーザーエラー
+- 400 Bad Request: 必須項目未入力 → フィールドレベルバリデーション
+- 409 Conflict: 競合検出 → 競合slotを赤表示
+- 06:00超過: トーストメッセージ表示
+
+## 10. 営業時間制約
+
+### 時間範囲チェック
+```javascript
+// ✅ 良い例：06:00超過チェック
+function isValidTimeRange(startAt, endAt) {
+  const startHour = new Date(startAt).getHours();
+  const endHour = new Date(endAt).getHours();
+  const endDate = new Date(endAt);
+  
+  // 18:00以降かつ翌06:00以前
+  return startHour >= 18 && (endHour <= 6 || endDate.getDate() > new Date(startAt).getDate());
+}
+```
+
+## 11. パフォーマンス考慮
+
+### 最適化ポイント
+- タイムライン表示: 仮想スクロール（多数のslotの場合）
+- ドラッグ&ドロップ: デバウンス処理
+- Google Maps API: レート制限に注意、キャッシュ検討
+
+## 12. テスト戦略
+
+### ユニットテスト
+- バッファ計算ロジック
+- 競合判定ロジック
+- 時間計算ユーティリティ
+
+### 統合テスト
+- 依頼作成 → ルート計算 → バッファ計算のフロー
+- スロット作成 → 競合チェック → 確定のフロー
+
+### E2Eテスト
+- 新規依頼入力 → 未割当一覧表示
+- カードドラッグ&ドロップ → タイムライン表示
+- 確定操作 → ステータス更新
+
+## チェックリスト
+
+実装前に確認：
+- [ ] コンポーネントは単一責任の原則に従っているか
+- [ ] Service層でAPI呼び出しを一元管理しているか
+- [ ] エラーハンドリングが適切に実装されているか
+- [ ] 競合検出がクライアント・サーバー両方で実装されているか
+- [ ] 営業時間制約（18:00〜翌06:00）がチェックされているか
+- [ ] ドラッグ&ドロップが15分刻みでスナップしているか
+- [ ] Google Maps API失敗時のフォールバック処理があるか

@@ -1,0 +1,1830 @@
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Next.js ベストプラクティス実装ルール
+
+## 1. ルーティングとファイル構造
+
+### ページ構造（Googleスプレッドシート仕様に基づく）
+
+**主要ページ:**
+1. Home - トップページ (`/`)
+2. About - 企業情報TOP (`/about`)
+   - Philosophy - フィロソフィ (`/about/our-philosophy`)
+   - Company - 会社情報 (`/about/company`)
+   - History - 沿革 (`/about/history`)
+   - Office - 拠点 (`/about/office`)
+   - DX - DX取り組み (`/about/dx`)
+   - Information Security - 情報セキュリティ (`/about/information-security`)
+3. Services - 事業TOP (`/services`)
+   - 音響・セキュリティ (`/services/audiovisual-security`)
+   - ネットワーク統合 (`/services/network-integration`)
+   - ユニファイドコミュニケーション (`/services/unified-communications`)
+   - 公共インフラ (`/services/public-infrastructure`)
+4. Recruit - 採用情報 (`/recruit`)
+   - 中途採用ページ (`/recruit/job-description`)
+5. Cases - 事例一覧 (`/cases`)
+   - Case - 事例詳細 (`/cases/[slug]`)
+6. News - ニューストップ (`/news`)
+   - ニュース一覧 (`/news/[slug]`)
+7. Contact - お問い合わせ (`/contact`)
+   - Confirm - 確認画面 (`/contact/confirm`)
+   - Thanks - サンクスページ (`/contact/thanks`)
+8. Privacy Policy - プライバシーポリシー (`/privacy-policy`)
+9. Sitemap - サイトマップ (`/sitemap`)
+10. 404 - 404エラー (`/404`)
+
+**モバイルファーストの原則:**
+- すべてのページは同一ルートでレスポンシブ対応
+- SP版とデスクトップ版は別々のルートではなく、CSS/SCSSのメディアクエリで切り替え
+- モバイル版をベースに、デスクトップ版を拡張
+
+**その他のアセット:**
+- icons (`/public/icons/`)
+- components (`/src/app/components/`)
+- color (デザインシステムのカラーパレット)
+- image (`/public/image/`)
+
+### モバイルファーストの原則
+
+**重要: このプロジェクトはモバイルファーストで構築します**
+
+1. **同一ルートでのレスポンシブ対応**
+   - SP版とデスクトップ版は別々のルートではなく、同一ルートでレスポンシブ対応
+   - CSS/SCSSのメディアクエリでデバイスに応じた表示を切り替え
+   - モバイルファーストのアプローチで、まずモバイル版を実装し、その後デスクトップ版を拡張
+
+2. **実装方針**
+   ```typescript
+   // ✅ 正しい実装：モバイルファースト
+   // モバイル版をベースに、デスクトップ版を拡張
+   <div className="mobile-first-base md:desktop-enhanced">
+     {/* モバイル版のコンテンツ */}
+   </div>
+   ```
+
+3. **コンポーネント設計**
+   - モバイル版とデスクトップ版で共通のコンポーネントを使用
+   - レスポンシブデザインで表示を切り替え
+   - 必要に応じて条件付きレンダリングを使用（`useMediaQuery`等）
+
+### ディレクトリ構造例（実際のプロジェクト構造）
+
+src/
+├── app/                    # ルーティングとページコンポーネント
+│   ├── components/        # UI コンポーネントと共通セクション
+│   │   ├── toppage/      # トップページ用コンポーネント
+│   │   ├── partner/      # パートナー向けページ用コンポーネント
+│   │   ├── cv-form/      # お問い合わせフォーム用コンポーネント
+│   │   └── legal/        # 法的事項ページ用コンポーネント
+│   ├── about/            # Aboutページ（企業情報）
+│   │   ├── our-philosophy/  # フィロソフィ
+│   │   ├── company/        # 会社情報
+│   │   ├── history/         # 沿革
+│   │   ├── office/         # 拠点
+│   │   ├── dx/             # DX取り組み
+│   │   ├── information-security/  # 情報セキュリティ
+│   │   └── page.tsx         # About TOP
+│   ├── services/         # Servicesページ（事業）
+│   │   ├── audiovisual-security/    # 音響・セキュリティ
+│   │   ├── network-integration/      # ネットワーク統合
+│   │   ├── unified-communications/   # ユニファイドコミュニケーション
+│   │   ├── public-infrastructure/    # 公共インフラ
+│   │   └── page.tsx         # Services TOP
+│   ├── recruit/          # Recruitページ（採用情報）
+│   │   ├── job-description/  # 中途採用ページ
+│   │   └── page.tsx         # Recruit TOP
+│   ├── cases/            # Casesページ（事例）
+│   │   ├── [slug]/         # 事例詳細（動的ルート）
+│   │   └── page.tsx         # 事例一覧
+│   ├── news/             # Newsページ（ニュース）
+│   │   ├── [slug]/         # ニュース詳細（動的ルート）
+│   │   └── page.tsx         # ニューストップ
+│   ├── contact/          # Contactページ（お問い合わせ）
+│   │   ├── confirm/        # 確認画面
+│   │   ├── thanks/         # サンクスページ
+│   │   └── page.tsx         # お問い合わせフォーム
+│   ├── privacy-policy/   # Privacy Policyページ
+│   ├── sitemap/          # Sitemapページ
+│   ├── 404.tsx           # 404エラーページ
+│   ├── companies/        # 会社一覧・詳細ページ（既存）
+│   ├── magazine/         # マガジン一覧・詳細ページ（既存）
+│   ├── voices/           # 利用者の声一覧・詳細ページ（既存）
+│   ├── cv-form/          # お問い合わせフォーム（既存）
+│   ├── simulation/        # 内装費用シミュレーション（既存）
+│   ├── partner/          # パートナー向けページ（既存）
+│   ├── api/              # APIルート（revalidate, send-email, sendSms）
+│   ├── context/          # React Context（FavoriteContext など）
+│   ├── layout.tsx        # ルートレイアウト
+│   └── page.tsx          # トップページ（Home）
+│
+├── lib/                  # ユーティリティ関数
+│   ├── microcms.ts      # microCMS クライアントとデータ取得関数
+│   ├── category.ts      # カテゴリ関連ユーティリティ
+│   ├── industryIcons.ts  # 業種アイコン関連
+│   └── service.ts        # サービス関連ユーティリティ
+│
+├── types/                # TypeScript 型定義
+│   ├── company.ts       # 会社関連の型
+│   ├── case.ts          # 事例関連の型（Cases, Categories）
+│   ├── news.ts          # ニュース関連の型（News, NewsTags）
+│   ├── magazine.ts       # マガジン関連の型
+│   └── ...              # その他の型定義
+│
+├── data/                 # スタティックデータ
+│   ├── mapRegions.ts    # 地域データ
+│   ├── prefectures.ts   # 都道府県データ
+│   └── purposeDatas.ts  # 目的データ
+│
+├── styles/               # スタイル関連
+│   └── mixins/          # SCSS mixin
+│       ├── _space.scss  # レスポンシブスペーシング
+│       └── _typography.scss # フルイドタイポグラフィ
+│
+└── public/               # 静的アセット
+    ├── icons/            # アイコン画像
+    ├── image/            # 画像ファイル
+    └── video/            # 動画ファイル
+
+### 命名規則
+
+- ページコンポーネント: `page.tsx`
+- レイアウトコンポーネント: `layout.tsx`
+- ローディング状態: `loading.tsx`
+- エラーハンドリング: `error.tsx`
+- 404 ページ: `not-found.tsx`
+
+## 2. コンポーネント設計
+
+### Server Components
+
+- **デフォルトで Server Components を使用**
+- **データフェッチングを含むコンポーネントは Server Components で実装**
+- SEO 対応が必要なコンポーネントは Server Components で実装
+
+### Client Components
+
+以下の場合のみ Client Components を使用:
+
+- ブラウザ API を使用する場合
+- イベントリスナーが必要な場合
+- React hooks を使用する場合
+- クライアントサイドの状態管理が必要な場合
+
+### 'use client' ディレクティブ
+
+```typescript
+"use client";
+// クライアントコンポーネントの先頭に記述
+```
+
+## 3. API実装
+
+- データフェッチ用のAPIはなるべく作成しないでください。サーバーコンポーネントでのデータフェッチを強く推奨します。
+- `app/api`ディレクトリ内に API エンドポイントを作成
+- HTTP メソッドごとに適切なハンドラーを実装:
+- GET の API はなるべく作らないでください。データフェッチはサーバーコンポーネントでお願いします。
+- API の仕様は POST/PATCH/PUT/DELETE のみに絞ってください。
+
+```typescript
+// app/api/articles/route.ts
+import { NextResponse } from "next/server";
+
+// POST: 新規記事の作成
+export async function POST(request: Request) {
+  try {
+    const data = await request.json();
+    const article = await prisma.article.create({
+      data,
+    });
+    return NextResponse.json(article, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### クライアントサイドでのユーザーデータ操作
+
+- `fetch` を使用して API を呼び出し
+- エラーハンドリングとローディング状態の管理:
+- ServerActionsでも可
+
+```typescript
+// components/articles/create-article.tsx
+"use client";
+
+export async function createArticle(data: ArticleData) {
+  try {
+    const response = await fetch("/api/articles", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error("API request failed");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating article:", error);
+    throw error;
+  }
+}
+```
+
+### キャッシュと再検証
+
+- デフォルトでキャッシュを活用
+- 適切な再検証戦略を選択:
+
+```typescript
+// ISRの場合
+fetch(url, { next: { revalidate: 3600 } }); // 1時間ごとに再検証
+
+// キャッシュを無効化する場合
+fetch(url, { cache: "no-store" });
+```
+
+### エラーハンドリング
+
+- API レスポンスには適切なステータスコードとエラーメッセージを含める
+- クライアントサイドでは適切なエラーハンドリングとユーザーフィードバックを実装
+- try-catch ブロックを使用して例外を適切に処理
+
+### セキュリティ
+
+- API ルートでは適切な認証・認可チェックを実装
+- 入力値のバリデーションを実施、特にサーバーサイドでのバリデーション
+- レートリミットの実装を検討
+
+## 3.5. お問い合わせフォーム設計
+
+### フォーム項目仕様
+
+**重要: お問い合わせフォーム（`/contact`）の項目設計**
+
+#### フォーム項目一覧
+
+| ID | 項目名 | 入力タイプ | プレースホルダ | 必須 | バリデーション |
+|----|--------|-----------|---------------|------|---------------|
+| `name` | 氏名 | `text` | `山田 太郎` | 必須 | 文字列/50文字以内 |
+| `email` | メールアドレス | `text` | `example@example.com` | 必須 | メール形式チェック |
+| `tel` | 電話番号 | `text` | `03-1234-5678` | 任意 | 数字・ハイフンのみ |
+| `company` | 会社名 | `text` | `株式会社〇〇` | 任意 | - |
+| `position` | 役職 | `text` | `部長` | 任意 | - |
+| `subject` | お問い合わせ種別 | `select` | `お問い合わせ項目` | 必須 | 選択必須 |
+| `body` | お問い合わせ内容 | `textarea` | `できるだけ詳しくご記入ください。` | 必須 | 文字列/2000文字以内 |
+| `agree_privacy` | 個人情報への同意 | `checkbox` | - | 必須 | チェック必須 |
+
+#### お問い合わせ種別（subject）の選択肢
+
+- `採用について` (Regarding recruitment)
+- `サービスについて` (Regarding services)
+
+**実装例:**
+```typescript
+// 型定義
+export interface ContactFormData {
+  name: string;           // 氏名（必須、50文字以内）
+  email: string;          // メールアドレス（必須、メール形式）
+  tel?: string;           // 電話番号（任意、数字・ハイフンのみ）
+  company?: string;       // 会社名（任意）
+  position?: string;      // 役職（任意）
+  subject: string;        // お問い合わせ種別（必須、選択必須）
+  body: string;          // お問い合わせ内容（必須、2000文字以内）
+  agree_privacy: boolean; // 個人情報への同意（必須、チェック必須）
+}
+
+export type ContactSubject = "採用について" | "サービスについて";
+
+// バリデーション関数
+export function validateContactForm(data: ContactFormData): {
+  isValid: boolean;
+  errors: Record<string, string>;
+} {
+  const errors: Record<string, string> = {};
+
+  // 氏名のバリデーション
+  if (!data.name || data.name.trim().length === 0) {
+    errors.name = "氏名は必須です。";
+  } else if (data.name.length > 50) {
+    errors.name = "氏名は50文字以内で入力してください。";
+  }
+
+  // メールアドレスのバリデーション
+  if (!data.email || data.email.trim().length === 0) {
+    errors.email = "メールアドレスは必須です。";
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    errors.email = "正しいメールアドレスを入力してください。";
+  }
+
+  // 電話番号のバリデーション（任意項目）
+  if (data.tel && !/^[0-9-]+$/.test(data.tel)) {
+    errors.tel = "電話番号は数字とハイフンのみで入力してください。";
+  }
+
+  // お問い合わせ種別のバリデーション
+  if (!data.subject) {
+    errors.subject = "お問い合わせ種別を選択してください。";
+  }
+
+  // お問い合わせ内容のバリデーション
+  if (!data.body || data.body.trim().length === 0) {
+    errors.body = "お問い合わせ内容は必須です。";
+  } else if (data.body.length > 2000) {
+    errors.body = "お問い合わせ内容は2000文字以内で入力してください。";
+  }
+
+  // 個人情報への同意のバリデーション
+  if (!data.agree_privacy) {
+    errors.agree_privacy = "個人情報の取り扱いに同意してください。";
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+```
+
+#### フォーム実装パターン
+
+**1. クライアントコンポーネントでのフォーム実装**
+```typescript
+"use client";
+
+import { useState } from "react";
+import { ContactFormData, validateContactForm } from "@/types/contact";
+
+export function ContactForm() {
+  const [formData, setFormData] = useState<ContactFormData>({
+    name: "",
+    email: "",
+    tel: "",
+    company: "",
+    position: "",
+    subject: "",
+    body: "",
+    agree_privacy: false,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // バリデーション
+    const validation = validateContactForm(formData);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        // 確認画面へリダイレクト
+        window.location.href = "/contact/confirm";
+      } else {
+        throw new Error("送信に失敗しました。");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setErrors({ submit: "送信に失敗しました。再度お試しください。" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* フォーム項目の実装 */}
+    </form>
+  );
+}
+```
+
+**2. サーバーアクションでの実装（推奨）**
+```typescript
+"use server";
+
+import { ContactFormData, validateContactForm } from "@/types/contact";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function submitContactForm(data: ContactFormData) {
+  // サーバーサイドでのバリデーション
+  const validation = validateContactForm(data);
+  if (!validation.isValid) {
+    return { success: false, errors: validation.errors };
+  }
+
+  try {
+    // 1. Supabaseに保存
+    const supabase = createClient();
+    const { error: dbError } = await supabase
+      .from("contacts")
+      .insert({
+        name: data.name,
+        email: data.email,
+        tel: data.tel || null,
+        company: data.company || null,
+        position: data.position || null,
+        subject: data.subject,
+        body: data.body,
+        agree_privacy: data.agree_privacy,
+        created_at: new Date().toISOString(),
+      });
+
+    if (dbError) {
+      throw new Error(`データベース保存エラー: ${dbError.message}`);
+    }
+
+    // 2. Resendでメール送信
+    const { error: emailError } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || "noreply@example.com",
+      to: process.env.CONTACT_RECIPIENT_EMAIL || "contact@example.com",
+      subject: `【お問い合わせ】${data.subject} - ${data.name}様`,
+      html: `
+        <h2>お問い合わせ内容</h2>
+        <p><strong>氏名:</strong> ${data.name}</p>
+        <p><strong>メールアドレス:</strong> ${data.email}</p>
+        ${data.tel ? `<p><strong>電話番号:</strong> ${data.tel}</p>` : ""}
+        ${data.company ? `<p><strong>会社名:</strong> ${data.company}</p>` : ""}
+        ${data.position ? `<p><strong>役職:</strong> ${data.position}</p>` : ""}
+        <p><strong>お問い合わせ種別:</strong> ${data.subject}</p>
+        <p><strong>お問い合わせ内容:</strong></p>
+        <p>${data.body.replace(/\n/g, "<br>")}</p>
+      `,
+    });
+
+    if (emailError) {
+      throw new Error(`メール送信エラー: ${emailError.message}`);
+    }
+
+    // 確認画面へリダイレクト
+    redirect("/contact/confirm");
+  } catch (error) {
+    console.error("Error submitting form:", error);
+    return { success: false, errors: { submit: "送信に失敗しました。" } };
+  }
+}
+```
+
+**3. APIルートでの実装（代替案）**
+```typescript
+// app/api/contact/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { Resend } from "resend";
+import { ContactFormData, validateContactForm } from "@/types/contact";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function POST(request: NextRequest) {
+  try {
+    const data: ContactFormData = await request.json();
+
+    // バリデーション
+    const validation = validateContactForm(data);
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { success: false, errors: validation.errors },
+        { status: 400 }
+      );
+    }
+
+    // 1. Supabaseに保存
+    const supabase = createClient();
+    const { error: dbError } = await supabase
+      .from("contacts")
+      .insert({
+        name: data.name,
+        email: data.email,
+        tel: data.tel || null,
+        company: data.company || null,
+        position: data.position || null,
+        subject: data.subject,
+        body: data.body,
+        agree_privacy: data.agree_privacy,
+        created_at: new Date().toISOString(),
+      });
+
+    if (dbError) {
+      throw new Error(`データベース保存エラー: ${dbError.message}`);
+    }
+
+    // 2. Resendでメール送信
+    const { error: emailError } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || "noreply@example.com",
+      to: process.env.CONTACT_RECIPIENT_EMAIL || "contact@example.com",
+      subject: `【お問い合わせ】${data.subject} - ${data.name}様`,
+      html: `
+        <h2>お問い合わせ内容</h2>
+        <p><strong>氏名:</strong> ${data.name}</p>
+        <p><strong>メールアドレス:</strong> ${data.email}</p>
+        ${data.tel ? `<p><strong>電話番号:</strong> ${data.tel}</p>` : ""}
+        ${data.company ? `<p><strong>会社名:</strong> ${data.company}</p>` : ""}
+        ${data.position ? `<p><strong>役職:</strong> ${data.position}</p>` : ""}
+        <p><strong>お問い合わせ種別:</strong> ${data.subject}</p>
+        <p><strong>お問い合わせ内容:</strong></p>
+        <p>${data.body.replace(/\n/g, "<br>")}</p>
+      `,
+    });
+
+    if (emailError) {
+      throw new Error(`メール送信エラー: ${emailError.message}`);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error processing contact form:", error);
+    return NextResponse.json(
+      { success: false, error: "送信に失敗しました。" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### 処理フロー
+
+**重要: お問い合わせフォームの処理フロー**
+
+1. **フォーム送信** → サーバーアクションまたはAPIルート
+2. **バリデーション** → サーバーサイドで再検証
+3. **Supabaseに保存** → `contacts`テーブルに保存
+4. **Resendでメール送信** → 管理者宛にメール送信
+5. **確認画面へリダイレクト** → `/contact/confirm`
+
+**実装時の注意点:**
+- Supabaseのテーブル構造を事前に定義
+- ResendのAPIキーを環境変数に設定
+- エラーハンドリングを適切に実装
+- トランザクション処理を検討（保存失敗時のロールバック）
+
+#### Supabaseテーブル構造
+
+**`contacts`テーブルのスキーマ:**
+
+```sql
+CREATE TABLE contacts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(50) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  tel VARCHAR(20),
+  company VARCHAR(255),
+  position VARCHAR(100),
+  subject VARCHAR(100) NOT NULL,
+  body TEXT NOT NULL,
+  agree_privacy BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_contacts_created_at ON contacts(created_at DESC);
+CREATE INDEX idx_contacts_email ON contacts(email);
+```
+
+#### 環境変数設定
+
+**`.env.local`に追加:**
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Resend
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM_EMAIL=noreply@example.com
+CONTACT_RECIPIENT_EMAIL=contact@example.com
+```
+
+#### チェックリスト
+
+- [ ] すべてのフォーム項目を実装
+- [ ] 必須項目のバリデーションを実装
+- [ ] サーバーサイドでのバリデーションを実装
+- [ ] メール形式チェックを実装
+- [ ] 文字数制限を実装（氏名50文字、本文2000文字）
+- [ ] 電話番号の形式チェック（数字・ハイフンのみ）を実装
+- [ ] お問い合わせ種別の選択肢を実装
+- [ ] 個人情報への同意チェックボックスを実装
+- [ ] エラーメッセージを適切に表示
+- [ ] Supabaseテーブル構造を定義
+- [ ] Supabaseへの保存処理を実装
+- [ ] ResendのAPIキーを環境変数に設定
+- [ ] Resendでのメール送信処理を実装
+- [ ] 確認画面（`/contact/confirm`）への遷移を実装
+- [ ] サンクスページ（`/contact/thanks`）への遷移を実装
+- [ ] エラーハンドリングを適切に実装
+
+## 4. パフォーマンス最適化
+
+### 画像最適化
+
+- `next/image`コンポーネントを使用
+
+```typescript
+import Image from "next/image";
+
+<Image
+  src="/path/to/image.jpg"
+  alt="説明"
+  width={800}
+  height={600}
+  priority={true} // 重要な画像の場合
+/>;
+```
+
+### スクリプト最適化
+
+- `next/script`を使用して外部スクリプトを最適化
+
+```typescript
+import Script from "next/script";
+
+<Script src="https://example.com/script.js" strategy="lazyOnload" />;
+```
+
+## 4.5. レスポンシブデザインとモバイルファースト実装
+
+### 基本原則
+
+**重要: このプロジェクトはモバイルファーストで構築します**
+
+1. **モバイルファーストアプローチ**
+   - まずモバイル版（SP版）を実装
+   - その後、デスクトップ版を拡張（`md:`、`lg:`等のブレークポイントを使用）
+   - Figmaデザインの「(SP)」版をベースに実装
+
+2. **同一ルートでのレスポンシブ対応**
+   - SP版とデスクトップ版は別々のルートではなく、同一ルートでレスポンシブ対応
+   - CSS/SCSSのメディアクエリでデバイスに応じた表示を切り替え
+   - 必要に応じて条件付きレンダリングを使用
+
+### Tailwind CSS ブレークポイント
+
+```typescript
+// モバイルファーストのブレークポイント
+sm: 640px   // 小さいタブレット
+md: 768px   // タブレット
+lg: 1024px  // デスクトップ
+xl: 1280px  // 大きなデスクトップ
+2xl: 1536px // 超大画面
+```
+
+### 実装パターン
+
+**1. モバイルファーストのスタイリング**
+```typescript
+// ✅ 正しい実装：モバイル版をベースに、デスクトップ版を拡張
+<div className="
+  p-4          // モバイル版のパディング
+  md:p-8       // デスクトップ版のパディング
+  text-sm      // モバイル版のフォントサイズ
+  md:text-base // デスクトップ版のフォントサイズ
+">
+  {/* コンテンツ */}
+</div>
+```
+
+**2. レイアウトの切り替え**
+```typescript
+// ✅ 正しい実装：モバイル版は縦並び、デスクトップ版は横並び
+<div className="
+  flex flex-col  // モバイル版：縦並び
+  md:flex-row    // デスクトップ版：横並び
+  gap-4          // モバイル版のギャップ
+  md:gap-8       // デスクトップ版のギャップ
+">
+  {/* コンテンツ */}
+</div>
+```
+
+**3. 条件付きレンダリング（必要に応じて）**
+```typescript
+"use client";
+
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+
+export function ResponsiveComponent() {
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  
+  return (
+    <>
+      {isMobile ? (
+        <MobileVersion />
+      ) : (
+        <DesktopVersion />
+      )}
+    </>
+  );
+}
+```
+
+**4. SCSS mixin の活用**
+```scss
+// ✅ 正しい実装：既存の mixin を活用
+@use "@/styles/mixins/space" as *;
+@use "@/styles/mixins/typography" as typo;
+
+.container {
+  // モバイル版をベースに
+  @include typo.body-s;
+  @include space(padding, sm);
+  
+  // デスクトップ版を拡張（mixin が自動的にレスポンシブ対応）
+  @include space(gap, md); // PC: 40px, SP: 28px
+}
+```
+
+### Figmaデザインとの対応
+
+**Figmaフレーム構造:**
+- **デスクトップ版**: Home, About, Services, Recruit, Cases, News, Contact, Privacy Policy, Sitemap, 404
+- **SP版**: Home(SP), About(SP), Services(SP), Recruit(SP), Cases(SP), News(SP), Contact(SP), Privacy Policy(SP), Sitemap(SP), 404(SP)
+
+**実装方針:**
+1. Figmaの「(SP)」版をベースに実装
+2. デスクトップ版は同じコンポーネントでレスポンシブ対応
+3. 必要に応じて条件付きレンダリングを使用
+
+### チェックリスト
+
+- [ ] モバイル版を最初に実装
+- [ ] デスクトップ版は`md:`、`lg:`等のブレークポイントで拡張
+- [ ] 既存のSCSS mixin（`space`、`typography`）を活用
+- [ ] Figmaデザインの「(SP)」版をベースに実装
+- [ ] 同一ルートでレスポンシブ対応（別ルートを作らない）
+- [ ] パフォーマンスを考慮した実装（不要な条件付きレンダリングを避ける）
+
+## 5. エラーハンドリング
+
+### エラーバウンダリ
+
+- `error.tsx`ファイルでエラーをキャッチ
+- ユーザーフレンドリーなエラーメッセージを表示
+
+### ローディング状態
+
+- `loading.tsx`でローディング状態を管理
+- Suspense を使用して細かい粒度でローディングを制御
+
+## 6. 型安全性
+
+### TypeScript
+
+- 厳格な型チェックを有効化
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}
+```
+
+### API ルート
+
+- リクエスト/レスポンスの型を定義
+
+```typescript
+type ResponseData = {
+  message: string;
+};
+```
+
+## 7. セキュリティ
+
+### 環境変数
+
+- 機密情報は`.en.local`に保存
+- 公開する環境変数は`NEXT_PUBLIC_`プレフィックスを使用
+
+### CSP (Content Security Policy)
+
+- 適切な CSP ヘッダーを設定
+- `next.config.js`でセキュリティヘッダーを構成
+
+## 8. デプロイメント
+
+### ビルド最適化
+
+- 本番環境では常に本番ビルドを使用
+- 適切なキャッシュ戦略を実装
+
+### 環境変数
+
+- 環境ごとに適切な環境変数を設定
+- 本番環境の環境変数は安全に管理
+
+## 10. メンテナンス
+
+### 依存関係
+
+- 定期的に依存パッケージを更新
+- セキュリティ脆弱性をモニタリング
+
+### パフォーマンスモニタリング
+
+- Core Web Vitals を定期的に確認
+- エラーログを監視
+- ターミナルの操作は常にバックエンドで実施
+
+## 11. Next.js 14必須対応ルール
+
+### Suspense境界の実装
+
+**重要: useSearchParams()とuseRouter()は必ずSuspense境界で囲む**
+
+#### 対象となるHooks
+- `useSearchParams()` - **必須でSuspense境界が必要**
+- `useRouter()` (クエリパラメータを使用する場合)
+- その他のクライアントサイドでサーチパラメータを参照するHooks
+
+#### 実装パターン
+
+```typescript
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+// コンテンツコンポーネントは分離して実装
+function PageContent() {
+  const searchParams = useSearchParams(); // Suspense内で使用
+  
+  // ページのロジック実装
+  return (
+    <div>
+      {/* ページコンテンツ */}
+    </div>
+  );
+}
+
+// メインエクスポートでSuspense境界を提供
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div>読み込み中...</div>
+      </div>
+    }>
+      <PageContent />
+    </Suspense>
+  );
+}
+```
+
+#### 必須チェックリスト
+
+1. **useSearchParams()使用時**
+   - [ ] コンポーネントを2つに分離（Content + Main）
+   - [ ] useSearchParams()をContentコンポーネント内で使用
+   - [ ] MainコンポーネントでSuspense境界を実装
+   - [ ] 適切なfallback UIを提供
+
+2. **fallback UIの推奨実装**
+   - ページと同じレイアウト構造を維持
+   - ローディング状態を明確に表示
+   - 一貫したデザインシステムを使用
+
+#### エラー予防のための開発フロー
+
+1. **新規ページ作成時**
+   ```bash
+   # useSearchParams()を使用する場合は最初からSuspense実装
+   ```
+
+2. **既存ページ修正時**
+   ```bash
+   # useSearchParams()を追加する際は同時にSuspense境界も追加
+   ```
+
+3. **ビルドテスト**
+   ```bash
+   npm run build
+   # プリレンダリングエラーがないことを確認
+   ```
+
+#### よくあるミス
+
+❌ **間違った実装**
+```typescript
+export default function Page() {
+  const searchParams = useSearchParams(); // エラー発生
+  return <div>...</div>;
+}
+```
+
+✅ **正しい実装**
+```typescript
+function PageContent() {
+  const searchParams = useSearchParams(); // OK
+  return <div>...</div>;
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <PageContent />
+    </Suspense>
+  );
+}
+```
+
+#### 自動チェック方法
+
+- Vercelデプロイ前に必ず `npm run build` でローカルビルドテストを実行
+- useSearchParams()を使用するページは必ずSuspense境界の実装を確認
+- TypeScriptエラーと併せてNext.jsビルドエラーも開発時に監視
+
+## 12. エラー解決後の再発防止義務
+
+### 🚨 必須プロセス：エラー解決時の追加作業
+
+**重要：エラーを修正した後は、必ず再発防止のためのルール追加を行うこと**
+
+#### 対象となるエラー
+- ビルドエラー（TypeScript、Next.js、Webpack等）
+- ランタイムエラー（認証、API、状態管理等）
+- デプロイエラー（Vercel、環境変数、設定等）
+- パフォーマンス問題（Core Web Vitals、メモリリーク等）
+
+#### 必須作業フロー
+
+1. **エラー解決**
+   ```bash
+   # エラーの修正作業を完了
+   git add .
+   git commit -m "fix: エラー内容の修正"
+   ```
+
+2. **再発防止ルール追加**
+   ```bash
+   # 必ず以下ファイルにルール追加
+   # - .cursor/rules/dev-rules/nextjs.mdc (Next.js関連)
+   # - .cursor/rules/dev-rules/techstack.mdc (技術スタック関連)
+   # - .cursor/rules/dev-rules/uiux.mdc (UI/UX関連)
+   ```
+
+3. **ルール内容の必須要素**
+   - **エラーの原因説明**
+   - **具体的な解決方法**
+   - **予防のためのチェックリスト**
+   - **実装パターンの例**
+   - **自動チェック方法（可能な場合）**
+
+#### ルール追加のテンプレート
+
+```markdown
+### [エラー分類] - [エラー名]
+
+#### 発生原因
+- 具体的な原因の説明
+
+#### 解決方法
+```typescript
+// 修正前（問題のあるコード）
+// 修正後（正しいコード）
+```
+
+#### 予防チェックリスト
+- [ ] チェック項目1
+- [ ] チェック項目2
+
+#### 自動検出方法
+- 使用可能な場合のみ記載
+```
+
+#### 実装例
+
+**ケース1: TypeScriptエラー**
+```markdown
+### TypeScript - Missing Property Error
+
+#### 発生原因
+- インターフェースに存在しないプロパティを参照
+
+#### 解決方法
+- インターフェース定義の確認
+- プロパティの存在チェック実装
+
+#### 予防策
+- [ ] 型定義ファイルの最新性確認
+- [ ] Optional chainingの使用検討
+```
+
+**ケース2: Next.jsエラー**
+```markdown
+### Next.js - useSearchParams Suspense Error
+
+#### 発生原因
+- useSearchParams()がSuspense境界外で使用される
+
+#### 解決方法
+- 必ずSuspense境界でコンポーネントを囲む
+- 適切なfallback UIの実装
+```
+
+#### 🔄 継続的改善のための記録
+
+1. **エラーログの維持**
+   - 解決したエラーの記録を残す
+   - 再発時の迅速な対応を可能にする
+
+2. **ルールの定期見直し**
+   - 月次でルールの有効性確認
+   - 不要になったルールの整理
+
+3. **チーム内共有**
+   - 新しいルールの周知徹底
+   - 類似エラーの予防教育
+
+#### ❌ 禁止事項
+
+- **エラー修正のみで終了する** - 再発防止策なしでの完了は禁止
+- **ルール追加の先送り** - エラー解決時に必ず同時実行
+- **曖昧なルール記述** - 具体的な実装例と手順を必ず含める
+
+#### ✅ 成功パターン
+
+1. エラー発生 → 修正 → ルール追加 → コミット
+2. 他の開発者がルールを参照して同じエラーを回避
+3. プロジェクト全体の安定性向上
+
+**この再発防止プロセスは開発ワークフローの必須部分です。例外なく実行してください。**
+
+### Next.js API - 開発環境での認証処理統一エラー
+
+#### 発生原因
+- 開発環境で最初のユーザーIDを使用する処理により、実際にログインしているユーザーとデータの所有者が一致しない
+- サイトマップやその他のデータが常に同じユーザー（最初のユーザー）で作成される
+
+#### 解決方法
+```typescript
+// 修正前（問題のあるコード）
+if (process.env.NODE_ENV === 'development') {
+  // 開発環境では最初のユーザーIDを使用
+  const { data: users } = await db.from('users').select('id').limit(1);
+  currentUserId = users?.[0]?.id;
+} else {
+  const { data: { user } } = await supabaseUser.auth.getUser();
+  currentUserId = user?.id;
+}
+
+// 修正後（正しいコード）
+// 開発環境でも実際にログインしているユーザーを使用
+const { data: { user } } = await supabaseUser.auth.getUser();
+const currentUserId = user?.id;
+console.log('現在のログインユーザーID:', currentUserId);
+```
+
+#### 予防チェックリスト
+- [ ] APIルートで環境による分岐処理を避ける
+- [ ] 常に実際の認証ユーザーを使用する
+- [ ] 開発環境でも認証チェックを実行する
+- [ ] ユーザーIDのログ出力を追加して確認する
+
+#### 自動検出方法
+- プログレスバーが動作しない場合はユーザーID不一致を疑う
+- データの所有者が期待と異なる場合は認証処理を確認
+- 開発環境での`users?.[0]?.id`使用をコードレビューで検出
+
+## 13. デバッグコード管理ルール
+
+### 🚨 本番環境へのデバッグコード混入防止
+
+**重要：開発時のデバッグコードが本番環境に残らないよう、厳格な管理を行う**
+
+#### 削除対象となるデバッグコード
+
+1. **console.log()** - 一般的なデバッグ出力
+2. **console.info()** - 情報出力
+3. **console.debug()** - デバッグ専用出力
+4. **alert()** - デバッグ用のアラート
+5. **TODO/FIXME コメント** - 一時的な開発メモ
+
+#### 保持すべきログ
+
+✅ **保持するもの**
+- `console.error()` - エラー処理での重要なログ
+- `console.warn()` - 警告メッセージ
+- 本番環境で必要な運用ログ
+
+#### デバッグコード検出方法
+
+```bash
+# 全ファイルのconsole.log検索
+grep -r "console\.log" src/ --include="*.ts" --include="*.tsx"
+
+# その他のデバッグコード検索
+grep -r "console\.(info|debug)" src/ --include="*.ts" --include="*.tsx"
+grep -r "alert(" src/ --include="*.ts" --include="*.tsx"
+```
+
+#### 開発時の適切なデバッグ方法
+
+❌ **避けるべき方法**
+```typescript
+console.log('ユーザー情報:', user); // 本番環境に残る
+alert('デバッグ中'); // ユーザー体験を阻害
+```
+
+✅ **推奨方法**
+```typescript
+// 開発環境のみでのデバッグ
+if (process.env.NODE_ENV === 'development') {
+  console.log('開発用デバッグ:', user);
+}
+
+// TypeScriptの型チェックを活用
+// コンパイル時に問題を発見
+
+// React Developer Toolsの使用
+// ブラウザの開発者ツールでの確認
+```
+
+#### 自動化による防止策
+
+1. **ESLintルールの追加**
+```json
+{
+  "rules": {
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-alert": "error",
+    "no-debugger": "error"
+  }
+}
+```
+
+2. **pre-commitフックの設定**
+```bash
+# .husky/pre-commit
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# デバッグコードの検出
+if grep -r "console\.log" src/ --include="*.ts" --include="*.tsx"; then
+  echo "❌ console.log が検出されました。削除してからコミットしてください。"
+  exit 1
+fi
+```
+
+3. **ビルド時チェック**
+```bash
+npm run build
+# ビルド時にコンソールログを検出して警告
+```
+
+#### 緊急時のデバッグコード使用ルール
+
+1. **一時的な使用時**
+   - コミット前に必ず削除
+   - PR作成時にレビューで確認
+   - `// TODO: Remove debug code` コメント追加
+
+2. **本番デバッグが必要な場合**
+   - 環境変数での制御を実装
+   - ログレベルの管理システム使用
+   - 適切なロギングライブラリの導入
+
+#### チェックリスト（コミット前必須）
+
+- [ ] `console.log` が残っていないか検索で確認
+- [ ] `alert()` が残っていないか確認  
+- [ ] TODOコメントが適切に管理されているか確認
+- [ ] 開発用の一時的なコードが削除されているか確認
+- [ ] ESLintエラーが解消されているか確認
+
+#### 違反時の対応
+
+**デバッグコードが本番環境で発見された場合：**
+1. 即座に修正PRを作成
+2. 再発防止策の検討と実装
+3. 開発プロセスの見直し
+
+**このルールにより、クリーンで保守性の高いコードベースを維持します。**
+
+#### よくある削除時のエラー
+
+❌ **console.log削除時の構文エラー**
+```typescript
+// 削除前（正常なコード）
+console.log('Element debug:', {
+  shouldApplyBlur,
+  excludeReason,
+  hasDataModal: element.hasAttribute('data-modal')
+});
+
+// 削除後（構文エラー）
+// console.logだけ削除してオブジェクトが残る
+{
+  shouldApplyBlur,
+  excludeReason,  // 構文エラー発生
+}
+```
+
+✅ **正しい削除方法**
+```typescript
+// console.log文全体を削除
+if (process.env.NODE_ENV === 'development') {
+  // デバッグ用コメントに置き換え
+}
+```
+
+#### 削除時の注意点
+
+1. **文全体を削除** - console.logと引数を含む全体を削除
+2. **構文チェック** - 削除後にESLintまたはTypeScriptエラーを確認
+3. **テストビルド** - `npm run build` で構文エラーがないか確認
+4. **段階的削除** - 複数のconsole.logは一つずつ削除してテスト
+
+### 実例: Supabaseクライアント初期化ログの修正
+
+❌ **本番環境でも出力される問題のあるコード**
+```typescript
+console.log('=== Supabaseクライアント初期化 ===');
+console.log('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl);
+console.log('環境:', process.env.NODE_ENV);
+```
+
+✅ **環境変数で制御された適切なコード**
+```typescript
+if (process.env.NODE_ENV === 'development') {
+  console.log('=== Supabaseクライアント初期化 ===');
+  console.log('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl);
+  console.log('環境:', process.env.NODE_ENV);
+}
+```
+
+**効果**: 本番環境でのログノイズ削減、セキュリティ情報の非表示化
+
+### JSON Parse Error - API Response Debugging
+
+#### 発生原因
+- APIレスポンスがHTMLエラーページを返している
+- Content-Typeがapplication/jsonでない
+- レスポンスボディが空または不正な形式
+
+#### 解決方法
+```typescript
+// 修正前（問題のあるコード）
+const result = await response.json();
+
+// 修正後（正しいコード）
+const responseText = await response.text();
+console.log('Response Body (raw):', responseText);
+console.log('Content-Type:', response.headers.get('content-type'));
+
+let result;
+try {
+  result = JSON.parse(responseText);
+  console.log('JSON Parse 成功:', result);
+} catch (parseError) {
+  console.error('JSON Parse エラー:', parseError);
+  console.error('パース対象データ:', responseText);
+  console.error('データ長:', responseText.length);
+  console.error('データの最初の100文字:', responseText.substring(0, 100));
+  throw new Error(`JSON Parse Error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
+}
+```
+
+#### 予防チェックリスト
+- [ ] APIレスポンスの生データを確認
+- [ ] Content-Typeヘッダーを確認
+- [ ] JSONパース前のデータ検証
+- [ ] エラーレスポンスの詳細ログ出力
+
+#### 自動検出方法
+- ESLintルールでresponse.json()の直接使用を警告
+- 開発環境での詳細ログ出力
+
+## 14. Next.js 15対応ルール
+
+### 動的ルートパラメータの型変更
+
+#### 発生原因
+- Next.js 15では動的ルートのパラメータがPromise型に変更された
+- 従来の`{ params: { id: string } }`から`{ params: Promise<{ id: string }> }`に変更
+
+#### 解決方法
+```typescript
+// 修正前（Next.js 14以前）
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
+  // ...
+}
+
+// 修正後（Next.js 15）
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  // ...
+}
+```
+
+#### 予防チェックリスト
+- [ ] 動的ルートのAPIエンドポイントでparamsの型を確認
+- [ ] awaitを使用してparamsを解決
+- [ ] TypeScriptエラーが出ないかビルドテスト実行
+
+#### 自動検出方法
+- `npm run build`でTypeScriptエラーを確認
+- 動的ルートファイルでparamsの型をチェック
+
+### microCMS 関連ルール
+
+**重要: microCMS関連のルールは `.cursor/rules/dev-rules/microcms.mdc` を参照してください**
+
+- microCMS クライアントの使用方法
+- データモデル設計
+- キャッシュ戦略
+- 関連コンテンツの取得パターン
+
+### コンポーネントプロパティの型安全性
+
+#### 発生原因
+- コンポーネントに存在しないプロパティを渡している
+- 型定義と実際の使用が一致していない
+
+#### 解決方法
+```typescript
+// ✅ 正しいコード：型定義に従ったプロパティの使用
+interface ButtonProps {
+  href: string;
+  label: string;
+  className?: string;
+}
+
+export function Button({ href, label, className }: ButtonProps) {
+  return (
+    <Link href={href} className={className}>
+      {label}
+    </Link>
+  );
+}
+```
+
+#### 予防チェックリスト
+- [ ] コンポーネントの型定義を確認
+- [ ] 不要なプロパティを削除
+- [ ] TypeScript の strict モードを有効化
+
+#### 自動検出方法
+- TypeScriptの型チェック
+- ESLintルールで不要なプロパティを警告
+
+### Next.js/Vercel - 型定義ファイル除外によるビルド失敗
+
+#### 発生原因
+- `.vercelignore`でビルドに必要な型定義ファイルを誤って除外し、Vercel上で`Cannot find module '@/types/*'`エラーが発生。
+
+#### 解決方法
+```diff
+- src/types/*.ts
++ # 型定義はデプロイに必要。除外しない
+```
+- 型のみ参照する箇所は`import type`を使用して依存最小化。
+
+```ts
+- import { Company } from '@/types/company';
++ import type { Company } from '@/types/company';
+```
+
+#### 予防チェックリスト
+- [ ] `.vercelignore`にアプリが参照する型/実装ファイルを除外していない
+- [ ] `@/types/*`の参照は`import type`にできるか検討
+- [ ] ローカルで`npm run build`が通ることを確認（型/ESLint含む）
+
+#### 自動検出方法（任意）
+- CIで`npm run build`を実行し、`Cannot find module '@/types/*'`を検出
+- ルール: `.vercelignore`に`src/types/`を含めないことを静的チェック
+
+### React Context - お気に入り機能の状態管理
+
+#### 基本原則
+- このプロジェクトには認証機能はなく、お気に入り機能はフロントエンドのみで管理
+- `FavoriteContext` を使用してクライアントサイドの状態を管理
+
+#### 解決方法
+```typescript
+// ✅ 正しいコード：FavoriteContext の使用
+"use client";
+
+import { FavoriteProvider } from "@/app/context/FavoriteContext";
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <FavoriteProvider>
+      {children}
+    </FavoriteProvider>
+  );
+}
+```
+
+#### 予防チェックリスト
+- [ ] お気に入り状態はクライアントサイドのみで管理
+- [ ] サーバーサイドでのお気に入り状態の取得は不要
+- [ ] ページリロード時に状態がリセットされることを理解
+
+#### 自動検出方法
+- クライアントコンポーネントでのみ `FavoriteContext` を使用
+- サーバーコンポーネントでのお気に入り状態の取得を検出
+
+### Next.js - 本番環境でのfavicon 404エラー
+
+#### 発生原因
+- 本番環境でfaviconファイルが見つからない（404エラー）
+- 複数のfaviconサイズファイルが存在し、一部がデプロイされていない
+- manifest.jsonで参照しているfaviconファイルが存在しない
+
+#### 解決方法
+```typescript
+// 修正前（複雑なfavicon設定）
+icons: {
+  icon: [
+    { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+    { url: '/icon-16x16.png', sizes: '16x16', type: 'image/png' },
+    { url: '/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+    { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+  ],
+  apple: [
+    { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+  ],
+  shortcut: '/favicon.ico',
+},
+
+// 修正後（簡素化されたfavicon設定）
+icons: {
+  icon: '/favicon.ico',
+  apple: '/apple-touch-icon.png',
+},
+```
+
+#### 予防チェックリスト
+- [ ] 基本的なfaviconファイルのみを使用（favicon.ico, apple-touch-icon.png）
+- [ ] 不要なfaviconファイルを削除
+- [ ] manifest.jsonの設定を簡素化
+- [ ] 本番環境でのfaviconファイルの存在確認
+
+#### 自動検出方法
+- ブラウザの開発者ツールで404エラーを監視
+- 本番環境でのfaviconファイルの存在確認
+- ビルド時のfaviconファイルの検証
+
+## 14.5. microCMS 関連ルール
+
+**重要: microCMS関連の詳細なルールは `.cursor/rules/dev-rules/microcms.mdc` を参照してください**
+
+microCMS関連のルールは別ファイルに分離されています。以下の内容が含まれています：
+
+- microCMS クライアントの使用方法
+- データモデル設計（Cases, Categories, News, Tags）
+- キャッシュ戦略
+- 関連コンテンツの取得パターン
+
+## 15. 読み込み中デザインの統一ルール
+
+### 統一されたローディングコンポーネントの使用
+
+#### 発生原因
+- 各ページで異なる読み込み中デザインが使用されている
+- 一貫性のないユーザー体験
+
+#### 解決方法
+**1. 共通ローディングコンポーネントの使用**
+```typescript
+// 修正前（問題のあるコード）
+return (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+      <p className="mt-2 text-gray-600">読み込み中...</p>
+    </div>
+  </div>
+);
+
+// 修正後（正しいコード）
+import { PageLoading, ComponentLoading, InlineLoading } from '@/components/common/ui/loading';
+
+// フルページローディング
+return <PageLoading text="データを読み込み中..." />;
+
+// コンポーネントローディング
+return <ComponentLoading text="データを読み込み中..." />;
+
+// インラインローディング
+return <InlineLoading text="保存中..." />;
+```
+
+**2. ローディングコンポーネントの種類**
+```typescript
+// フルスクリーンローディング（ページ全体）
+<PageLoading text="サイトマップデータを読み込み中..." />
+
+// コンポーネント内ローディング
+<ComponentLoading text="コストデータを読み込み中..." />
+
+// インラインローディング（ボタン内など）
+<InlineLoading text="保存中..." />
+
+// カード内ローディング
+<CardLoading />
+```
+
+**3. バリエーションの使用**
+```typescript
+// スピナー（デフォルト）
+<Loading variant="spinner" size="lg" text="読み込み中..." />
+
+// ドット
+<Loading variant="dots" size="md" text="処理中..." />
+
+// パルス
+<Loading variant="pulse" size="sm" text="更新中..." />
+
+// バー
+<Loading variant="bars" size="md" text="分析中..." />
+```
+
+#### 予防チェックリスト
+- [ ] 新しいページには統一されたローディングコンポーネントを使用
+- [ ] 既存の古いローディングデザインを段階的に置き換え
+- [ ] 適切なバリエーションとサイズを選択
+- [ ] 意味のあるローディングテキストを設定
+
+#### 自動検出方法
+- ESLintルールで古いローディングパターンの使用を警告
+- コードレビューで一貫性をチェック
+- デザインシステムのガイドライン遵守
+
+### AIルール生成時の信頼度上書きエラー
+
+#### 発生原因
+- AIルール生成後に本文中の信頼度を計算値で上書きしてしまう
+- 応答パターン生成でAIルール由来の信頼度を `rule.confidence * 0.9` などで減算している
+- 本来AI応答に含まれる信頼度評価が無視される
+
+#### 解決方法
+```typescript
+// 修正前（問題のあるコード）
+confidence_score: Math.min((rule.confidence || 0.8) * 0.9, 0.95) // 計算で上書き
+
+// 修正後（正しいコード）
+confidence_score: rule.confidence || pattern.confidence_score || 0.8 // 本文中の値を優先
+```
+
+#### 予防チェックリスト
+- [ ] AIルール保存時に `rule.confidence` をそのまま使用
+- [ ] 応答パターン生成でAIルール由来信頼度を計算で変更しない
+- [ ] extractConfidence関数で複数パターンの信頼度表記に対応
+- [ ] フォールバックパターンでもAIルール本来の信頼度を使用
+
+#### 自動検出方法
+- AIルール生成で「信頼度: 85%」と表示されているのに保存時は別の値になる場合
+- 信頼度計算式（* 0.9 や * 0.8）の使用を検出
+
+## 16. 仕様駆動開発（Kiro）ルール
+
+### 基本原則
+
+**重要: `/kiro`コマンドを使用した仕様駆動開発のルール**
+
+このプロジェクトでは、`.kiro`ディレクトリを使用した仕様駆動開発（Spec-Driven Development）を採用しています。キロコマンド（`.cursor/commands/kiro/`）を使用して作業を行う際は、必ず開発ルール（`.cursor/rules/dev-rules/`）を参照してください。
+
+### キロコマンド使用時の必須手順
+
+**重要: キロコマンド実行前の必須確認**
+
+キロコマンド（`/kiro/spec-init`, `/kiro/spec-requirements`, `/kiro/spec-design`, `/kiro/spec-tasks`, `/kiro/spec-impl`など）を実行する際は、**必ず以下の手順を実行すること**：
+
+1. **開発ルールの確認**
+   - `.cursor/rules/dev-rules/`ディレクトリ内の関連ルールファイルを読み込む
+   - 実装対象の機能に関連するルールを特定
+   - 該当するルールセクションをピックアップ
+
+2. **ルールファイルの参照**
+   - `nextjs.mdc` - Next.js実装ルール、API実装、フォーム設計など
+   - `microcms.mdc` - microCMSデータモデル、APIクエリパラメータ、件数表示仕様など
+   - `uiux.mdc` - UI/UX設計、コンポーネント設計、スタイリング規約など
+
+3. **ルールの適用**
+   - ピックアップしたルールを実装に反映
+   - ルールに記載されている実装パターンに従う
+   - チェックリストを確認して実装漏れがないか確認
+
+### 実装例
+
+**キロコマンド実行時のルール参照パターン:**
+
+```typescript
+// ✅ 正しい実装：キロコマンド実行前にルールを確認
+// 1. 実装対象の機能を特定
+// 例: お問い合わせフォームの実装
+
+// 2. 関連するルールファイルを読み込む
+// - nextjs.mdc の「3.5. お問い合わせフォーム設計」セクション
+// - nextjs.mdc の「3. API実装」セクション（サーバーアクション）
+// - uiux.mdc の「フォーム設計」セクション（該当する場合）
+
+// 3. ルールに記載されている実装パターンに従う
+// - フォーム項目の定義
+// - バリデーション関数の実装
+// - Supabase保存とResendメール送信の処理フロー
+```
+
+### キロコマンド一覧
+
+| コマンド | 説明 | 参照すべきルール |
+|---------|------|----------------|
+| `/kiro/spec-init` | 仕様の初期化 | プロジェクト構造、命名規則 |
+| `/kiro/spec-requirements` | 要件定義の生成 | 機能要件、非機能要件 |
+| `/kiro/spec-design` | 設計の生成 | UI/UX設計、コンポーネント設計、API設計 |
+| `/kiro/spec-tasks` | タスクの生成 | 実装パターン、ベストプラクティス |
+| `/kiro/spec-impl` | 実装の実行 | 該当機能の実装ルール（nextjs.mdc, microcms.mdc, uiux.mdc） |
+
+### ルール参照のチェックリスト
+
+キロコマンド実行前に以下を確認：
+
+- [ ] 実装対象の機能を特定
+- [ ] 関連するルールファイル（`nextjs.mdc`, `microcms.mdc`, `uiux.mdc`）を確認
+- [ ] 該当するルールセクションをピックアップ
+- [ ] ルールに記載されている実装パターンを確認
+- [ ] チェックリストを確認して実装漏れがないか確認
+- [ ] ルールに記載されている型定義、バリデーション、エラーハンドリングを確認
+
+### ルールファイルの構成
+
+**`.cursor/rules/dev-rules/`ディレクトリ構造:**
+
+```
+.cursor/rules/dev-rules/
+├── nextjs.mdc          # Next.js実装ルール
+│   ├── ルーティングとファイル構造
+│   ├── コンポーネント設計
+│   ├── API実装
+│   ├── お問い合わせフォーム設計
+│   ├── レスポンシブデザイン
+│   └── ...
+├── microcms.mdc        # microCMS実装ルール
+│   ├── クライアント使用方法
+│   ├── データモデル設計
+│   ├── APIクエリパラメータ仕様
+│   ├── 件数表示仕様
+│   └── キャッシュ戦略
+└── uiux.mdc            # UI/UX設計ルール
+    ├── デザインシステム
+    ├── スタイリング規約
+    ├── コンポーネント設計
+    └── ...
+```
+
+### 実装時の注意点
+
+1. **ルールの優先順位**
+   - 機能固有のルール（例: お問い合わせフォーム設計）を最優先
+   - 一般的な実装ルール（例: API実装、コンポーネント設計）を次に参照
+   - UI/UX設計ルールを最後に参照
+
+2. **ルールの更新**
+   - 実装中に新しいパターンやベストプラクティスを発見した場合
+   - 該当するルールファイルに追記する
+   - 再発防止のためのルール追加を忘れない
+
+3. **ルールの一貫性**
+   - 複数のルールファイルに矛盾がないか確認
+   - ルール間の整合性を保つ
+   - 必要に応じてルールを統合または整理
+
+### 自動検出方法
+
+- キロコマンド実行時にルールファイルの参照を確認
+- 実装コードとルールの整合性をチェック
+- ルールに記載されていない実装パターンの使用を検出
+
+## 17. Playwright MCP使用ルール
+
+### ブラウザ操作とテスト環境確認の統一
+
+#### 発生原因
+- ブラウザでの操作やテスト環境の確認が手動で行われている
+- 一貫性のないテスト環境の確認方法
+- 効率的でないブラウザ操作の検証
+
+#### 解決方法
+
+**1. ブラウザ操作の統一**
+```typescript
+// 修正前（手動でのブラウザ操作）
+// ブラウザを手動で開いて操作を確認
+
+// 修正後（Playwright MCP使用）
+// Playwright MCPを使用してブラウザ操作を自動化
+```
+
+**2. テスト環境確認の統一**
+```typescript
+// 修正前（手動での環境確認）
+// ブラウザで手動でURLにアクセスして確認
+
+// 修正後（Playwright MCP使用）
+// 現在起動しているテスト環境を自動で確認
+```
+
+#### 必須チェックリスト
+- [ ] ブラウザ操作が必要な場合はPlaywright MCPを使用
+- [ ] テストサーバーの確認はPlaywright MCPで実行
+- [ ] 現在起動しているテスト環境を確認してから操作
+- [ ] 手動でのブラウザ操作は避ける
+
+#### 自動検出方法
+- ブラウザ操作の手動指示を検出
+- テスト環境確認の手動指示を検出
+- Playwright MCPの使用状況を監視
+
+#### 実装時の注意点
+1. **テスト環境の確認**: 現在起動しているテスト環境を最初に確認
+2. **効率的な操作**: Playwright MCPの機能を最大限活用
+3. **エラーハンドリング**: ブラウザ操作エラーの適切な処理
+4. **ログ出力**: 操作結果の詳細なログ記録
+
+### Playwright MCP使用パターン
+
+#### 基本的なブラウザ操作
+```typescript
+// ページ遷移
+await mcp_playwright_browser_navigate({ url: 'http://localhost:3000' });
+
+// 要素のクリック
+await mcp_playwright_browser_click({ 
+  element: 'ボタン要素', 
+  ref: 'button-ref' 
+});
+
+// テキスト入力
+await mcp_playwright_browser_type({ 
+  element: '入力フィールド', 
+  ref: 'input-ref', 
+  text: '入力テキスト' 
+});
+
+// スクリーンショット取得
+await mcp_playwright_browser_take_screenshot({ 
+  filename: 'test-result.png' 
+});
+```
+
+#### テスト環境確認
+```typescript
+// 現在のテスト環境を確認
+await mcp_playwright_browser_navigate({ url: 'http://localhost:3000' });
+
+// ページの状態を確認
+const snapshot = await mcp_playwright_browser_snapshot({});
+
+// コンソールメッセージを確認
+const consoleMessages = await mcp_playwright_browser_console_messages({});
+```
+
+#### エラーハンドリング
+```typescript
+try {
+  await mcp_playwright_browser_navigate({ url: 'http://localhost:3000' });
+} catch (error) {
+  console.error('ブラウザ操作エラー:', error);
+  // 適切なエラー処理
+}
+```
+
+**このルールにより、一貫性のある効率的なブラウザ操作とテスト環境確認が可能になります。**
+
+
+#### 自動検出方法
+- AIルール生成で「信頼度: 85%」と表示されているのに保存時は別の値になる場合
+- 信頼度計算式（* 0.9 や * 0.8）の使用を検出
