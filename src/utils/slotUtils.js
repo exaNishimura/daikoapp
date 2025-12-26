@@ -4,6 +4,7 @@
 
 import { exceedsBusinessHours } from './timeUtils'
 import { dateToRowIndex, dateToEndRowIndex, rowIndexToDate, minutesToRows, snapToRowIndex } from './rowUtils'
+import { isVehicleOperational } from './operationStatusUtils'
 
 /**
  * 車両のスロットリストから最短の空き時間を見つける（行番号ベース）
@@ -147,7 +148,7 @@ export function findEarliestAvailableSlot(slots, orderStartTime, duration, prefe
  * @param {boolean} preferExactTime - trueの場合、指定された時刻を優先（現在時刻の影響を受けない）
  * @returns {Object|null} - { vehicleId, startAt } または null
  */
-export function findEarliestAvailableSlotAcrossVehicles(vehicles, allSlots, orderStartTime, duration, preferExactTime = false) {
+export function findEarliestAvailableSlotAcrossVehicles(vehicles, allSlots, orderStartTime, duration, preferExactTime = false, operationStatusesMap = {}) {
   if (!vehicles || vehicles.length === 0) {
     return null
   }
@@ -157,6 +158,13 @@ export function findEarliestAvailableSlotAcrossVehicles(vehicles, allSlots, orde
   let earliestRowIndex = null
 
   for (const vehicle of vehicles) {
+    // 稼働状況チェック
+    const statuses = operationStatusesMap[vehicle.id] || []
+    if (!isVehicleOperational(vehicle.id, orderStartTime, statuses)) {
+      // 非稼働車両はスキップ
+      continue
+    }
+
     // この車両のスロットを取得（start_atでソート）
     const vehicleSlots = allSlots
       .filter(slot => slot.vehicle_id === vehicle.id)
@@ -165,6 +173,13 @@ export function findEarliestAvailableSlotAcrossVehicles(vehicles, allSlots, orde
     const startAt = findEarliestAvailableSlot(vehicleSlots, orderStartTime, duration, preferExactTime)
     
     if (startAt) {
+      // 稼働状況を再チェック（開始時刻での稼働状況）
+      const statuses = operationStatusesMap[vehicle.id] || []
+      if (!isVehicleOperational(vehicle.id, startAt, statuses)) {
+        // 開始時刻で非稼働の場合はスキップ
+        continue
+      }
+
       // 行番号で比較（より早い行番号を優先）
       const rowIndex = dateToRowIndex(startAt)
       

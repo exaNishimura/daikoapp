@@ -2,10 +2,11 @@ import { useDroppable } from '@dnd-kit/core'
 import { SlotComponent } from './SlotComponent'
 import { checkSlotConflict } from '@/services/conflictDetectionService'
 import { useState, useEffect, useRef } from 'react'
-import { dateToRowIndex, rowIndexToPixels } from '@/utils/rowUtils'
+import { dateToRowIndex, rowIndexToPixels, rowIndexToDate } from '@/utils/rowUtils'
+import { isVehicleOperational } from '@/utils/operationStatusUtils'
 import './TimelineGrid.css'
 
-export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosition, draggingSlotVehicleId, onOrderSelect, onOrderUpdate, onSlotsUpdate }) {
+export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosition, draggingSlotVehicleId, onOrderSelect, onOrderUpdate, onSlotsUpdate, operationStatuses = {} }) {
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
   const headerScrollRef = useRef(null)
@@ -82,19 +83,22 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
   }
 
   // 時間軸の生成（18:00〜翌06:00、15分刻み）
+  // 営業時間は18:00〜翌06:00なので、06:00は含まない（06:00は営業時間外）
   const generateTimeSlots = () => {
     const slots = []
+    // 18:00〜23:45（24個）
     for (let hour = 18; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
         slots.push({ hour, minute })
       }
     }
-    for (let hour = 0; hour <= 6; hour++) {
+    // 00:00〜05:45（24個）
+    for (let hour = 0; hour < 6; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
-        if (hour === 6 && minute > 0) break
         slots.push({ hour, minute })
       }
     }
+    // 合計48個（0-47）
     return slots
   }
 
@@ -170,11 +174,33 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
         <div className="timeline-header">
           <div className="time-axis-label" style={{ padding: '12px 16px' }}>時間</div>
           <div className="vehicles-header">
-            {vehicles.map((vehicle) => (
-              <div key={vehicle.id} className="vehicle-header-label" style={{ padding: '12px 16px' }}>
-                {vehicle.name}
-              </div>
-            ))}
+            {vehicles.map((vehicle) => {
+              // 稼働状況を判定（現在時刻で判定）
+              const statuses = operationStatuses[vehicle.id] || []
+              const now = new Date()
+              const isOperational = isVehicleOperational(vehicle.id, now, statuses)
+              
+              return (
+                <div key={vehicle.id} className="vehicle-header-label" style={{ padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                    <span>{vehicle.name}</span>
+                    {!isOperational && (
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: '#999',
+                          flexShrink: 0,
+                        }}
+                        title="非稼働中"
+                      />
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -225,6 +251,7 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
                   dragOverPosition={dragOverPosition?.vehicleId === vehicle.id ? dragOverPosition : null}
                   draggingSlotVehicleId={draggingSlotVehicleId}
                   onSlotSelect={onOrderSelect}
+                  operationStatuses={operationStatuses[vehicle.id] || []}
                 />
               ))}
             </div>
@@ -267,7 +294,33 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
   )
 }
 
-function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeight, dragOverPosition, onSlotSelect, draggingSlotVehicleId }) {
+function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeight, dragOverPosition, onSlotSelect, draggingSlotVehicleId, operationStatuses = [] }) {
+  // 営業日の基準日を計算
+  const now = new Date()
+  const localHours = now.getHours()
+  let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  
+  if (localHours < 6) {
+    // 06:00未満の場合は前日の営業日として扱う
+    businessDay.setDate(businessDay.getDate() - 1)
+  }
+
+  // 各行（15分刻み）の稼働状況を判定
+  const getOperationalStatusForRow = (rowIndex) => {
+    // rowIndexが有効な範囲（0-47）内かチェック
+    if (rowIndex < 0 || rowIndex > 47) {
+      // 範囲外の場合はデフォルトで稼働（エラーを避けるため）
+      return true
+    }
+    try {
+      const rowDate = rowIndexToDate(rowIndex, businessDay)
+      return isVehicleOperational(vehicle.id, rowDate, operationStatuses)
+    } catch (error) {
+      // エラーが発生した場合はデフォルトで稼働
+      console.warn('Error checking operational status for row:', rowIndex, error)
+      return true
+    }
+  }
   const { setNodeRef, isOver } = useDroppable({
     id: `vehicle-${vehicle.id}`,
     data: {
@@ -286,10 +339,32 @@ function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeig
       className={`vehicle-column ${shouldHighlight ? 'drag-over' : ''}`}
       style={{ height: `${totalHeight}px` }}
     >
-      {/* 時間行の区切り線 */}
-      {timeSlots.map((ts, index) => (
-        <div key={index} className="time-cell-divider" style={{ top: `${index * 20}px` }} />
-      ))}
+      {/* 時間行の区切り線と非稼働時間帯の表示 */}
+      {timeSlots.map((ts, index) => {
+        const isOperational = getOperationalStatusForRow(index)
+        return (
+          <div key={index}>
+            <div className="time-cell-divider" style={{ top: `${index * 20}px` }} />
+            {!isOperational && (
+              <div
+                className="non-operational-time"
+                style={{
+                  position: 'absolute',
+                  top: `${index * 20}px`,
+                  left: 0,
+                  right: 0,
+                  height: '20px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 4px, rgba(0, 0, 0, 0.1) 8px)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+                title="非稼働時間帯"
+              />
+            )}
+          </div>
+        )
+      })}
 
       {/* ドロップ予定位置のハイライト（行全体） */}
       {dragOverPosition && dragOverPosition.top >= 0 && (

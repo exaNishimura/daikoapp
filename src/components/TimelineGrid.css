@@ -200,3 +200,18 @@
   }
 }
 
+/* 非稼働時間帯のスタイル */
+.non-operational-time {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.05);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 0, 0, 0.1) 4px,
+    rgba(0, 0, 0, 0.1) 8px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+

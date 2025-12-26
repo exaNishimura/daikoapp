@@ -3,9 +3,11 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { TimelineGrid } from './TimelineGrid'
 import { OrderDetailPanel } from './OrderDetailPanel'
 import { OrderFormModal } from './OrderFormModal'
+import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { getOrders, getOrderById } from '@/services/orderService'
 import { getVehicles } from '@/services/vehicleService'
 import { createSlot, updateSlot, getSlotsByVehicleAndDate } from '@/services/slotService'
+import { getVehicleOperationStatuses } from '@/services/vehicleOperationService'
 import { calculateBuffer } from '@/services/routeService'
 import { supabase } from '@/lib/supabase'
 import {
@@ -21,6 +23,7 @@ import {
   rowIndexToPixels,
 } from '@/utils/rowUtils'
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
+import { isVehicleOperational } from '@/utils/operationStatusUtils'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
@@ -32,13 +35,26 @@ import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
 import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import SettingsIcon from '@mui/icons-material/Settings'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import List from '@mui/material/List'
+import ListItem from '@mui/material/ListItem'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
 
 export function DispatchBoard() {
   const [orders, setOrders] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [slots, setSlots] = useState([])
+  const [operationStatuses, setOperationStatuses] = useState({}) // vehicleIdをキーとした稼働状況マップ
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isOperationStatusModalOpen, setIsOperationStatusModalOpen] = useState(false)
+  const [isVehicleSelectDialogOpen, setIsVehicleSelectDialogOpen] = useState(false)
+  const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [dragOverPosition, setDragOverPosition] = useState(null) // { vehicleId, top }
@@ -65,8 +81,34 @@ export function DispatchBoard() {
   }, [slots])
   
   const earliestAvailableTime = useMemo(() => {
-    return getEarliestAvailableTimeWithSlots(vehicles, slots, 30)
-  }, [vehicles, slots])
+    return getEarliestAvailableTimeWithSlots(vehicles, slots, 30, operationStatuses)
+  }, [vehicles, slots, operationStatuses])
+
+  // 稼働状況データを取得
+  const loadOperationStatuses = useCallback(async (vehiclesList) => {
+    if (!vehiclesList || vehiclesList.length === 0) {
+      setOperationStatuses({})
+      return
+    }
+
+    try {
+      const vehicleIds = vehiclesList.map(v => v.id)
+      const today = new Date()
+      const todayStr = today.toISOString().split('T')[0]
+
+      const { data, error } = await getVehicleOperationStatuses(vehicleIds, todayStr)
+
+      if (error) {
+        console.error('Error loading operation statuses:', error)
+        setOperationStatuses({})
+      } else {
+        setOperationStatuses(data || {})
+      }
+    } catch (error) {
+      console.error('Error loading operation statuses:', error)
+      setOperationStatuses({})
+    }
+  }, [])
 
   // loadSlotsとloadDataを先に定義（useEffectで使用するため）
   const loadSlots = useCallback(async (vehiclesList, preserveNewSlots = false) => {
@@ -139,11 +181,13 @@ export function DispatchBoard() {
         setVehicles([])
       } else {
         setVehicles(vehiclesResult.data || [])
-        // 車両が読み込まれたらスロットも取得
+        // 車両が読み込まれたらスロットと稼働状況も取得
         if (vehiclesResult.data && vehiclesResult.data.length > 0) {
           loadSlots(vehiclesResult.data)
+          loadOperationStatuses(vehiclesResult.data)
         } else {
           setSlots([])
+          setOperationStatuses({})
         }
       }
     } catch (error) {
@@ -202,12 +246,32 @@ export function DispatchBoard() {
       )
       .subscribe()
 
+    // vehicle_operation_statusテーブルの変更を監視
+    const operationStatusChannel = supabase
+      .channel('operation-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE すべて
+          schema: 'public',
+          table: 'vehicle_operation_status',
+        },
+        (payload) => {
+          // 稼働状況を再読み込み（車両データが必要）
+          if (vehicles.length > 0) {
+            loadOperationStatuses(vehicles)
+          }
+        }
+      )
+      .subscribe()
+
     // クリーンアップ
     return () => {
       ordersChannel.unsubscribe()
       slotsChannel.unsubscribe()
+      operationStatusChannel.unsubscribe()
     }
-  }, [vehicles, loadData, loadSlots])
+  }, [vehicles, loadData, loadSlots, loadOperationStatuses])
 
   // マウス/タッチ位置を追跡し、ドラッグ中のハイライト位置をリアルタイム更新
   useEffect(() => {
@@ -334,7 +398,8 @@ export function DispatchBoard() {
           slots,
           orderStartTime,
           totalDuration,
-          preferExactTime
+          preferExactTime,
+          operationStatuses
         )
 
         if (availableSlot) {
@@ -420,7 +485,10 @@ export function DispatchBoard() {
       setSelectedOrder(null)
     }
     // スロットも再読み込み（削除された依頼に関連するスロットが削除されている可能性があるため）
-    await loadSlots(vehicles)
+    if (vehicles.length > 0) {
+      await loadSlots(vehicles)
+      await loadOperationStatuses(vehicles)
+    }
   }
 
   // マウス/タッチ位置からタイムライン内のY座標を計算する関数
@@ -616,6 +684,13 @@ export function DispatchBoard() {
       const endAt = new Date(startAt)
       endAt.setMinutes(endAt.getMinutes() + totalDuration)
 
+      // 稼働状況チェック
+      const statuses = operationStatuses[newVehicleId] || []
+      if (!isVehicleOperational(newVehicleId, startAt, statuses)) {
+        alert('この時間帯は車両が稼働していないため配置できません。')
+        return
+      }
+
       // 06:00超過チェック
       if (exceedsBusinessHours(endAt)) {
         alert('06:00を超えるため配置できません。開始時刻を前にずらしてください。')
@@ -648,6 +723,79 @@ export function DispatchBoard() {
 
       // 少し待ってからスロットを再読み込みして確実に同期（データベースへの書き込み完了を待つ）
       // preserveNewSlots=trueで、更新したスロットを保持する
+      setTimeout(async () => {
+        await loadSlots(vehicles, true)
+      }, 500)
+    }
+
+    // 未割当依頼のドラッグ&ドロップ
+    if (active.data.current?.type === 'order' && over.data.current?.vehicleId) {
+      const order = active.data.current.order
+      const targetVehicleId = over.data.current.vehicleId
+
+      if (!order) {
+        console.error('Order data not found')
+        return
+      }
+
+      // ドロップ位置から時刻を計算
+      const newStartAt = calculateTimeFromDropPosition(targetVehicleId)
+      
+      if (!newStartAt) {
+        alert('ドロップ位置から時刻を計算できませんでした')
+        return
+      }
+
+      // 稼働状況チェック
+      const statuses = operationStatuses[targetVehicleId] || []
+      if (!isVehicleOperational(targetVehicleId, newStartAt, statuses)) {
+        alert('この時間帯は車両が稼働していないため配置できません。')
+        return
+      }
+
+      // 依頼の所要時間を計算
+      const baseDuration = order.base_duration_min || 30
+      const buffer = order.buffer_min || calculateBuffer(baseDuration)
+      const totalDuration = baseDuration + buffer
+
+      const endAt = new Date(newStartAt)
+      endAt.setMinutes(endAt.getMinutes() + totalDuration)
+
+      // 06:00超過チェック
+      if (exceedsBusinessHours(endAt)) {
+        alert('06:00を超えるため配置できません。開始時刻を前にずらしてください。')
+        return
+      }
+
+      // スロットを作成
+      const { data: newSlot, error: slotError } = await createSlot({
+        order_id: order.id,
+        vehicle_id: targetVehicleId,
+        start_at: newStartAt.toISOString(),
+        end_at: endAt.toISOString(),
+        status: 'TENTATIVE',
+      })
+
+      if (slotError) {
+        console.error('Error creating slot:', slotError)
+        alert('スロットの作成に失敗しました')
+        return
+      }
+
+      // スロットを即座に追加
+      if (newSlot) {
+        setSlots((prev) => [...prev, newSlot])
+      }
+
+      // 依頼のステータスを更新
+      const { data: updatedOrder, error: orderUpdateError } = await getOrderById(order.id)
+      if (!orderUpdateError && updatedOrder) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === order.id ? updatedOrder : o))
+        )
+      }
+
+      // 少し待ってからスロットを再読み込み
       setTimeout(async () => {
         await loadSlots(vehicles, true)
       }, 500)
@@ -717,14 +865,34 @@ export function DispatchBoard() {
                 </Typography>
               </Box>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setIsModalOpen(true)}
-              sx={{ ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              依頼
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <Button
+                variant="outlined"
+                startIcon={<SettingsIcon />}
+                onClick={() => {
+                  // 車両選択ダイアログを表示
+                  if (vehicles.length === 0) return
+                  if (vehicles.length === 1) {
+                    // 車両が1台のみの場合は直接モーダルを開く
+                    setSelectedVehicleForStatus(vehicles[0])
+                    setIsOperationStatusModalOpen(true)
+                  } else {
+                    // 複数車両の場合は選択ダイアログを表示
+                    setIsVehicleSelectDialogOpen(true)
+                  }
+                }}
+                disabled={vehicles.length === 0}
+              >
+                設定
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setIsModalOpen(true)}
+              >
+                依頼
+              </Button>
+            </Box>
           </Toolbar>
         </AppBar>
 
@@ -782,6 +950,7 @@ export function DispatchBoard() {
                   vehicles={vehicles}
                   orders={orders}
                   slots={slots}
+                  operationStatuses={operationStatuses}
                   dragOverPosition={dragOverPosition}
                   draggingSlotVehicleId={draggingSlotVehicleId}
                   onOrderSelect={handleOrderSelect}
@@ -825,6 +994,52 @@ export function DispatchBoard() {
           open={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onOrderCreated={handleOrderCreated}
+        />
+        {/* 車両選択ダイアログ */}
+        <Dialog
+          open={isVehicleSelectDialogOpen}
+          onClose={() => setIsVehicleSelectDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>車両を選択してください</DialogTitle>
+          <DialogContent>
+            <List>
+              {vehicles.map((vehicle) => (
+                <ListItem key={vehicle.id} disablePadding>
+                  <ListItemButton
+                    onClick={() => {
+                      setSelectedVehicleForStatus(vehicle)
+                      setIsVehicleSelectDialogOpen(false)
+                      setIsOperationStatusModalOpen(true)
+                    }}
+                  >
+                    <ListItemText primary={vehicle.name} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsVehicleSelectDialogOpen(false)}>
+              キャンセル
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <VehicleOperationStatusModal
+          open={isOperationStatusModalOpen}
+          onClose={() => {
+            setIsOperationStatusModalOpen(false)
+            setSelectedVehicleForStatus(null)
+          }}
+          onStatusUpdated={() => {
+            // 稼働状況が更新されたら再読み込み
+            if (vehicles.length > 0) {
+              loadOperationStatuses(vehicles)
+            }
+          }}
+          vehicleId={selectedVehicleForStatus?.id}
+          vehicleName={selectedVehicleForStatus?.name}
         />
       </Box>
     </DndContext>

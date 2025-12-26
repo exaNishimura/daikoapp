@@ -17,8 +17,10 @@ SPA + REST API（クライアント・サーバー分離）。フロントエン
 
 - **React**: UI構築、状態管理
 - **Vite**: 開発サーバー・ビルドツール（HMR対応）
+- **Material-UI (@mui/material)**: 主要UIコンポーネントライブラリ（AppBar, Button, Dialog, TextField等）
 - **@dnd-kit/core**: ドラッグ&ドロップ機能
-- **@supabase/supabase-js**: Supabaseクライアントライブラリ
+- **@supabase/supabase-js**: Supabaseクライアントライブラリ（Realtime機能含む）
+- **Tailwind CSS**: 補助的なスタイリング（ユーティリティクラス）
 - **Google Maps API**: ルート計算
 
 ## Development Standards
@@ -62,8 +64,10 @@ SPA + REST API（クライアント・サーバー分離）。フロントエン
 
 - **Vite選択理由**: 高速なHMRとシンプルな設定。SPA構成に適している
 - **SPA + REST API**: クライアント・サーバー分離により、将来の拡張性を確保
+- **Material-UI**: 豊富なコンポーネントとテーマ機能。MVPでは基本コンポーネントを中心に使用
 - **@dnd-kit**: React向けのドラッグ&ドロップライブラリ。タイムライン操作に最適
-- **Supabase**: PostgreSQLベースのマネージドデータベース。リアルタイム機能や認証機能も利用可能（MVPでは基本機能のみ使用）
+- **Supabase**: PostgreSQLベースのマネージドデータベース。Realtime機能を使用してデータ変更を自動反映（orders, dispatch_slotsテーブルを監視）
+- **Tailwind CSS**: Material-UIと併用。補助的なスタイリングに使用
 - **Google Maps API**: ルート計算の標準API。失敗時はnullを返し、手動再計算を可能にする
 
 ---

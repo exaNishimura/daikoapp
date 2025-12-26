@@ -1,9 +1,14 @@
 import { supabase } from '@/lib/supabase'
+import { getVehicleOperationStatuses } from './vehicleOperationService'
+import { getOperationalVehicles } from '@/utils/operationStatusUtils'
 
 /**
  * 全車両取得
+ * @param {Object} options - オプション
+ * @param {Date} options.targetTime - 稼働状況を判定する時刻（指定しない場合は全車両を返す）
+ * @returns {Promise<{data: Array|null, error: Error|null}>}
  */
-export async function getVehicles() {
+export async function getVehicles(options = {}) {
   if (!supabase) {
     return { data: null, error: new Error('Supabase client not initialized') }
   }
@@ -16,6 +21,26 @@ export async function getVehicles() {
       .order('sort_order', { ascending: true })
 
     if (error) throw error
+
+    // 稼働状況チェックが指定されている場合
+    if (options.targetTime) {
+      const vehicleIds = (data || []).map(v => v.id)
+      const today = new Date(options.targetTime)
+      const todayStr = today.toISOString().split('T')[0]
+
+      // 稼働状況を取得
+      const { data: operationStatusesMap, error: statusError } = await getVehicleOperationStatuses(vehicleIds, todayStr)
+
+      if (statusError) {
+        // エラーが発生した場合は全車両を返す（フォールバック）
+        return { data, error: null }
+      }
+
+      // 稼働中の車両のみをフィルタ
+      const operationalVehicles = getOperationalVehicles(data || [], options.targetTime, operationStatusesMap || {})
+      return { data: operationalVehicles, error: null }
+    }
+
     return { data, error: null }
   } catch (error) {
     console.error('Error fetching vehicles:', error)

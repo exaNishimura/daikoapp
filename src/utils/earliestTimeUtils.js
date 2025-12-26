@@ -10,9 +10,10 @@ import { calculateBuffer } from '@/services/routeService'
  * @param {Array} vehicles - 車両の配列
  * @param {Array} slots - すべてのスロットの配列
  * @param {number} defaultDuration - デフォルトの所要時間（分、デフォルト: 30分）
+ * @param {Object} operationStatusesMap - vehicleIdをキーとした稼働状況設定のマップ（オプション）
  * @returns {string} 直近依頼をとれる時間の文字列（例: "今すぐ" または "20:15"）
  */
-export function getEarliestAvailableTimeWithSlots(vehicles, slots, defaultDuration = 30) {
+export function getEarliestAvailableTimeWithSlots(vehicles, slots, defaultDuration = 30, operationStatusesMap = {}) {
   if (!vehicles || vehicles.length === 0) {
     return '車両がありません'
   }
@@ -37,7 +38,9 @@ export function getEarliestAvailableTimeWithSlots(vehicles, slots, defaultDurati
     vehicles,
     slots || [],
     searchStartTime,
-    totalDuration
+    totalDuration,
+    false, // preferExactTime
+    operationStatusesMap
   )
 
   if (!availableSlot) {
