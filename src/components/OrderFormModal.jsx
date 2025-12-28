@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createOrder, updateOrder } from '@/services/orderService'
 import { estimateDuration, calculateBuffer } from '@/services/routeService'
+import { getVehicles } from '@/services/vehicleService'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -13,6 +14,10 @@ import RadioGroup from '@mui/material/RadioGroup'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
+import IconButton from '@mui/material/IconButton'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/Delete'
+import Stack from '@mui/material/Stack'
 
 // 現在時刻をdatetime-local形式に変換（15分刻みにスナップ）
 const getCurrentDateTimeLocal = () => {
@@ -63,6 +68,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     pickup_location: '',
     pickup_address: '',
     dropoff_address: '',
+    waypoints: [],
     contact_phone: '',
     car_model: '',
     car_plate: '',
@@ -81,6 +87,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
         pickup_location: '',
         pickup_address: '',
         dropoff_address: '',
+        waypoints: [],
         contact_phone: '',
         car_model: '',
         car_plate: '',
@@ -179,11 +186,16 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
 
     try {
       // 依頼データの準備
+      const waypoints = formData.waypoints
+        .map((wp) => wp.trim())
+        .filter((wp) => wp.length > 0)
+
       const orderData = {
         order_type: formData.order_type,
         pickup_location: formData.pickup_location.trim() || null,
         pickup_address: formData.pickup_address.trim(),
         dropoff_address: formData.dropoff_address.trim(),
+        waypoints: waypoints.length > 0 ? waypoints : null,
         contact_phone: formData.contact_phone.trim() || null,
         car_model: formData.car_model.trim() || null,
         car_plate: formData.car_plate.trim() || null,
@@ -205,7 +217,28 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
 
       // ルート計算（バックグラウンド）
       // ルート計算が完了するまで待機してから依頼を作成
-      const { duration, error } = await estimateDuration(order.pickup_address, order.dropoff_address)
+      
+      // 待機場所住所を取得（最初の車両の待機場所住所を使用）
+      let waitingLocationAddress = null
+      try {
+        const { data: vehicles } = await getVehicles()
+        if (vehicles && vehicles.length > 0) {
+          // 最初の車両の待機場所住所を使用
+          waitingLocationAddress = vehicles[0].waiting_location_address || null
+        }
+      } catch (vehicleError) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching vehicles for waiting location:', vehicleError)
+        }
+        // エラーでも続行（待機場所なしで計算）
+      }
+
+      const { duration, error } = await estimateDuration(
+        order.pickup_address,
+        order.dropoff_address,
+        waypoints.length > 0 ? waypoints : null,
+        waitingLocationAddress
+      )
       
       if (error) {
         if (process.env.NODE_ENV === 'development') {
@@ -362,6 +395,62 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             fullWidth
             required
           />
+
+          {/* 経由地 */}
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                経由地
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    waypoints: [...prev.waypoints, ''],
+                  }))
+                }}
+              >
+                追加
+              </Button>
+            </Box>
+            <Stack spacing={1.5}>
+              {formData.waypoints.map((waypoint, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <TextField
+                    label={`経由地 ${index + 1}`}
+                    value={waypoint}
+                    onChange={(e) => {
+                      const newWaypoints = [...formData.waypoints]
+                      newWaypoints[index] = e.target.value
+                      setFormData((prev) => ({ ...prev, waypoints: newWaypoints }))
+                    }}
+                    multiline
+                    rows={2}
+                    placeholder="例: 三重県鈴鹿市..."
+                    fullWidth
+                    size="small"
+                  />
+                  <IconButton
+                    onClick={() => {
+                      const newWaypoints = formData.waypoints.filter((_, i) => i !== index)
+                      setFormData((prev) => ({ ...prev, waypoints: newWaypoints }))
+                    }}
+                    sx={{ mt: 0.5 }}
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              ))}
+              {formData.waypoints.length === 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  経由地はありません
+                </Typography>
+              )}
+            </Stack>
+          </Box>
 
           <TextField
             label="連絡先電話番号"

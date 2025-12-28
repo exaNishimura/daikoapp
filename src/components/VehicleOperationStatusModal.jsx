@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getVehicleOperationStatus, setVehicleOperationStatus, deleteVehicleOperationStatus } from '@/services/vehicleOperationService'
+import { getVehicles, updateVehicle } from '@/services/vehicleService'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -24,16 +25,19 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [statuses, setStatuses] = useState([])
+  const [vehicle, setVehicle] = useState(null)
+  const [waitingLocationAddress, setWaitingLocationAddress] = useState('')
   const [formData, setFormData] = useState({
     type: 'DEFAULT',
     date: '',
     time: '',
   })
 
-  // モーダルが開かれたときに稼働状況を取得
+  // モーダルが開かれたときに稼働状況と車両情報を取得
   useEffect(() => {
     if (open && vehicleId) {
       loadStatuses()
+      loadVehicle()
     }
   }, [open, vehicleId])
 
@@ -61,6 +65,30 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
       setStatuses([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadVehicle = async () => {
+    if (!vehicleId) return
+
+    try {
+      const { data: vehicles, error: fetchError } = await getVehicles()
+      if (fetchError) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error loading vehicle:', fetchError)
+        }
+        return
+      }
+
+      const foundVehicle = vehicles?.find(v => v.id === vehicleId)
+      if (foundVehicle) {
+        setVehicle(foundVehicle)
+        setWaitingLocationAddress(foundVehicle.waiting_location_address || '')
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading vehicle:', err)
+      }
     }
   }
 
@@ -247,6 +275,23 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
           </Box>
         )}
 
+        <Divider sx={{ my: 3 }} />
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            待機場所住所
+          </Typography>
+          <TextField
+            label="待機場所住所"
+            value={waitingLocationAddress}
+            onChange={(e) => setWaitingLocationAddress(e.target.value)}
+            multiline
+            rows={2}
+            placeholder="例: 三重県鈴鹿市平田新町2-20"
+            fullWidth
+            helperText="目的地から待機場所への所要時間を計算するために使用されます"
+          />
+        </Box>
+
         {statuses.length > 0 && (
           <>
             <Divider sx={{ my: 3 }} />
@@ -291,7 +336,33 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
         <Button onClick={onClose} disabled={loading}>
           キャンセル
         </Button>
-        <Button onClick={handleSave} variant="contained" disabled={loading}>
+        <Button
+          onClick={async () => {
+            // 待機場所住所を保存
+            if (vehicleId) {
+              setLoading(true)
+              try {
+                const { error: updateError } = await updateVehicle(vehicleId, {
+                  waiting_location_address: waitingLocationAddress.trim() || null,
+                })
+                if (updateError) {
+                  setError(`待機場所住所の保存に失敗: ${updateError.message}`)
+                  setLoading(false)
+                  return
+                }
+                // 稼働状況も保存
+                await handleSave()
+              } catch (err) {
+                setError(`エラーが発生しました: ${err.message}`)
+                setLoading(false)
+              }
+            } else {
+              await handleSave()
+            }
+          }}
+          variant="contained"
+          disabled={loading}
+        >
           保存
         </Button>
       </DialogActions>

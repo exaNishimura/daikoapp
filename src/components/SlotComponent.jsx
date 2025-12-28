@@ -169,7 +169,19 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
       </div>
       <div className="slot-body">
         <div className="slot-route">
-          {shortenAddress(order.pickup_address)} →{' '}
+          {shortenAddress(order.pickup_address)}
+          {order.waypoints && order.waypoints.length > 0 && (
+            <>
+              {' → '}
+              {order.waypoints.map((wp, idx) => (
+                <span key={idx}>
+                  {shortenAddress(wp)}
+                  {idx < order.waypoints.length - 1 ? ' → ' : ''}
+                </span>
+              ))}
+              {' → '}
+            </>
+          )}
           {shortenAddress(order.dropoff_address)}
         </div>
         {/* アイコンは非表示（長押しで情報を表示） */}

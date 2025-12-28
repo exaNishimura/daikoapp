@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { updateOrder, cancelOrder } from '@/services/orderService'
 import { confirmSlot, deleteSlot, createSlot } from '@/services/slotService'
 import { estimateDuration, calculateBuffer } from '@/services/routeService'
 import { getOrderById } from '@/services/orderService'
+import { getVehicles } from '@/services/vehicleService'
 import { supabase } from '@/lib/supabase'
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import Box from '@mui/material/Box'
@@ -22,10 +23,16 @@ import RouteIcon from '@mui/icons-material/Route'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles = [], slots = [] }) {
+  // この依頼に関連する車両を取得
+  const relatedVehicle = slots.length > 0
+    ? vehicles.find(v => v.id === slots[0].vehicle_id)
+    : null
+
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState({
     pickup_address: order.pickup_address,
     dropoff_address: order.dropoff_address,
+    waypoints: order.waypoints || [],
     contact_phone: order.contact_phone || '',
     car_model: order.car_model || '',
     car_plate: order.car_plate || '',
@@ -34,8 +41,48 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
     base_duration_min: order.base_duration_min || 30,
     buffer_min: order.buffer_min || 10,
   })
+  const [waitingLocationDuration, setWaitingLocationDuration] = useState(null)
+  const [calculatingWaitingDuration, setCalculatingWaitingDuration] = useState(false)
   const [loading, setLoading] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
+
+  // 待機場所住所への所要時間を計算（車両の待機場所住所を使用）
+  useEffect(() => {
+    const calculateWaitingLocationDuration = async () => {
+      if (!order.dropoff_address || !relatedVehicle?.waiting_location_address) {
+        setWaitingLocationDuration(null)
+        return
+      }
+
+      setCalculatingWaitingDuration(true)
+      try {
+        const { duration, error } = await estimateDuration(
+          order.dropoff_address,
+          relatedVehicle.waiting_location_address,
+          null
+        )
+
+        if (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Error calculating waiting location duration:', error)
+          }
+          setWaitingLocationDuration(null)
+        } else {
+          // 片道時間を表示（往復ではない）
+          setWaitingLocationDuration(duration ? Math.round(duration / 2) : null)
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error calculating waiting location duration:', error)
+        }
+        setWaitingLocationDuration(null)
+      } finally {
+        setCalculatingWaitingDuration(false)
+      }
+    }
+
+    calculateWaitingLocationDuration()
+  }, [order.dropoff_address, relatedVehicle?.waiting_location_address])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -48,31 +95,36 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       const baseDurationMin = parseInt(formData.base_duration_min, 10)
       const bufferMin = parseInt(formData.buffer_min, 10)
       
-      const updates = {
-        pickup_address: formData.pickup_address,
-        dropoff_address: formData.dropoff_address,
-        contact_phone: formData.contact_phone || null,
-        car_model: formData.car_model || null,
-        car_plate: formData.car_plate || null,
-        car_color: formData.car_color || null,
-        parking_note: formData.parking_note || null,
-        base_duration_min: baseDurationMin,
-        buffer_min: bufferMin,
-        buffer_manual: true,
-      }
+      const waypoints = formData.waypoints
+        .map((wp) => wp.trim())
+        .filter((wp) => wp.length > 0)
+
+        const updates = {
+          pickup_address: formData.pickup_address,
+          dropoff_address: formData.dropoff_address,
+          waypoints: waypoints.length > 0 ? waypoints : null,
+          contact_phone: formData.contact_phone || null,
+          car_model: formData.car_model || null,
+          car_plate: formData.car_plate || null,
+          car_color: formData.car_color || null,
+          parking_note: formData.parking_note || null,
+          base_duration_min: baseDurationMin,
+          buffer_min: bufferMin,
+          buffer_manual: true,
+        }
       
-      // 仮配置中の場合は、関連するスロットのend_atを再計算
-      if (order.status === 'TENTATIVE') {
-        const { data: existingSlots } = await supabase
-          .from('dispatch_slots')
-          .select('*')
-          .eq('order_id', order.id)
-          .eq('status', 'TENTATIVE')
+      // スロットが存在する場合は、関連するスロットのend_atを再計算
+      const { data: existingSlots } = await supabase
+        .from('dispatch_slots')
+        .select('*')
+        .eq('order_id', order.id)
+      
+      if (existingSlots && existingSlots.length > 0) {
+        const totalDuration = baseDurationMin + bufferMin
         
-        if (existingSlots && existingSlots.length > 0) {
-          const totalDuration = baseDurationMin + bufferMin
-          
-          for (const slot of existingSlots) {
+        for (const slot of existingSlots) {
+          // TENTATIVEのスロットのみ更新（CONFIRMEDのスロットは確定済みなので更新しない）
+          if (slot.status === 'TENTATIVE') {
             const startAt = new Date(slot.start_at)
             const endAt = new Date(startAt)
             endAt.setMinutes(endAt.getMinutes() + totalDuration)
@@ -115,9 +167,32 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
         return
       }
 
+      const waypoints = formData.waypoints
+        .map((wp) => wp.trim())
+        .filter((wp) => wp.length > 0)
+
+      // 待機場所住所を取得（関連する車両の待機場所住所を使用、なければ最初の車両の待機場所住所）
+      let waitingLocationAddress = null
+      if (relatedVehicle?.waiting_location_address) {
+        waitingLocationAddress = relatedVehicle.waiting_location_address
+      } else {
+        try {
+          const { data: allVehicles } = await getVehicles()
+          if (allVehicles && allVehicles.length > 0) {
+            waitingLocationAddress = allVehicles[0].waiting_location_address || null
+          }
+        } catch (vehicleError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Error fetching vehicles for waiting location:', vehicleError)
+          }
+        }
+      }
+
       const { duration, error } = await estimateDuration(
         formData.pickup_address.trim(),
-        formData.dropoff_address.trim()
+        formData.dropoff_address.trim(),
+        waypoints.length > 0 ? waypoints : null,
+        waitingLocationAddress
       )
 
       if (error) {
@@ -534,6 +609,62 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     rows={2}
                     fullWidth
                   />
+                  {/* 経由地 */}
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        経由地
+                      </Typography>
+                      <Button
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            waypoints: [...prev.waypoints, ''],
+                          }))
+                        }}
+                      >
+                        追加
+                      </Button>
+                    </Box>
+                    <Stack spacing={1}>
+                      {formData.waypoints.map((waypoint, index) => (
+                        <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                          <TextField
+                            label={`経由地 ${index + 1}`}
+                            value={waypoint}
+                            onChange={(e) => {
+                              const newWaypoints = [...formData.waypoints]
+                              newWaypoints[index] = e.target.value
+                              setFormData((prev) => ({ ...prev, waypoints: newWaypoints }))
+                            }}
+                            multiline
+                            rows={2}
+                            placeholder="例: 三重県鈴鹿市..."
+                            fullWidth
+                            size="small"
+                          />
+                          <IconButton
+                            onClick={() => {
+                              const newWaypoints = formData.waypoints.filter((_, i) => i !== index)
+                              setFormData((prev) => ({ ...prev, waypoints: newWaypoints }))
+                            }}
+                            sx={{ mt: 0.5 }}
+                            color="error"
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      ))}
+                      {formData.waypoints.length === 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', fontSize: '0.75rem' }}>
+                          経由地はありません
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Box>
                   <TextField
                     label="目的地"
                     name="dropoff_address"
@@ -552,12 +683,47 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     </Typography>
                     <Typography variant="body2">{order.pickup_address}</Typography>
                   </Box>
+                  {order.waypoints && order.waypoints.length > 0 && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        経由地
+                      </Typography>
+                      <Stack spacing={0.5}>
+                        {order.waypoints.map((waypoint, index) => (
+                          <Typography key={index} variant="body2" sx={{ pl: 1, borderLeft: 2, borderColor: 'divider' }}>
+                            {index + 1}. {waypoint}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
                   <Box>
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                       目的地
                     </Typography>
                     <Typography variant="body2">{order.dropoff_address}</Typography>
                   </Box>
+                  {relatedVehicle?.waiting_location_address && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        待機場所住所（{relatedVehicle.name}）
+                      </Typography>
+                      <Typography variant="body2">{relatedVehicle.waiting_location_address}</Typography>
+                      {calculatingWaitingDuration ? (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          所要時間を計算中...
+                        </Typography>
+                      ) : waitingLocationDuration !== null ? (
+                        <Typography variant="body2" color="primary" sx={{ mt: 0.5, fontWeight: 500 }}>
+                          目的地から待機場所まで: 約{waitingLocationDuration}分
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontStyle: 'italic' }}>
+                          所要時間を計算できませんでした
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
                 </>
               )}
 
@@ -565,7 +731,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                   所要時間
                 </Typography>
-                {editing && order.status === 'TENTATIVE' ? (
+                {editing ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="body2" sx={{ minWidth: '80px' }}>
@@ -615,56 +781,6 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                 )}
               </Box>
 
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                  バッファ
-                </Typography>
-                {editing ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          buffer_min: Math.max(0, prev.buffer_min - 5),
-                        }))
-                      }
-                    >
-                      <Typography>−</Typography>
-                    </IconButton>
-                    <TextField
-                      type="number"
-                      name="buffer_min"
-                      value={formData.buffer_min}
-                      onChange={handleChange}
-                      inputProps={{ min: 0, style: { textAlign: 'center', width: '60px' } }}
-                      size="small"
-                    />
-                    <Typography variant="body2" sx={{ ml: 1 }}>分</Typography>
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          buffer_min: prev.buffer_min + 5,
-                        }))
-                      }
-                    >
-                      <Typography>+</Typography>
-                    </IconButton>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2">
-                      {order.buffer_min || 10}分
-                    </Typography>
-                    {order.buffer_manual && (
-                      <Chip label="手動" size="small" color="primary" />
-                    )}
-                  </Box>
-                )}
-              </Box>
-
               {!order.base_duration_min && (
                 <Button
                   variant="outlined"
@@ -701,7 +817,21 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                       loading="lazy"
                       allowFullScreen
                       referrerPolicy="no-referrer-when-downgrade"
-                      src={`https://www.google.com/maps/embed/v1/directions?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&origin=${encodeURIComponent(order.pickup_address)}&destination=${encodeURIComponent(order.dropoff_address)}&language=ja`}
+                      src={(() => {
+                        const origin = encodeURIComponent(order.pickup_address)
+                        const destination = encodeURIComponent(order.dropoff_address)
+                        let url = `https://www.google.com/maps/embed/v1/directions?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&origin=${origin}&destination=${destination}&language=ja`
+                        if (order.waypoints && order.waypoints.length > 0) {
+                          const waypointsParam = order.waypoints
+                            .filter((wp) => wp && wp.trim().length > 0)
+                            .map((wp) => encodeURIComponent(wp.trim()))
+                            .join('|')
+                          if (waypointsParam) {
+                            url += `&waypoints=${waypointsParam}`
+                          }
+                        }
+                        return url
+                      })()}
                     />
                   </Box>
                   <Button
@@ -711,7 +841,16 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     onClick={() => {
                       const origin = encodeURIComponent(order.pickup_address)
                       const destination = encodeURIComponent(order.dropoff_address)
-                      const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+                      let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+                      if (order.waypoints && order.waypoints.length > 0) {
+                        const waypointsParam = order.waypoints
+                          .filter((wp) => wp && wp.trim().length > 0)
+                          .map((wp) => encodeURIComponent(wp.trim()))
+                          .join('|')
+                        if (waypointsParam) {
+                          url += `&waypoints=${waypointsParam}`
+                        }
+                      }
                       window.open(url, '_blank')
                     }}
                     sx={{ mt: 1 }}

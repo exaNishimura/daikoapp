@@ -72,6 +72,30 @@ export async function createVehicle(vehicleData) {
 }
 
 /**
+ * 車両更新
+ */
+export async function updateVehicle(vehicleId, updates) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('vehicles')
+      .update(updates)
+      .eq('id', vehicleId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error updating vehicle:', error)
+    return { data: null, error }
+  }
+}
+
+/**
  * 車両削除（名前で検索して削除）
  */
 export async function deleteVehicleByName(name) {

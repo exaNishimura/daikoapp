@@ -126,6 +126,20 @@ export function OrderCard({ order, isSelected, onClick }) {
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
               {shortenAddress(order.pickup_address)}
             </Typography>
+            {order.waypoints && order.waypoints.length > 0 && (
+              <>
+                {order.waypoints.map((wp, idx) => (
+                  <Box key={idx}>
+                    <Typography variant="body2" color="text.secondary" sx={{ my: 0.25 }}>
+                      ↓
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: 'primary.main' }}>
+                      {shortenAddress(wp)} (経由地{idx + 1})
+                    </Typography>
+                  </Box>
+                ))}
+              </>
+            )}
             <Typography variant="body2" color="text.secondary" sx={{ my: 0.25 }}>
               ↓
             </Typography>
