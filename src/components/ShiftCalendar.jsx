@@ -22,14 +22,20 @@ const SHIFT_DATA = [
   { date: "2026-01-04", dow: "日", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00" },
   { date: "2026-01-04", dow: "日", car: "1", role: "代行", staff: "チョロモン", start: "23:00", end: "06:00" },
   { date: "2026-01-05", dow: "月", status: "定休日" },
-  { date: "2026-01-06", dow: "火", car: "1", role: "代行", staff: "チョロモン", start: "20:00", end: "06:00" },
-  { date: "2026-01-06", dow: "火", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00" },
-  { date: "2026-01-06", dow: "火", car: "2", role: "代行", staff: "西村", start: "21:00", end: "02:00" },
-  { date: "2026-01-06", dow: "火", car: "2", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
-  { date: "2026-01-07", dow: "水", car: "1", role: "代行", staff: "西村", start: "21:00", end: "02:00" },
+
+  { date: "2026-01-06", dow: "火", car: "1", role: "随伴", staff: "たかし", start: "02:00", end: "06:00" },
+  { date: "2026-01-06", dow: "火", car: "1", role: "代行", staff: "西村", start: "21:00", end: "06:00" },
+  { date: "2026-01-06", dow: "火", car: "1", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
+ 
+  { date: "2026-01-07", dow: "水", car: "1", role: "代行", staff: "西村", start: "21:00", end: "06:00" },
   { date: "2026-01-07", dow: "水", car: "1", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
+  { date: "2026-01-07", dow: "水", car: "1", role: "随伴", staff: "たかし", start: "02:00", end: "06:00" },
+
   { date: "2026-01-08", dow: "木", car: "1", role: "代行", staff: "西村", start: "21:00", end: "02:00" },
   { date: "2026-01-08", dow: "木", car: "1", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
+  { date: "2026-01-08", dow: "木", car: "1", role: "代行", staff: "チョロモン", start: "02:00", end: "06:00" },
+  　{ date: "2026-01-08", dow: "木", car: "1", role: "随伴", staff: "西村", start: "02:00", end: "06:00" },
+
   { date: "2026-01-09", dow: "金", car: "1", role: "代行", staff: "鈴木", start: "20:00", end: "06:00" },
   { date: "2026-01-09", dow: "金", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00" },
   { date: "2026-01-09", dow: "金", car: "2", role: "代行", staff: "西村", start: "23:00", end: "06:00" },
@@ -45,10 +51,11 @@ const SHIFT_DATA = [
   { date: "2026-01-11", dow: "日", car: "1", role: "随伴", staff: "なみ", start: "20:00", end: "06:00" },
 
   { date: "2026-01-12", dow: "月", status: "定休日" },
-  { date: "2026-01-13", dow: "火", car: "1", role: "代行", staff: "チョロモン", start: "20:00", end: "06:00" },
+  { date: "2026-01-13", dow: "火", car: "1", role: "代行", staff: "西村", start: "20:00", end: "06:00" },
   { date: "2026-01-13", dow: "火", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00" },
   { date: "2026-01-13", dow: "火", car: "2", role: "代行", staff: "鈴木", start: "00:30", end: "06:00" },
-  { date: "2026-01-13", dow: "火", car: "2", role: "随伴", staff: "西村", start: "00:30", end: "06:00" },
+  { date: "2026-01-13", dow: "火", car: "2", role: "随伴", staff: "チョロモン", start: "00:30", end: "06:00" },
+
   { date: "2026-01-14", dow: "水", car: "1", role: "代行", staff: "西村", start: "20:00", end: "06:00" },
   { date: "2026-01-14", dow: "水", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00" },
   { date: "2026-01-14", dow: "水", car: "2", role: "代行", staff: "鈴木", start: "00:30", end: "06:00" },
@@ -71,10 +78,10 @@ const SHIFT_DATA = [
   { date: "2026-01-18", dow: "日", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00", note: "無人回避" },
 
   { date: "2026-01-19", dow: "月", status: "定休日" },
-  { date: "2026-01-20", dow: "火", car: "2", role: "代行", staff: "チョロモン", start: "21:00", end: "02:00" },
-  { date: "2026-01-20", dow: "火", car: "2", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
-  { date: "2026-01-20", dow: "火", car: "1", role: "代行", staff: "西村", start: "20:00", end: "06:00" },
-  { date: "2026-01-20", dow: "火", car: "1", role: "随伴", staff: "たかし", start: "20:00", end: "06:00" },
+  { date: "2026-01-20", dow: "火", car: "1", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
+  { date: "2026-01-20", dow: "火", car: "1", role: "代行", staff: "西村", start: "21:00", end: "06:00" },
+  { date: "2026-01-20", dow: "火", car: "1", role: "随伴", staff: "たかし", start: "02:00", end: "06:00" },
+
   { date: "2026-01-21", dow: "水", car: "2", role: "代行", staff: "チョロモン", start: "23:00", end: "06:00" },
   { date: "2026-01-21", dow: "水", car: "1", role: "随伴", staff: "なみ", start: "21:00", end: "02:00" },
   { date: "2026-01-21", dow: "水", car: "1", role: "代行", staff: "西村", start: "21:00", end: "02:00" },
