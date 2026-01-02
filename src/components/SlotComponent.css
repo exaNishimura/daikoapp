@@ -13,7 +13,7 @@
   overflow: visible; /* conflict-warningが切れないように */
   display: flex;
   flex-direction: column;
-  color: hsl(var(--card-foreground));
+  color: rgba(255, 255, 255, 0.9);
   box-sizing: border-box; /* paddingを含めた高さ計算 */
 }
 
@@ -119,7 +119,7 @@
 
 .slot-time {
   font-size: 0.7rem;
-  color: hsl(var(--muted-foreground));
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .slot-body {
@@ -133,6 +133,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .slot-icons {

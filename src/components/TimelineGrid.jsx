@@ -105,11 +105,12 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
   const timeSlots = generateTimeSlots()
   const totalHeight = timeSlots.length * 20 // 15分 = 20px
 
-  // 現在時刻の位置を計算（営業時間内の場合のみ）
+  // 現在時刻の位置を計算（営業時間内の場合のみ、1分単位で正確に計算）
   const getCurrentTimePosition = () => {
     const now = new Date(currentTime)
     const hours = now.getHours()
     const minutes = now.getMinutes()
+    const seconds = now.getSeconds()
     const totalMinutes = hours * 60 + minutes
 
     // 営業時間は18:00〜翌06:00
@@ -119,12 +120,24 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
       return null
     }
 
-    // 営業時間内の場合、行番号を計算
+    // 営業時間内の場合、18:00を基準に1分単位で正確な位置を計算
     try {
-      const rowIndex = dateToRowIndex(now)
+      let minutesFromStart = 0
       
-      // 行番号からピクセル位置に変換
-      const position = rowIndexToPixels(rowIndex)
+      if (hours >= 18) {
+        // 18:00以降（当日）
+        // 例: 20:30 = (20-18)*60 + 30 = 150分
+        minutesFromStart = (hours - 18) * 60 + minutes
+      } else {
+        // 06:00未満（翌日）
+        // 例: 02:30 = (24-18)*60 + 2*60 + 30 = 360 + 120 + 30 = 510分
+        minutesFromStart = (24 - 18) * 60 + hours * 60 + minutes
+      }
+      
+      // 秒も考慮（1分 = 20/15 = 4/3 px、1秒 = (4/3)/60 px）
+      const totalSeconds = minutesFromStart * 60 + seconds
+      const pixelsPerSecond = (20 / 15) / 60 // 1秒あたりのピクセル数
+      const position = totalSeconds * pixelsPerSecond
       
       // タイムラインの範囲内かチェック（0〜totalHeight）
       // totalHeight = 48行 * 20px = 960px
@@ -134,7 +147,7 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
       
       return position
     } catch (error) {
-      // 行番号が範囲外の場合はnullを返す
+      // エラーの場合はnullを返す
       return null
     }
   }

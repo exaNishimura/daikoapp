@@ -28,6 +28,47 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
     ? vehicles.find(v => v.id === slots[0].vehicle_id)
     : null
 
+  // 都道府県と郵便番号を削除して市以降を取得
+  const getAddressFromCity = (address) => {
+    if (!address) return ''
+    
+    let result = address
+    
+    // 「日本、」を削除
+    if (result.startsWith('日本、')) {
+      result = result.substring(3) // 「日本、」は3文字
+    } else if (result.startsWith('日本')) {
+      result = result.substring(2) // 「日本」は2文字
+    }
+    
+    // 郵便番号を削除（〒123-4567 または 123-4567 の形式）
+    result = result.replace(/^〒?\d{3}-?\d{4}\s*/, '') // 郵便番号パターンを削除
+    
+    // 都道府県のリスト
+    const prefectures = [
+      '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+      '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+      '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+      '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+      '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+      '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+      '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
+    ]
+    
+    // 都道府県を削除
+    for (const prefecture of prefectures) {
+      if (result.startsWith(prefecture)) {
+        result = result.substring(prefecture.length)
+        break
+      }
+    }
+    
+    // 先頭の区切り文字（、やスペース）を削除
+    result = result.replace(/^[、\s]+/, '')
+    
+    return result.trim()
+  }
+
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState({
     pickup_address: order.pickup_address,
@@ -681,7 +722,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                       出発地
                     </Typography>
-                    <Typography variant="body2">{order.pickup_address}</Typography>
+                    <Typography variant="body2">{getAddressFromCity(order.pickup_address)}</Typography>
                   </Box>
                   {order.waypoints && order.waypoints.length > 0 && (
                     <Box>
@@ -691,7 +732,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                       <Stack spacing={0.5}>
                         {order.waypoints.map((waypoint, index) => (
                           <Typography key={index} variant="body2" sx={{ pl: 1, borderLeft: 2, borderColor: 'divider' }}>
-                            {index + 1}. {waypoint}
+                            {index + 1}. {getAddressFromCity(waypoint)}
                           </Typography>
                         ))}
                       </Stack>
@@ -701,7 +742,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                       目的地
                     </Typography>
-                    <Typography variant="body2">{order.dropoff_address}</Typography>
+                    <Typography variant="body2">{getAddressFromCity(order.dropoff_address)}</Typography>
                   </Box>
                   {relatedVehicle?.waiting_location_address && (
                     <Box>
