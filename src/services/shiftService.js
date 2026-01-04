@@ -163,3 +163,44 @@ export async function createShiftsBulk(shifts) {
   }
 }
 
+/**
+ * 指定日のシフトデータを取得（車両別にグループ化）
+ * @param {string} date - 日付（YYYY-MM-DD形式）
+ * @returns {Promise<{data: Object|null, error: Error|null}>} carをキーとしたオブジェクト
+ */
+export async function getShiftsByDate(date) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('date', date)
+      .order('car', { ascending: true })
+      .order('start', { ascending: true })
+
+    if (error) throw error
+
+    // carをキーとしたオブジェクトに変換
+    const result = {}
+    if (data) {
+      data.forEach(shift => {
+        const car = shift.car
+        if (car) {
+          if (!result[car]) {
+            result[car] = []
+          }
+          result[car].push(shift)
+        }
+      })
+    }
+
+    return { data: result, error: null }
+  } catch (error) {
+    console.error('Error fetching shifts by date:', error)
+    return { data: null, error }
+  }
+}
+

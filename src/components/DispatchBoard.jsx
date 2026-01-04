@@ -7,7 +7,8 @@ import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { getOrders, getOrderById } from '@/services/orderService'
 import { getVehicles } from '@/services/vehicleService'
 import { createSlot, updateSlot, getSlotsByVehicleAndDate } from '@/services/slotService'
-import { getVehicleOperationStatuses } from '@/services/vehicleOperationService'
+import { getVehicleOperationStatuses, syncOperationStatusFromShifts } from '@/services/vehicleOperationService'
+import { getShiftsByDate } from '@/services/shiftService'
 import { calculateBuffer } from '@/services/routeService'
 import { supabase } from '@/lib/supabase'
 import {
@@ -184,7 +185,22 @@ export function DispatchBoard() {
         // 車両が読み込まれたらスロットと稼働状況も取得
         if (vehiclesResult.data && vehiclesResult.data.length > 0) {
           loadSlots(vehiclesResult.data)
-          loadOperationStatuses(vehiclesResult.data)
+          
+          // シフトから稼働状況を自動生成
+          const today = new Date()
+          const todayStr = today.toISOString().split('T')[0]
+          
+          getShiftsByDate(todayStr).then(({ data: shiftsByCar, error: shiftsError }) => {
+            if (!shiftsError && shiftsByCar) {
+              syncOperationStatusFromShifts(vehiclesResult.data, todayStr, shiftsByCar).then(() => {
+                // 稼働状況を再読み込み
+                loadOperationStatuses(vehiclesResult.data)
+              })
+            } else {
+              // シフトデータがない場合は通常の読み込み
+              loadOperationStatuses(vehiclesResult.data)
+            }
+          })
         } else {
           setSlots([])
           setOperationStatuses({})
@@ -265,11 +281,68 @@ export function DispatchBoard() {
       )
       .subscribe()
 
+    // shiftsテーブルの変更を監視（シフト変更時に稼働状況を自動更新）
+    const shiftsChannel = supabase
+      .channel('shifts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE すべて
+          schema: 'public',
+          table: 'shifts',
+        },
+        async (payload) => {
+          // シフト変更時に稼働状況を自動更新
+          if (vehicles.length > 0) {
+            try {
+              // 今日の日付を取得
+              const today = new Date()
+              const todayStr = today.toISOString().split('T')[0]
+
+              // 変更されたシフトの日付を取得
+              const shiftDate = payload.new?.date || payload.old?.date || todayStr
+
+              // その日のシフトデータを取得
+              const { data: shiftsByCar, error: shiftsError } = await getShiftsByDate(shiftDate)
+
+              if (shiftsError) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Error fetching shifts for sync:', shiftsError)
+                }
+                return
+              }
+
+              // シフトから稼働状況を自動生成
+              const { error: syncError } = await syncOperationStatusFromShifts(
+                vehicles,
+                shiftDate,
+                shiftsByCar || {}
+              )
+
+              if (syncError) {
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Error syncing operation status from shifts:', syncError)
+                }
+              } else {
+                // 稼働状況を再読み込み
+                await loadOperationStatuses(vehicles)
+              }
+            } catch (error) {
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Error handling shift change:', error)
+              }
+            }
+          }
+        }
+      )
+      .subscribe()
+
     // クリーンアップ
     return () => {
       ordersChannel.unsubscribe()
       slotsChannel.unsubscribe()
       operationStatusChannel.unsubscribe()
+      shiftsChannel.unsubscribe()
     }
   }, [vehicles, loadData, loadSlots, loadOperationStatuses])
 
@@ -823,73 +896,55 @@ export function DispatchBoard() {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
         {/* ヘッダー */}
-        <AppBar position="static" elevation={1} sx={{ bgcolor: 'background.paper', width: '100vw' }}>
-          <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, sm: 3 }, py: 1.5, width: '100%', maxWidth: '100vw' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography 
-                variant="body2" 
-                component="div" 
-                sx={{ fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2, fontSize: '0.875rem' }}
-              >
+        <AppBar position="fixed" elevation={1} sx={{ bgcolor: "background.paper", zIndex: (theme) => theme.zIndex.drawer + 1, top: '45px' }}>
+          <Toolbar sx={{ justifyContent: "space-between", px: { xs: 2, sm: 3 }, py: 1.5, width: "100%", maxWidth: "100vw" }}>
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
+              <Typography variant="body2" component="div" sx={{ fontWeight: 600, whiteSpace: "nowrap", lineHeight: 1.2, fontSize: "0.875rem" }}>
                 {businessDayText}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 0.25 }}>
-                <Typography 
-                  variant="caption" 
-                  component="span" 
-                  sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 500 }}
-                >
+              <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.5, mt: 0.25 }}>
+                <Typography variant="caption" component="span" sx={{ color: "text.secondary", fontSize: "0.75rem", fontWeight: 500 }}>
                   受付可能時間:
                 </Typography>
-                <Typography 
-                  variant="h6" 
-                  component="span" 
-                  sx={{ 
-                    color: 'error.main', 
-                    fontWeight: 700, 
-                    fontSize: '1.25rem',
-                    whiteSpace: 'nowrap',
-                    lineHeight: 1.2
+                <Typography
+                  variant="h6"
+                  component="span"
+                  sx={{
+                    color: "error.main",
+                    fontWeight: 700,
+                    fontSize: "1.25rem",
+                    whiteSpace: "nowrap",
+                    lineHeight: 1.2,
                   }}
                 >
                   {earliestAvailableTime}
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: 'flex', gap: 1, ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <Box sx={{ display: "flex", gap: 1, ml: 2, whiteSpace: "nowrap", flexShrink: 0 }}>
               <Button
                 variant="outlined"
                 startIcon={<SettingsIcon />}
                 onClick={() => {
                   // 車両選択ダイアログを表示
-                  if (vehicles.length === 0) return
+                  if (vehicles.length === 0) return;
                   if (vehicles.length === 1) {
                     // 車両が1台のみの場合は直接モーダルを開く
-                    setSelectedVehicleForStatus(vehicles[0])
-                    setIsOperationStatusModalOpen(true)
+                    setSelectedVehicleForStatus(vehicles[0]);
+                    setIsOperationStatusModalOpen(true);
                   } else {
                     // 複数車両の場合は選択ダイアログを表示
-                    setIsVehicleSelectDialogOpen(true)
+                    setIsVehicleSelectDialogOpen(true);
                   }
                 }}
                 disabled={vehicles.length === 0}
               >
                 設定
               </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setIsModalOpen(true)}
-              >
+              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsModalOpen(true)}>
                 依頼
               </Button>
             </Box>
@@ -901,63 +956,47 @@ export function DispatchBoard() {
           <Alert
             severity="error"
             action={
-              <Button
-                color="inherit"
-                size="small"
-                startIcon={<RefreshIcon />}
-                onClick={loadData}
-              >
+              <Button color="inherit" size="small" startIcon={<RefreshIcon />} onClick={loadData}>
                 再読み込み
               </Button>
             }
-            sx={{ borderRadius: 0 }}
+            sx={{ borderRadius: 0, mt: "64px" }}
           >
             {error}
           </Alert>
         )}
 
         {/* メインコンテンツ */}
-        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", mt: "70px" }}>
           {/* タイムライン */}
           <Box
             component="main"
             sx={{
               flexGrow: 1,
-              overflow: 'auto',
-              bgcolor: 'background.default',
+              bgcolor: "background.default",
             }}
           >
-              {vehicles.length === 0 ? (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    gap: 1,
-                  }}
-                >
-                  <Typography variant="h6" color="text.secondary">
-                    車両データがありません
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Supabaseに車両データを追加してください
-                  </Typography>
-                </Box>
-              ) : (
-                <TimelineGrid
-                  vehicles={vehicles}
-                  orders={orders}
-                  slots={slots}
-                  operationStatuses={operationStatuses}
-                  dragOverPosition={dragOverPosition}
-                  draggingSlotVehicleId={draggingSlotVehicleId}
-                  onOrderSelect={handleOrderSelect}
-                  onOrderUpdate={handleOrderUpdate}
-                  onSlotsUpdate={loadSlots}
-                />
-              )}
+            {vehicles.length === 0 ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  gap: 1,
+                }}
+              >
+                <Typography variant="h6" color="text.secondary">
+                  車両データがありません
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Supabaseに車両データを追加してください
+                </Typography>
+              </Box>
+            ) : (
+              <TimelineGrid vehicles={vehicles} orders={orders} slots={slots} operationStatuses={operationStatuses} dragOverPosition={dragOverPosition} draggingSlotVehicleId={draggingSlotVehicleId} onOrderSelect={handleOrderSelect} onOrderUpdate={handleOrderUpdate} onSlotsUpdate={loadSlots} />
+            )}
           </Box>
 
           {/* 右サイドバー: 依頼詳細 */}
@@ -969,39 +1008,23 @@ export function DispatchBoard() {
               sx={{
                 width: 384,
                 flexShrink: 0,
-                '& .MuiDrawer-paper': {
+                "& .MuiDrawer-paper": {
                   width: 384,
-                  boxSizing: 'border-box',
+                  boxSizing: "border-box",
                   borderLeft: 1,
-                  borderColor: 'divider',
+                  borderColor: "divider",
                 },
               }}
             >
-              <OrderDetailPanel
-                order={selectedOrder}
-                onUpdate={handleOrderUpdate}
-                onDelete={handleOrderDelete}
-                onClose={() => setSelectedOrder(null)}
-                vehicles={vehicles}
-                slots={slots}
-              />
+              <OrderDetailPanel order={selectedOrder} onUpdate={handleOrderUpdate} onDelete={handleOrderDelete} onClose={() => setSelectedOrder(null)} vehicles={vehicles} slots={slots} />
             </Drawer>
           )}
         </Box>
 
         {/* モーダル */}
-        <OrderFormModal
-          open={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onOrderCreated={handleOrderCreated}
-        />
+        <OrderFormModal open={isModalOpen} onClose={() => setIsModalOpen(false)} onOrderCreated={handleOrderCreated} />
         {/* 車両選択ダイアログ */}
-        <Dialog
-          open={isVehicleSelectDialogOpen}
-          onClose={() => setIsVehicleSelectDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
+        <Dialog open={isVehicleSelectDialogOpen} onClose={() => setIsVehicleSelectDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>車両を選択してください</DialogTitle>
           <DialogContent>
             <List>
@@ -1009,9 +1032,9 @@ export function DispatchBoard() {
                 <ListItem key={vehicle.id} disablePadding>
                   <ListItemButton
                     onClick={() => {
-                      setSelectedVehicleForStatus(vehicle)
-                      setIsVehicleSelectDialogOpen(false)
-                      setIsOperationStatusModalOpen(true)
+                      setSelectedVehicleForStatus(vehicle);
+                      setIsVehicleSelectDialogOpen(false);
+                      setIsOperationStatusModalOpen(true);
                     }}
                   >
                     <ListItemText primary={vehicle.name} />
@@ -1021,21 +1044,19 @@ export function DispatchBoard() {
             </List>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setIsVehicleSelectDialogOpen(false)}>
-              キャンセル
-            </Button>
+            <Button onClick={() => setIsVehicleSelectDialogOpen(false)}>キャンセル</Button>
           </DialogActions>
         </Dialog>
         <VehicleOperationStatusModal
           open={isOperationStatusModalOpen}
           onClose={() => {
-            setIsOperationStatusModalOpen(false)
-            setSelectedVehicleForStatus(null)
+            setIsOperationStatusModalOpen(false);
+            setSelectedVehicleForStatus(null);
           }}
           onStatusUpdated={() => {
             // 稼働状況が更新されたら再読み込み
             if (vehicles.length > 0) {
-              loadOperationStatuses(vehicles)
+              loadOperationStatuses(vehicles);
             }
           }}
           vehicleId={selectedVehicleForStatus?.id}
@@ -1043,6 +1064,6 @@ export function DispatchBoard() {
         />
       </Box>
     </DndContext>
-  )
+  );
 }
 

@@ -22,7 +22,7 @@ function App() {
             シフト表
           </Link>
         </nav>
-        <div style={{ flex: 1, overflow: 'auto', overflowX: 'auto', overflowY: 'auto' }}>
+        <div style={{ flex: 1 }}>
           <Routes>
             <Route path="/" element={<DispatchBoard />} />
             <Route path="/shift" element={<ShiftCalendar />} />

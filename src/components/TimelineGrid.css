@@ -219,3 +219,19 @@
   z-index: 1;
 }
 
+/* PC向け: 水平スクロールバーを非表示 */
+@media (min-width: 768px) {
+  .timeline-header-wrapper,
+  .timeline-content-wrapper {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .timeline-header-wrapper::-webkit-scrollbar,
+  .timeline-content-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+    width: 0;
+    height: 0;
+  }
+}
+
