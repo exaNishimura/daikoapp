@@ -91,7 +91,7 @@ export function OrderCard({ order, isSelected, onClick }) {
 
   // 所要時間の表示
   const totalDuration =
-    (order.base_duration_min || 30) + (order.buffer_min || 10)
+    (order.base_duration_min || 30) + (order.buffer_min || 0)
 
   // 車情報の表示
   const carInfo = []

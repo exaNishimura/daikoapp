@@ -80,7 +80,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
     car_color: order.car_color || '',
     parking_note: order.parking_note || '',
     base_duration_min: order.base_duration_min || 30,
-    buffer_min: order.buffer_min || 10,
+    buffer_min: order.buffer_min || 0,
   })
   const [waitingLocationDuration, setWaitingLocationDuration] = useState(null)
   const [calculatingWaitingDuration, setCalculatingWaitingDuration] = useState(false)
@@ -649,6 +649,9 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     multiline
                     rows={2}
                     fullWidth
+                    inputProps={{
+                      'data-1p-ignore': true,
+                    }}
                   />
                   {/* 経由地 */}
                   <Box>
@@ -714,6 +717,9 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     multiline
                     rows={2}
                     fullWidth
+                    inputProps={{
+                      'data-1p-ignore': true,
+                    }}
                   />
                 </>
               ) : (
@@ -812,11 +818,11 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                   <Typography variant="body2">
                     {order.base_duration_min ? (
                       <>
-                        {order.base_duration_min}分（基本）+ {order.buffer_min || 10}
-                        分（バッファ）= {order.base_duration_min + (order.buffer_min || 10)}分
+                        {order.base_duration_min}分（基本）+ {order.buffer_min || 0}
+                        分（バッファ）= {order.base_duration_min + (order.buffer_min || 0)}分
                       </>
                     ) : (
-                      <>未計算（仮30分 + {order.buffer_min || 10}分 = {30 + (order.buffer_min || 10)}分）</>
+                      <>未計算（仮30分 + {order.buffer_min || 0}分 = {30 + (order.buffer_min || 0)}分）</>
                     )}
                   </Typography>
                 )}

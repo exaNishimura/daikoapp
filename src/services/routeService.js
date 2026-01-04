@@ -196,10 +196,10 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
 }
 
 /**
- * バッファ計算（一律10分）
+ * バッファ計算（一律0分）
  */
 export function calculateBuffer(baseDuration) {
-  // バッファは一律10分
-  return 10
+  // バッファは一律0分
+  return 0
 }
 

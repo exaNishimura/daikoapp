@@ -39,7 +39,7 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
   const endDate = new Date(slot.end_at)
   
   // 依頼の所要時間（base_duration_min + buffer_min）を取得
-  const orderDuration = (order.base_duration_min || 30) + (order.buffer_min || 10)
+  const orderDuration = (order.base_duration_min || 30) + (order.buffer_min || 0)
   
   // 開始行番号を計算
   const startRowIndex = dateToRowIndex(startDate)
