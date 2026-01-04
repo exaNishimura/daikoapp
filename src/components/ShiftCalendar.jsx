@@ -1,4 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getShifts } from '@/services/shiftService'
+import EditIcon from '@mui/icons-material/Edit'
+import Button from '@mui/material/Button'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import Box from '@mui/material/Box'
 import './ShiftCalendar.css'
 
 // ============================================
@@ -194,11 +203,49 @@ function groupByDate(data) {
 }
 
 export function ShiftCalendar() {
+  const navigate = useNavigate()
   const [visibleStaff, setVisibleStaff] = useState(['西村', '鈴木', 'チョロモン', 'たかし', 'なみ'])
   const [searchText, setSearchText] = useState('')
+  const [shifts, setShifts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedYear, setSelectedYear] = useState(2026)
+  const [selectedMonth, setSelectedMonth] = useState(1)
+
+
+  const loadShifts = async () => {
+    setLoading(true)
+    try {
+      // 選択された年月のデータを取得
+      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate()
+      const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`
+      
+      const { data, error } = await getShifts(startDate, endDate)
+      if (error) {
+        console.error('Error loading shifts:', error)
+        // エラー時は空配列を使用
+        setShifts([])
+      } else {
+        setShifts(data || [])
+      }
+    } catch (err) {
+      console.error('Error loading shifts:', err)
+      setShifts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedYear && selectedMonth) {
+      loadShifts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth])
+
 
   // データを日付でグループ化
-  const groupedData = useMemo(() => groupByDate(SHIFT_DATA), [])
+  const groupedData = useMemo(() => groupByDate(shifts), [shifts])
 
   // フィルタリングされた日付リスト
   const filteredDates = useMemo(() => {
@@ -229,7 +276,42 @@ export function ShiftCalendar() {
   return (
     <div className="shift-calendar-page">
       <div className="shift-header">
-        <h1>運転代行シフト表 - 2026年1月</h1>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <h1>運転代行シフト表</h1>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>年</InputLabel>
+              <Select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                label="年"
+              >
+                {[2024, 2025, 2026, 2027, 2028].map(year => (
+                  <MenuItem key={year} value={year}>{year}年</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel>月</InputLabel>
+              <Select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                label="月"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
+                  <MenuItem key={month} value={month}>{month}月</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              variant="contained"
+              onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
+              startIcon={<EditIcon />}
+            >
+              シフト編集
+            </Button>
+          </Box>
+        </Box>
         <div className="shift-controls">
           <div className="filter-group">
             {['西村', '鈴木', 'チョロモン', 'たかし', 'なみ'].map(staff => (
@@ -276,16 +358,21 @@ export function ShiftCalendar() {
       </div>
 
       <div className="shift-container">
-        <div className="shift-calendar">
-          {filteredDates.map(date => (
-            <DayBlock
-              key={date}
-              dayData={groupedData[date]}
-              visibleStaff={visibleStaff}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>
+        ) : (
+          <div className="shift-calendar">
+            {filteredDates.map(date => (
+              <DayBlock
+                key={date}
+                dayData={groupedData[date]}
+                visibleStaff={visibleStaff}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
     </div>
   )
 }
@@ -302,11 +389,13 @@ function DayBlock({ dayData, visibleStaff }) {
           {dateFormatted}
           <span className="day-dow">({dayData.dow})</span>
         </div>
-        {dayData.status && (
-          <div className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}>
-            {dayData.status}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {dayData.status && (
+            <div className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}>
+              {dayData.status}
+            </div>
+          )}
+        </div>
       </div>
 
       {!dayData.status && (

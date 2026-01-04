@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import { DispatchBoard } from './components/DispatchBoard'
 import { ShiftCalendar } from './components/ShiftCalendar'
+import { ShiftEditPage } from './components/ShiftEditPage'
 import './App.css'
 
 function App() {
@@ -21,10 +22,11 @@ function App() {
             シフト表
           </Link>
         </nav>
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ flex: 1, overflow: 'auto', overflowX: 'auto', overflowY: 'auto' }}>
           <Routes>
             <Route path="/" element={<DispatchBoard />} />
             <Route path="/shift" element={<ShiftCalendar />} />
+            <Route path="/shift/edit" element={<ShiftEditPage />} />
           </Routes>
         </div>
       </div>

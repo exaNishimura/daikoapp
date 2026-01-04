@@ -19,6 +19,9 @@
   color: var(--text-color);
   padding: 20px;
   min-height: 100vh;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .shift-header {
@@ -99,14 +102,19 @@
 
 .shift-container {
   overflow-x: auto;
+  overflow-y: visible;
   background: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .shift-calendar {
-  min-width: 1200px;
+  /* タイムライン幅（960px）+ day-blockのパディング（左右15px×2 = 30px）= 990px */
+  /* 実際のコンテンツ幅に合わせてmin-widthを設定 */
+  min-width: 990px;
 }
 
 .day-block {
@@ -130,16 +138,11 @@
   border-bottom: 2px solid var(--border-color);
   position: sticky;
   left: 0;
-  background: white;
   z-index: 10;
   padding-right: 20px;
   margin-left: -15px;
   margin-right: -15px;
   padding-left: 15px;
-}
-
-.day-block.fri-sat .day-header {
-  background: var(--bg-fri-sat);
 }
 
 .day-date {
