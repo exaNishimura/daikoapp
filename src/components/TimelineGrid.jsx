@@ -4,11 +4,16 @@ import { checkSlotConflict } from '@/services/conflictDetectionService'
 import { useState, useEffect, useRef } from 'react'
 import { dateToRowIndex, rowIndexToPixels, rowIndexToDate } from '@/utils/rowUtils'
 import { isVehicleOperational } from '@/utils/operationStatusUtils'
+import IconButton from '@mui/material/IconButton'
+import OpenInFullIcon from '@mui/icons-material/OpenInFull'
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen'
+import Tooltip from '@mui/material/Tooltip'
 import './TimelineGrid.css'
 
 export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosition, draggingSlotVehicleId, onOrderSelect, onOrderUpdate, onSlotsUpdate, operationStatuses = {} }) {
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [expandedVehicles, setExpandedVehicles] = useState(new Set()) // 拡大されている号車列のIDセット
   const headerScrollRef = useRef(null)
   const bodyScrollRef = useRef(null)
   const timelineBodyRef = useRef(null) // タイムラインボディのref
@@ -181,6 +186,19 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
     return slots.filter((slot) => slot.vehicle_id === vehicleId)
   }
 
+  // 号車列の拡大/縮小を切り替える関数
+  const toggleVehicleExpand = (vehicleId) => {
+    setExpandedVehicles((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(vehicleId)) {
+        newSet.delete(vehicleId)
+      } else {
+        newSet.add(vehicleId)
+      }
+      return newSet
+    })
+  }
+
   return (
     <div className="timeline-grid">
       <div className="timeline-header-wrapper" ref={headerScrollRef}>
@@ -192,10 +210,12 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
               const statuses = operationStatuses[vehicle.id] || []
               const now = new Date()
               const isOperational = isVehicleOperational(vehicle.id, now, statuses)
+              const isExpanded = expandedVehicles.has(vehicle.id)
+              const vehicleHeaderWidth = isExpanded ? '60vw' : '40vw'
               
               return (
-                <div key={vehicle.id} className="vehicle-header-label" style={{ padding: '12px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <div key={vehicle.id} className="vehicle-header-label" style={{ padding: '12px 16px', width: vehicleHeaderWidth }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <span>{vehicle.name}</span>
                     {!isOperational && (
                       <span
@@ -210,6 +230,25 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
                         title="非稼働中"
                       />
                     )}
+                    {/* 拡大/縮小ボタン */}
+                    <Tooltip title={isExpanded ? '縮小' : '拡大'}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleVehicleExpand(vehicle.id)
+                        }}
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          padding: '4px',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          }
+                        }}
+                      >
+                        {isExpanded ? <CloseFullscreenIcon fontSize="small" /> : <OpenInFullIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
                   </div>
                 </div>
               )
@@ -252,21 +291,27 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
 
             {/* 車両列 */}
             <div className="vehicles-columns">
-              {vehicles.map((vehicle) => (
-                <VehicleColumn
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  slots={getSlotsForVehicle(vehicle.id)}
-                  conflicts={conflicts}
-                  orders={orders}
-                  timeSlots={timeSlots}
-                  totalHeight={totalHeight}
-                  dragOverPosition={dragOverPosition?.vehicleId === vehicle.id ? dragOverPosition : null}
-                  draggingSlotVehicleId={draggingSlotVehicleId}
-                  onSlotSelect={onOrderSelect}
-                  operationStatuses={operationStatuses[vehicle.id] || []}
-                />
-              ))}
+              {vehicles.map((vehicle) => {
+                const isExpanded = expandedVehicles.has(vehicle.id)
+                const vehicleColumnWidth = isExpanded ? '60vw' : '40vw'
+                
+                return (
+                  <VehicleColumn
+                    key={vehicle.id}
+                    vehicle={vehicle}
+                    slots={getSlotsForVehicle(vehicle.id)}
+                    conflicts={conflicts}
+                    orders={orders}
+                    timeSlots={timeSlots}
+                    totalHeight={totalHeight}
+                    dragOverPosition={dragOverPosition?.vehicleId === vehicle.id ? dragOverPosition : null}
+                    draggingSlotVehicleId={draggingSlotVehicleId}
+                    onSlotSelect={onOrderSelect}
+                    operationStatuses={operationStatuses[vehicle.id] || []}
+                    columnWidth={vehicleColumnWidth}
+                  />
+                )
+              })}
             </div>
 
             {/* 現在時刻ライン */}
@@ -307,7 +352,7 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
   )
 }
 
-function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeight, dragOverPosition, onSlotSelect, draggingSlotVehicleId, operationStatuses = [] }) {
+function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeight, dragOverPosition, onSlotSelect, draggingSlotVehicleId, operationStatuses = [], columnWidth = '40vw' }) {
   // 営業日の基準日を計算
   const now = new Date()
   const localHours = now.getHours()
@@ -350,7 +395,7 @@ function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeig
       ref={setNodeRef}
       data-vehicle-id={vehicle.id}
       className={`vehicle-column ${shouldHighlight ? 'drag-over' : ''}`}
-      style={{ height: `${totalHeight}px` }}
+      style={{ height: `${totalHeight}px`, width: columnWidth }}
     >
       {/* 時間行の区切り線と非稼働時間帯の表示 */}
       {timeSlots.map((ts, index) => {
