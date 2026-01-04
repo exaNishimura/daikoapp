@@ -880,9 +880,9 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                     color="primary"
                     fullWidth
                     onClick={() => {
-                      const origin = encodeURIComponent(order.pickup_address)
                       const destination = encodeURIComponent(order.dropoff_address)
-                      let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+                      // originを省略することで現在地が使用される
+                      let url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`
                       if (order.waypoints && order.waypoints.length > 0) {
                         const waypointsParam = order.waypoints
                           .filter((wp) => wp && wp.trim().length > 0)
