@@ -1008,11 +1008,13 @@ export function DispatchBoard() {
               sx={{
                 width: 384,
                 flexShrink: 0,
+                zIndex: (theme) => theme.zIndex.drawer + 10,
                 "& .MuiDrawer-paper": {
                   width: 384,
                   boxSizing: "border-box",
                   borderLeft: 1,
                   borderColor: "divider",
+                  zIndex: (theme) => theme.zIndex.drawer + 10,
                 },
               }}
             >
