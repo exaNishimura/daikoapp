@@ -50,6 +50,7 @@
 .slot-component.completed {
   border-color: #4caf50;
   background-color: hsl(142 71% 20% / 0.3);
+  opacity: 0.5;
 }
 
 .slot-component.conflict {

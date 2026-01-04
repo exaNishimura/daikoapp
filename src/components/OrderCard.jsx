@@ -137,7 +137,7 @@ export function OrderCard({ order, isSelected, onClick }) {
         ...style,
         marginBottom: '8px',
         cursor: isDragging ? 'grabbing' : 'grab',
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.5 : order.status === 'COMPLETED' ? 0.5 : 1,
         border: isSelected ? '2px solid #646cff' : 'none',
         touchAction: 'none',
         userSelect: 'none',
