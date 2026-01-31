@@ -5,6 +5,7 @@
   --color-choromon: #8A2BE2;  /* チョロモン：紫 */
   --color-takashi: #00BFFF;   /* たかし：水色 */
   --color-nami: #FF69B4;      /* なみ：ピンク */
+  --color-shuya: #32CD32;     /* しゅうや：緑 */
   
   /* その他 */
   --bg-peak: rgba(255, 240, 200, 0.3); /* ピーク帯背景 */
@@ -99,6 +100,7 @@
 .legend-color.choromon { background: var(--color-choromon); }
 .legend-color.takashi { background: var(--color-takashi); }
 .legend-color.nami { background: var(--color-nami); }
+.legend-color.shuya { background: var(--color-shuya); }
 
 .shift-container {
   overflow-x: auto;
@@ -290,11 +292,13 @@
 .bar.choromon { background: var(--color-choromon); }
 .bar.takashi { background: var(--color-takashi); }
 .bar.nami { background: var(--color-nami); }
+.bar.shuya { background: var(--color-shuya); }
 
 /* 文字色の自動調整（視認性優先） */
 .bar.nishimura .bar-text,
 .bar.suzuki .bar-text,
-.bar.takashi .bar-text {
+.bar.takashi .bar-text,
+.bar.shuya .bar-text {
   color: #000;
 }
 .bar.choromon .bar-text,

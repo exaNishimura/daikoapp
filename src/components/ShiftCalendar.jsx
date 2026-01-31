@@ -178,7 +178,8 @@ function staffToClass(staff) {
     '鈴木': 'suzuki',
     'チョロモン': 'choromon',
     'たかし': 'takashi',
-    'なみ': 'nami'
+    'なみ': 'nami',
+    'しゅうや': 'shuya'
   }
   return map[staff] || ''
 }
@@ -204,7 +205,7 @@ function groupByDate(data) {
 
 export function ShiftCalendar() {
   const navigate = useNavigate()
-  const [visibleStaff, setVisibleStaff] = useState(['西村', '鈴木', 'チョロモン', 'たかし', 'なみ'])
+  const [visibleStaff, setVisibleStaff] = useState(['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや'])
   const [searchText, setSearchText] = useState('')
   const [shifts, setShifts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -314,7 +315,7 @@ export function ShiftCalendar() {
         </Box>
         <div className="shift-controls">
           <div className="filter-group">
-            {['西村', '鈴木', 'チョロモン', 'たかし', 'なみ'].map(staff => (
+            {['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや'].map(staff => (
               <label key={staff}>
                 <input
                   type="checkbox"
@@ -353,6 +354,10 @@ export function ShiftCalendar() {
           <div className="legend-item">
             <div className="legend-color nami"></div>
             <span>なみ</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color shuya"></div>
+            <span>しゅうや</span>
           </div>
         </div>
       </div>

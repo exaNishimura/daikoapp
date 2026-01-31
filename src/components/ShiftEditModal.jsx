@@ -23,7 +23,7 @@ import Grid from '@mui/material/Grid'
 const DOW_OPTIONS = ['月', '火', '水', '木', '金', '土', '日']
 const CAR_OPTIONS = ['1', '2']
 const ROLE_OPTIONS = ['代行', '随伴']
-const STAFF_OPTIONS = ['西村', '鈴木', 'チョロモン', 'たかし', 'なみ']
+const STAFF_OPTIONS = ['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや']
 const STATUS_OPTIONS = ['休業', '定休日']
 
 export function ShiftEditModal({ open, onClose, date, onSaved }) {
