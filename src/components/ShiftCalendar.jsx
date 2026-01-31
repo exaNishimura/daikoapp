@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getShifts } from '@/services/shiftService'
 import EditIcon from '@mui/icons-material/Edit'
@@ -209,8 +209,12 @@ export function ShiftCalendar() {
   const [searchText, setSearchText] = useState('')
   const [shifts, setShifts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedYear, setSelectedYear] = useState(2026)
-  const [selectedMonth, setSelectedMonth] = useState(1)
+  // 現在の年月を初期値として設定
+  const today = new Date()
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1)
+  const calendarContainerRef = useRef(null)
+  const hasScrolledRef = useRef(false)
 
 
   const loadShifts = async () => {
@@ -239,10 +243,39 @@ export function ShiftCalendar() {
 
   useEffect(() => {
     if (selectedYear && selectedMonth) {
+      hasScrolledRef.current = false
       loadShifts()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, selectedMonth])
+
+  // 本日の日付まで自動スクロール
+  useEffect(() => {
+    if (loading || hasScrolledRef.current) return
+    
+    const today = new Date()
+    const currentYear = today.getFullYear()
+    const currentMonth = today.getMonth() + 1
+    const currentDate = today.getDate()
+    
+    // 選択された年月が現在の年月の場合のみスクロール
+    if (selectedYear === currentYear && selectedMonth === currentMonth) {
+      const todayDateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`
+      
+      // 少し遅延を入れてDOMの更新を待つ
+      setTimeout(() => {
+        const todayElement = document.querySelector(`[data-date="${todayDateStr}"]`)
+        if (todayElement && calendarContainerRef.current) {
+          todayElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          })
+          hasScrolledRef.current = true
+        }
+      }, 100)
+    }
+  }, [loading, selectedYear, selectedMonth])
 
 
   // データを日付でグループ化
@@ -362,7 +395,7 @@ export function ShiftCalendar() {
         </div>
       </div>
 
-      <div className="shift-container">
+      <div className="shift-container" ref={calendarContainerRef}>
         {loading ? (
           <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>
         ) : (
@@ -388,7 +421,7 @@ function DayBlock({ dayData, visibleStaff }) {
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
 
   return (
-    <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`}>
+    <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`} data-date={dayData.date}>
       <div className="day-header">
         <div className="day-date">
           {dateFormatted}
