@@ -27,15 +27,27 @@
 
 .shift-header {
   background: white;
-  padding: 20px;
+  padding: 16px;
   border-radius: 8px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .shift-header h1 {
-  font-size: 24px;
-  margin-bottom: 20px;
+  font-size: 20px;
+  margin-bottom: 16px;
+  margin-top: 0;
+}
+
+@media (min-width: 600px) {
+  .shift-header {
+    padding: 20px;
+  }
+  
+  .shift-header h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
 }
 
 .shift-controls {
