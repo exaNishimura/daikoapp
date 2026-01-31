@@ -2,12 +2,16 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getShifts } from '@/services/shiftService'
 import EditIcon from '@mui/icons-material/Edit'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
 import './ShiftCalendar.css'
 
 // ============================================
@@ -307,12 +311,47 @@ export function ShiftCalendar() {
     }
   }
 
+  const handlePrevMonth = () => {
+    const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1
+    const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear
+    setSelectedYear(prevYear)
+    setSelectedMonth(prevMonth)
+  }
+
+  const handleNextMonth = () => {
+    const nextMonth = selectedMonth === 12 ? 1 : selectedMonth + 1
+    const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear
+    setSelectedYear(nextYear)
+    setSelectedMonth(nextMonth)
+  }
+
   return (
     <div className="shift-calendar-page">
       <div className="shift-header">
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <h1>運転代行シフト表</h1>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton
+                onClick={handlePrevMonth}
+                disabled={loading}
+                size="large"
+                aria-label="前月"
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Typography variant="h6" component="div" sx={{ minWidth: '120px', textAlign: 'center' }}>
+                {selectedYear}年{selectedMonth}月
+              </Typography>
+              <IconButton
+                onClick={handleNextMonth}
+                disabled={loading}
+                size="large"
+                aria-label="次月"
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </Box>
             <FormControl size="small" sx={{ minWidth: 100 }}>
               <InputLabel>年</InputLabel>
               <Select
