@@ -120,10 +120,6 @@
 .shift-container {
   overflow-x: auto;
   overflow-y: visible;
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   width: 100%;
   -webkit-overflow-scrolling: touch;
 }
@@ -189,6 +185,16 @@
 .status-label.holiday {
   background: #ffffcc;
   color: #666600;
+}
+
+.target-amount {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  background: #e3f2fd;
+  color: #1976d2;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .timeline-container {
@@ -272,7 +278,8 @@
   border-radius: 4px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 4px;
   font-size: 11px;
   font-weight: bold;
   cursor: pointer;

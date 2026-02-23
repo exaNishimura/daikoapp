@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getShifts } from '@/services/shiftService'
+import { getEmployees } from '@/services/employeeService'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -216,6 +217,7 @@ export function ShiftCalendar() {
   const [visibleStaff, setVisibleStaff] = useState(['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや'])
   const [searchText, setSearchText] = useState('')
   const [shifts, setShifts] = useState([])
+  const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   // 現在の年月を初期値として設定
   const today = new Date()
@@ -234,17 +236,28 @@ export function ShiftCalendar() {
       const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate()
       const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`
       
-      const { data, error } = await getShifts(startDate, endDate)
-      if (error) {
-        console.error('Error loading shifts:', error)
-        // エラー時は空配列を使用
+      const [shiftsResult, employeesResult] = await Promise.all([
+        getShifts(startDate, endDate),
+        getEmployees()
+      ])
+
+      if (shiftsResult.error) {
+        console.error('Error loading shifts:', shiftsResult.error)
         setShifts([])
       } else {
-        setShifts(data || [])
+        setShifts(shiftsResult.data || [])
+      }
+
+      if (employeesResult.error) {
+        console.error('Error loading employees:', employeesResult.error)
+        setEmployees([])
+      } else {
+        setEmployees(employeesResult.data || [])
       }
     } catch (err) {
-      console.error('Error loading shifts:', err)
+      console.error('Error loading data:', err)
       setShifts([])
+      setEmployees([])
     } finally {
       setLoading(false)
     }
@@ -587,6 +600,7 @@ export function ShiftCalendar() {
                 key={date}
                 dayData={groupedData[date]}
                 visibleStaff={visibleStaff}
+                employees={employees}
               />
             ))}
           </div>
@@ -597,17 +611,67 @@ export function ShiftCalendar() {
   )
 }
 
-function DayBlock({ dayData, visibleStaff }) {
+function DayBlock({ dayData, visibleStaff, employees }) {
   const isFriSat = dayData.dow === '金' || dayData.dow === '土'
   const dateParts = dayData.date.split('-')
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
 
+  // 目標金額を計算
+  const calculateTargetAmount = () => {
+    if (dayData.status || !dayData.shifts || dayData.shifts.length === 0) {
+      return null
+    }
+
+    // 従業員マップを作成（名前で検索）
+    const employeeMap = {}
+    employees.forEach(emp => {
+      employeeMap[emp.name] = emp
+    })
+
+    let totalWage = 0
+
+    // 各シフトの給料を計算
+    dayData.shifts.forEach(shift => {
+      if (!shift.start || !shift.end || !shift.staff) return
+
+      const employee = employeeMap[shift.staff]
+      if (!employee || !employee.hourly_wage) return
+
+      // 勤務時間を計算（時間単位）
+      const startTime = shift.start.split(':')
+      const endTime = shift.end.split(':')
+      const startMinutes = parseInt(startTime[0]) * 60 + parseInt(startTime[1])
+      let endMinutes = parseInt(endTime[0]) * 60 + parseInt(endTime[1])
+
+      // 翌日をまたぐ場合（終了時刻が開始時刻より小さい場合）
+      if (endMinutes <= startMinutes) {
+        endMinutes += 24 * 60 // 24時間分を加算
+      }
+
+      const workHours = (endMinutes - startMinutes) / 60
+      const wage = employee.hourly_wage * workHours
+      totalWage += wage
+    })
+
+    // 3000円を加算
+    return totalWage + 3000
+  }
+
+  const targetAmount = calculateTargetAmount()
+
   return (
     <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`} data-date={dayData.date}>
       <div className="day-header">
-        <div className="day-date">
-          {dateFormatted}
-          <span className="day-dow">({dayData.dow})</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+          <div className="day-date">
+            {dateFormatted}
+            <span className="day-dow">({dayData.dow})</span>
+          </div>
+          {targetAmount !== null && (
+            <div className="target-amount">
+              目標: ¥{(Math.ceil(Math.round(targetAmount) / 1000) * 1000).toLocaleString()}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {dayData.status && (
