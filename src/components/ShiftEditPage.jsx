@@ -26,6 +26,11 @@ import Collapse from '@mui/material/Collapse'
 import SaveIcon from '@mui/icons-material/Save'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
 
 const CAR_OPTIONS = ['1', '2']
 const ROLE_OPTIONS = ['代行', '随伴']
@@ -62,6 +67,8 @@ export function ShiftEditPage() {
   const [editingShiftIds, setEditingShiftIds] = useState({}) // 編集中のシフトID
   const [editingShifts, setEditingShifts] = useState({}) // 編集中のシフトデータ
   const [statuses, setStatuses] = useState({}) // 日付ごとのステータス
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false) // コピー用ダイアログの開閉状態
+  const [copyTargetDate, setCopyTargetDate] = useState(null) // コピー対象の日付
   const [expandedDates, setExpandedDates] = useState(() => {
     // デフォルトで全て展開
     const expanded = {}
@@ -284,44 +291,127 @@ export function ShiftEditPage() {
       return
     }
 
+    // 一括保存用に編集状態を保持（個別保存は行わない）
+    // 実際の保存は handleSaveAll で一括実行
+  }
+
+  // 一括保存処理
+  const handleSaveAll = async () => {
+    // バリデーション
+    const invalidShifts = []
+    Object.keys(editingShifts).forEach(shiftId => {
+      const shiftData = editingShifts[shiftId]
+      if (!shiftData || !shiftData.car || !shiftData.role || !shiftData.staff || !shiftData.start || !shiftData.end) {
+        invalidShifts.push(shiftId)
+      }
+    })
+
+    if (invalidShifts.length > 0) {
+      setError('編集中のシフトに必須項目が未入力です。車両、役割、スタッフ、開始時刻、終了時刻は必須です')
+      return
+    }
+
     setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const dateObj = new Date(date)
-      const dow = DOW_MAP[dateObj.getDay()]
-      
-      const { error: updateError } = await updateShift(shiftId, {
-        car: shiftData.car,
-        role: shiftData.role,
-        staff: shiftData.staff,
-        start: shiftData.start,
-        end: shiftData.end,
-        note: shiftData.note || null,
-        dow,
+      const updatePromises = []
+      const shiftIdToDateMap = {}
+
+      // シフトIDから日付を取得するためのマップを作成
+      shifts.forEach(shift => {
+        if (editingShifts[shift.id]) {
+          shiftIdToDateMap[shift.id] = shift.date
+        }
       })
 
-      if (updateError) {
-        setError(`シフトの更新に失敗: ${updateError.message}`)
+      // 全ての編集中のシフトを更新
+      Object.keys(editingShifts).forEach(shiftId => {
+        const shiftData = editingShifts[shiftId]
+        const date = shiftIdToDateMap[shiftId]
+        if (!date) return
+
+        const dateObj = new Date(date)
+        const dow = DOW_MAP[dateObj.getDay()]
+
+        updatePromises.push(
+          updateShift(shiftId, {
+            car: shiftData.car,
+            role: shiftData.role,
+            staff: shiftData.staff,
+            start: shiftData.start,
+            end: shiftData.end,
+            note: shiftData.note || null,
+            dow,
+          })
+        )
+      })
+
+      const results = await Promise.all(updatePromises)
+      const errors = results.filter(r => r.error)
+
+      if (errors.length > 0) {
+        setError(`一部のシフトの更新に失敗しました: ${errors[0].error.message}`)
       } else {
-        setEditingShiftIds(prev => {
-          const next = { ...prev }
-          delete next[shiftId]
-          return next
-        })
-        setEditingShifts(prev => {
-          const next = { ...prev }
-          delete next[shiftId]
-          return next
-        })
+        // 編集状態をクリア
+        setEditingShiftIds({})
+        setEditingShifts({})
         await loadShifts()
-        setSuccess('シフトを更新しました')
+        setSuccess(`${results.length}件のシフトを更新しました`)
       }
     } catch (err) {
       setError(`エラーが発生しました: ${err.message}`)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 他の日からシフトをコピー
+  const handleCopyFromDate = async (sourceDate) => {
+    const sourceShifts = getShiftsForDate(sourceDate)
+    if (sourceShifts.length === 0) {
+      setError('選択した日付にシフトが設定されていません')
+      setCopyDialogOpen(false)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const dateObj = new Date(copyTargetDate)
+      const dow = DOW_MAP[dateObj.getDay()]
+
+      // 全てのシフトをコピーして作成
+      const createPromises = sourceShifts.map(shift =>
+        createShift({
+          date: copyTargetDate,
+          dow,
+          car: shift.car,
+          role: shift.role,
+          staff: shift.staff,
+          start: shift.start,
+          end: shift.end,
+          note: shift.note || null,
+        })
+      )
+
+      const results = await Promise.all(createPromises)
+      const errors = results.filter(r => r.error)
+
+      if (errors.length > 0) {
+        setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
+      } else {
+        await loadShifts()
+        setSuccess(`${sourceDate}から${sourceShifts.length}件のシフトをコピーしました`)
+      }
+    } catch (err) {
+      setError(`エラーが発生しました: ${err.message}`)
+    } finally {
+      setLoading(false)
+      setCopyDialogOpen(false)
     }
   }
 
@@ -425,13 +515,24 @@ export function ShiftEditPage() {
             </IconButton>
           </Box>
         </Box>
-        <Button
-          variant="outlined"
-          onClick={loadShifts}
-          disabled={loading}
-        >
-          再読み込み
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleSaveAll}
+            disabled={loading || Object.keys(editingShifts).length === 0}
+          >
+            一括保存
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={loadShifts}
+            disabled={loading}
+          >
+            再読み込み
+          </Button>
+        </Box>
       </Box>
 
       {/* エラー・成功メッセージ */}
@@ -654,15 +755,29 @@ export function ShiftEditPage() {
                               />
                             </Grid>
                             <Grid item xs={12}>
-                              <Button
-                                size="small"
-                                variant="contained"
-                                startIcon={<SaveIcon />}
-                                onClick={() => handleAddShift(date)}
-                                disabled={loading}
-                              >
-                                追加
-                              </Button>
+                              <Stack direction="row" spacing={1}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<ContentCopyIcon />}
+                                  onClick={() => {
+                                    setCopyTargetDate(date)
+                                    setCopyDialogOpen(true)
+                                  }}
+                                  disabled={loading}
+                                >
+                                  他の日からコピー
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  startIcon={<SaveIcon />}
+                                  onClick={() => handleAddShift(date)}
+                                  disabled={loading}
+                                >
+                                  追加
+                                </Button>
+                              </Stack>
                             </Grid>
                           </Grid>
                         </Box>
@@ -834,20 +949,14 @@ export function ShiftEditPage() {
                                           <Stack direction="row" spacing={1}>
                                             <Button
                                               size="small"
-                                              variant="contained"
-                                              startIcon={<SaveIcon />}
-                                              onClick={() => handleUpdateShift(shift.id, date)}
-                                              disabled={loading}
-                                            >
-                                              保存
-                                            </Button>
-                                            <Button
-                                              size="small"
                                               onClick={() => handleCancelEditShift(shift.id)}
                                               disabled={loading}
                                             >
                                               キャンセル
                                             </Button>
+                                            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 'auto' }}>
+                                              編集内容は「一括保存」ボタンで保存されます
+                                            </Typography>
                                           </Stack>
                                         </Grid>
                                       </Grid>
@@ -875,6 +984,38 @@ export function ShiftEditPage() {
           })}
         </Stack>
       )}
+
+      {/* コピー用ダイアログ */}
+      <Dialog open={copyDialogOpen} onClose={() => setCopyDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>他の日からシフトをコピー</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            コピー元の日付を選択してください
+          </Typography>
+          <FormControl fullWidth>
+            <InputLabel>日付を選択</InputLabel>
+            <Select
+              value=""
+              onChange={(e) => handleCopyFromDate(e.target.value)}
+              label="日付を選択"
+            >
+              {days
+                .filter(({ date }) => date !== copyTargetDate)
+                .map(({ date, day, dow }) => {
+                  const dateShifts = getShiftsForDate(date)
+                  return (
+                    <MenuItem key={date} value={date}>
+                      {day}日 ({dow}) {dateShifts.length > 0 && `- ${dateShifts.length}件`}
+                    </MenuItem>
+                  )
+                })}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCopyDialogOpen(false)}>キャンセル</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
