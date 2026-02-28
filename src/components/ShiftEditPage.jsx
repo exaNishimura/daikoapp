@@ -818,7 +818,14 @@ export function ShiftEditPage() {
                       <IconButton
                         size="small"
                         onClick={toggleExpand}
-                        sx={{ mr: 0.5 }}
+                        sx={{ 
+                          mr: 0.5,
+                          color: '#666',
+                          '&:hover': {
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                            color: '#333'
+                          }
+                        }}
                       >
                         {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                       </IconButton>
@@ -836,7 +843,7 @@ export function ShiftEditPage() {
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                       <FormControl size="small" sx={{ minWidth: 140 }}>
-                        <InputLabel id={`status-label-${date}`} shrink>ステータス</InputLabel>
+                        <InputLabel id={`status-label-${date}`} shrink sx={{ color: '#666' }}>ステータス</InputLabel>
                         <Select
                           labelId={`status-label-${date}`}
                           value={status || ''}
@@ -844,7 +851,35 @@ export function ShiftEditPage() {
                           disabled={loading}
                           displayEmpty
                           label="ステータス"
-                          sx={{ minWidth: 140 }}
+                          sx={{ 
+                            minWidth: 140,
+                            color: '#333',
+                            '& .MuiSelect-icon': {
+                              color: '#666'
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#bdbdbd'
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#666'
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#1976d2'
+                            }
+                          }}
+                          MenuProps={{
+                            PaperProps: {
+                              sx: {
+                                bgcolor: '#ffffff',
+                                '& .MuiMenuItem-root': {
+                                  color: '#333',
+                                  '&:hover': {
+                                    bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                  }
+                                }
+                              }
+                            }
+                          }}
                         >
                           <MenuItem value="">なし</MenuItem>
                           {STATUS_OPTIONS.map(s => (
@@ -873,7 +908,7 @@ export function ShiftEditPage() {
                       label={status} 
                       size="medium" 
                       color={status === '休業' ? 'error' : 'warning'}
-                      sx={{ fontWeight: 'bold' }}
+                      sx={{ fontWeight: 'bold', color: '#fff' }}
                     />
                   ) : (
                     <>
@@ -905,7 +940,7 @@ export function ShiftEditPage() {
                           <Grid container spacing={2}>
                             <Grid item xs={12} sm={6} md={3}>
                               <FormControl fullWidth size="small">
-                                <InputLabel>車両</InputLabel>
+                                <InputLabel sx={{ color: '#666' }}>車両</InputLabel>
                                 <Select
                                   value={newShift.car}
                                   onChange={(e) => setNewShifts(prev => ({
@@ -913,6 +948,31 @@ export function ShiftEditPage() {
                                     [date]: { ...newShift, car: e.target.value }
                                   }))}
                                   label="車両"
+                                  sx={{ 
+                                    color: '#333',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#bdbdbd'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#666'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#1976d2'
+                                    }
+                                  }}
+                                  MenuProps={{
+                                    PaperProps: {
+                                      sx: {
+                                        bgcolor: '#ffffff',
+                                        '& .MuiMenuItem-root': {
+                                          color: '#333',
+                                          '&:hover': {
+                                            bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }}
                                 >
                                   {CAR_OPTIONS.map(car => (
                                     <MenuItem key={car} value={car}>{car}号車</MenuItem>
@@ -922,7 +982,7 @@ export function ShiftEditPage() {
                             </Grid>
                             <Grid item xs={12} sm={6} md={3}>
                               <FormControl fullWidth size="small">
-                                <InputLabel>役割</InputLabel>
+                                <InputLabel sx={{ color: '#666' }}>役割</InputLabel>
                                 <Select
                                   value={newShift.role}
                                   onChange={(e) => setNewShifts(prev => ({
@@ -930,6 +990,31 @@ export function ShiftEditPage() {
                                     [date]: { ...newShift, role: e.target.value }
                                   }))}
                                   label="役割"
+                                  sx={{ 
+                                    color: '#333',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#bdbdbd'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#666'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#1976d2'
+                                    }
+                                  }}
+                                  MenuProps={{
+                                    PaperProps: {
+                                      sx: {
+                                        bgcolor: '#ffffff',
+                                        '& .MuiMenuItem-root': {
+                                          color: '#333',
+                                          '&:hover': {
+                                            bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }}
                                 >
                                   {ROLE_OPTIONS.map(role => (
                                     <MenuItem key={role} value={role}>{role}</MenuItem>
@@ -939,7 +1024,7 @@ export function ShiftEditPage() {
                             </Grid>
                             <Grid item xs={12} sm={6} md={3}>
                               <FormControl fullWidth size="small">
-                                <InputLabel>スタッフ</InputLabel>
+                                <InputLabel sx={{ color: '#666' }}>スタッフ</InputLabel>
                                 <Select
                                   value={newShift.staff}
                                   onChange={(e) => setNewShifts(prev => ({
@@ -947,6 +1032,31 @@ export function ShiftEditPage() {
                                     [date]: { ...newShift, staff: e.target.value }
                                   }))}
                                   label="スタッフ"
+                                  sx={{ 
+                                    color: '#333',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#bdbdbd'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#666'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                      borderColor: '#1976d2'
+                                    }
+                                  }}
+                                  MenuProps={{
+                                    PaperProps: {
+                                      sx: {
+                                        bgcolor: '#ffffff',
+                                        '& .MuiMenuItem-root': {
+                                          color: '#333',
+                                          '&:hover': {
+                                            bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }}
                                 >
                                   {STAFF_OPTIONS.map(staff => (
                                     <MenuItem key={staff} value={staff}>{staff}</MenuItem>
@@ -965,7 +1075,21 @@ export function ShiftEditPage() {
                                 }))}
                                 size="small"
                                 fullWidth
-                                InputLabelProps={{ shrink: true }}
+                                InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    color: '#333'
+                                  },
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#bdbdbd'
+                                  },
+                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#666'
+                                  },
+                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#1976d2'
+                                  }
+                                }}
                               />
                             </Grid>
                             <Grid item xs={6} sm={3} md={1.5}>
@@ -979,7 +1103,21 @@ export function ShiftEditPage() {
                                 }))}
                                 size="small"
                                 fullWidth
-                                InputLabelProps={{ shrink: true }}
+                                InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    color: '#333'
+                                  },
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#bdbdbd'
+                                  },
+                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#666'
+                                  },
+                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#1976d2'
+                                  }
+                                }}
                               />
                             </Grid>
                             <Grid item xs={12} md={12}>
@@ -995,6 +1133,21 @@ export function ShiftEditPage() {
                                 multiline
                                 rows={1}
                                 placeholder="例: 無人回避"
+                                InputLabelProps={{ sx: { color: '#666' } }}
+                                sx={{
+                                  '& .MuiInputBase-input': {
+                                    color: '#333'
+                                  },
+                                  '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#bdbdbd'
+                                  },
+                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#666'
+                                  },
+                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#1976d2'
+                                  }
+                                }}
                               />
                             </Grid>
                             <Grid item xs={12}>
@@ -1054,10 +1207,28 @@ export function ShiftEditPage() {
                                     >
                                       <Box sx={{ flex: 1 }}>
                                         <Typography variant="body2" sx={{ fontWeight: 'medium', color: '#333' }}>
-                                          <Chip label={shift.car} size="small" sx={{ mr: 1 }} />
+                                          <Chip 
+                                            label={shift.car} 
+                                            size="small" 
+                                            sx={{ 
+                                              mr: 1,
+                                              bgcolor: '#e3f2fd',
+                                              color: '#1976d2',
+                                              border: '1px solid #90caf9'
+                                            }} 
+                                          />
                                           {shift.role} / {shift.staff} / {shift.start} - {shift.end}
                                           {shift.note && (
-                                            <Chip label={shift.note} size="small" sx={{ ml: 1 }} variant="outlined" />
+                                            <Chip 
+                                              label={shift.note} 
+                                              size="small" 
+                                              variant="outlined"
+                                              sx={{ 
+                                                ml: 1, 
+                                                borderColor: '#bdbdbd',
+                                                color: '#666'
+                                              }} 
+                                            />
                                           )}
                                         </Typography>
                                       </Box>
@@ -1096,7 +1267,7 @@ export function ShiftEditPage() {
                                       <Grid container spacing={2}>
                                         <Grid item xs={12} sm={6} md={3}>
                                           <FormControl fullWidth size="small">
-                                            <InputLabel>車両</InputLabel>
+                                            <InputLabel sx={{ color: '#666' }}>車両</InputLabel>
                                             <Select
                                               value={editingShift.car}
                                               onChange={(e) => setEditingShifts(prev => ({
@@ -1104,6 +1275,31 @@ export function ShiftEditPage() {
                                                 [shift.id]: { ...editingShift, car: e.target.value }
                                               }))}
                                               label="車両"
+                                              sx={{ 
+                                                color: '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#bdbdbd'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#666'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#1976d2'
+                                                }
+                                              }}
+                                              MenuProps={{
+                                                PaperProps: {
+                                                  sx: {
+                                                    bgcolor: '#ffffff',
+                                                    '& .MuiMenuItem-root': {
+                                                      color: '#333',
+                                                      '&:hover': {
+                                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }}
                                             >
                                               {CAR_OPTIONS.map(car => (
                                                 <MenuItem key={car} value={car}>{car}号車</MenuItem>
@@ -1113,7 +1309,7 @@ export function ShiftEditPage() {
                                         </Grid>
                                         <Grid item xs={12} sm={6} md={3}>
                                           <FormControl fullWidth size="small">
-                                            <InputLabel>役割</InputLabel>
+                                            <InputLabel sx={{ color: '#666' }}>役割</InputLabel>
                                             <Select
                                               value={editingShift.role}
                                               onChange={(e) => setEditingShifts(prev => ({
@@ -1121,6 +1317,31 @@ export function ShiftEditPage() {
                                                 [shift.id]: { ...editingShift, role: e.target.value }
                                               }))}
                                               label="役割"
+                                              sx={{ 
+                                                color: '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#bdbdbd'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#666'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#1976d2'
+                                                }
+                                              }}
+                                              MenuProps={{
+                                                PaperProps: {
+                                                  sx: {
+                                                    bgcolor: '#ffffff',
+                                                    '& .MuiMenuItem-root': {
+                                                      color: '#333',
+                                                      '&:hover': {
+                                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }}
                                             >
                                               {ROLE_OPTIONS.map(role => (
                                                 <MenuItem key={role} value={role}>{role}</MenuItem>
@@ -1130,7 +1351,7 @@ export function ShiftEditPage() {
                                         </Grid>
                                         <Grid item xs={12} sm={6} md={3}>
                                           <FormControl fullWidth size="small">
-                                            <InputLabel>スタッフ</InputLabel>
+                                            <InputLabel sx={{ color: '#666' }}>スタッフ</InputLabel>
                                             <Select
                                               value={editingShift.staff}
                                               onChange={(e) => setEditingShifts(prev => ({
@@ -1138,6 +1359,31 @@ export function ShiftEditPage() {
                                                 [shift.id]: { ...editingShift, staff: e.target.value }
                                               }))}
                                               label="スタッフ"
+                                              sx={{ 
+                                                color: '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#bdbdbd'
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#666'
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                  borderColor: '#1976d2'
+                                                }
+                                              }}
+                                              MenuProps={{
+                                                PaperProps: {
+                                                  sx: {
+                                                    bgcolor: '#ffffff',
+                                                    '& .MuiMenuItem-root': {
+                                                      color: '#333',
+                                                      '&:hover': {
+                                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }}
                                             >
                                               {STAFF_OPTIONS.map(staff => (
                                                 <MenuItem key={staff} value={staff}>{staff}</MenuItem>
@@ -1156,7 +1402,21 @@ export function ShiftEditPage() {
                                             }))}
                                             size="small"
                                             fullWidth
-                                            InputLabelProps={{ shrink: true }}
+                                            InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                                            sx={{
+                                              '& .MuiInputBase-input': {
+                                                color: '#333'
+                                              },
+                                              '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#bdbdbd'
+                                              },
+                                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#666'
+                                              },
+                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#1976d2'
+                                              }
+                                            }}
                                           />
                                         </Grid>
                                         <Grid item xs={6} sm={3} md={1.5}>
@@ -1170,7 +1430,21 @@ export function ShiftEditPage() {
                                             }))}
                                             size="small"
                                             fullWidth
-                                            InputLabelProps={{ shrink: true }}
+                                            InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                                            sx={{
+                                              '& .MuiInputBase-input': {
+                                                color: '#333'
+                                              },
+                                              '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#bdbdbd'
+                                              },
+                                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#666'
+                                              },
+                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#1976d2'
+                                              }
+                                            }}
                                           />
                                         </Grid>
                                         <Grid item xs={12} md={12}>
@@ -1186,6 +1460,21 @@ export function ShiftEditPage() {
                                             multiline
                                             rows={1}
                                             placeholder="例: 無人回避"
+                                            InputLabelProps={{ sx: { color: '#666' } }}
+                                            sx={{
+                                              '& .MuiInputBase-input': {
+                                                color: '#333'
+                                              },
+                                              '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#bdbdbd'
+                                              },
+                                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#666'
+                                              },
+                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#1976d2'
+                                              }
+                                            }}
                                           />
                                         </Grid>
                                         <Grid item xs={12}>
@@ -1229,23 +1518,52 @@ export function ShiftEditPage() {
       )}
 
       {/* コピー用ダイアログ */}
-      <Dialog open={copyDialogOpen} onClose={() => setCopyDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>他の日からシフトをコピー</DialogTitle>
+      <Dialog 
+        open={copyDialogOpen} 
+        onClose={() => setCopyDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#ffffff'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#333' }}>他の日からシフトをコピー</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
             コピー元の日付を選択してください
           </Typography>
           <FormControl fullWidth>
-            <InputLabel>日付を選択</InputLabel>
+            <InputLabel sx={{ color: '#666' }}>日付を選択</InputLabel>
             <Select
               value=""
               onChange={(e) => handleCopyFromDate(e.target.value)}
               label="日付を選択"
+              sx={{ 
+                color: '#333',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#bdbdbd'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#666'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2'
+                }
+              }}
               MenuProps={{
                 PaperProps: {
-                  style: {
+                  sx: {
                     maxHeight: 400,
-                  },
+                    bgcolor: '#ffffff',
+                    '& .MuiMenuItem-root': {
+                      color: '#333',
+                      '&:hover': {
+                        bgcolor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }
+                  }
                 },
               }}
             >
