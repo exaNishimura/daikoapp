@@ -297,6 +297,12 @@ export function ShiftEditPage() {
 
   // 一括保存処理
   const handleSaveAll = async () => {
+    // 編集中のシフトがない場合
+    if (Object.keys(editingShifts).length === 0) {
+      setError('保存するシフトがありません。シフトを編集してから保存してください。')
+      return
+    }
+
     // バリデーション
     const invalidShifts = []
     Object.keys(editingShifts).forEach(shiftId => {
@@ -515,16 +521,27 @@ export function ShiftEditPage() {
             </IconButton>
           </Box>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<SaveIcon />}
-            onClick={handleSaveAll}
-            disabled={loading || Object.keys(editingShifts).length === 0}
-          >
-            一括保存
-          </Button>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveAll}
+              disabled={loading}
+              sx={{ minWidth: '120px' }}
+            >
+              一括保存
+            </Button>
+            {Object.keys(editingShifts).length > 0 && (
+              <Chip 
+                label={`${Object.keys(editingShifts).length}件編集中`} 
+                size="small" 
+                color="primary"
+                variant="outlined"
+              />
+            )}
+          </Box>
           <Button
             variant="outlined"
             onClick={loadShifts}
