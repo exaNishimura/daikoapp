@@ -563,7 +563,7 @@ export function ShiftEditPage() {
     }
 
     return (
-      <Box className="time-axis" sx={{ position: 'relative', height: '30px', borderBottom: '2px solid #ddd', mb: 1.25 }}>
+      <Box className="time-axis" sx={{ position: 'relative', height: '30px', borderBottom: '2px solid #ddd', mb: 1.25, bgcolor: '#ffffff' }}>
         <Box
           className="peak-zone"
           sx={{
@@ -587,7 +587,7 @@ export function ShiftEditPage() {
               borderLeft: marker.type === 'major' ? '2px solid #ddd' : '1px dashed #ddd',
               fontSize: '11px',
               pl: 0.5,
-              color: '#666',
+              color: '#333',
               fontWeight: marker.type === 'major' ? 'bold' : 'normal',
               opacity: marker.type === 'minor' ? 0.5 : 1,
               left: `${marker.left}px`
@@ -605,8 +605,8 @@ export function ShiftEditPage() {
     const companionShifts = shifts.filter(s => s.car === carNum && s.role === '随伴')
 
     return (
-      <Box className="car-block" sx={{ mb: 2.5 }}>
-        <Box className="car-header" sx={{ fontWeight: 'bold', mb: 1, fontSize: '14px', color: '#555' }}>
+      <Box className="car-block" sx={{ mb: 2.5, bgcolor: '#ffffff' }}>
+        <Box className="car-header" sx={{ fontWeight: 'bold', mb: 1, fontSize: '14px', color: '#333' }}>
           {carNum}号車
         </Box>
         <Lane role="代行" shifts={driverShifts} />
@@ -687,7 +687,13 @@ export function ShiftEditPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: '1400px', mx: 'auto' }}>
+    <Box sx={{ 
+      p: 3, 
+      maxWidth: '1400px', 
+      mx: 'auto',
+      bgcolor: '#f5f5f5',
+      minHeight: '100vh'
+    }}>
       {/* ヘッダー */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -706,7 +712,7 @@ export function ShiftEditPage() {
             >
               <ChevronLeftIcon />
             </IconButton>
-            <Typography variant="h4" component="h1" sx={{ minWidth: '200px', textAlign: 'center' }}>
+            <Typography variant="h4" component="h1" sx={{ minWidth: '200px', textAlign: 'center', color: '#333' }}>
               {monthLabel}
             </Typography>
             <IconButton
@@ -798,8 +804,8 @@ export function ShiftEditPage() {
                 key={date} 
                 sx={{ 
                   border: isWeekend ? '2px solid' : '1px solid',
-                  borderColor: isWeekend ? 'primary.main' : 'divider',
-                  bgcolor: isWeekend ? 'action.hover' : 'background.paper',
+                  borderColor: isWeekend ? '#1976d2' : '#e0e0e0',
+                  bgcolor: isWeekend ? 'rgba(200, 220, 255, 0.2)' : '#ffffff',
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     boxShadow: 2,
@@ -816,7 +822,7 @@ export function ShiftEditPage() {
                       >
                         {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                       </IconButton>
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: '#333' }}>
                         {day}日 ({dow})
                       </Typography>
                       {hasShifts && !status && (
@@ -874,10 +880,10 @@ export function ShiftEditPage() {
                       {/* タイムライン表示 */}
                       {dateShifts.length > 0 && (
                         <Box sx={{ mb: 3, mt: 1 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}>
                             シフト表
                           </Typography>
-                          <Box className="timeline-container" sx={{ position: 'relative', mt: 1.25, width: `${TIMELINE_WIDTH}px`, overflowX: 'auto' }}>
+                          <Box className="timeline-container" sx={{ position: 'relative', mt: 1.25, width: `${TIMELINE_WIDTH}px`, overflowX: 'auto', bgcolor: '#ffffff', p: 1, borderRadius: 1 }}>
                             <TimeAxis />
                             {[...new Set(dateShifts.map(s => s.car))].sort().map(carNum => (
                               <CarBlock
@@ -892,8 +898,8 @@ export function ShiftEditPage() {
 
                       {/* 新規シフト追加フォーム */}
                       <Collapse in={isEditing}>
-                        <Box sx={{ mb: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold' }}>
+                        <Box sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 1 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#333' }}>
                             新規シフト追加
                           </Typography>
                           <Grid container spacing={2}>
@@ -1023,7 +1029,7 @@ export function ShiftEditPage() {
                       {/* 既存シフト一覧 */}
                       {dateShifts.length > 0 && (
                         <Box>
-                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}>
                             設定済みシフト ({dateShifts.length}件)
                           </Typography>
                           <Stack spacing={1}>
@@ -1041,13 +1047,13 @@ export function ShiftEditPage() {
                                         justifyContent: 'space-between',
                                         p: 1.5,
                                         border: '1px solid',
-                                        borderColor: 'divider',
+                                        borderColor: '#e0e0e0',
                                         borderRadius: 1,
-                                        bgcolor: 'background.default',
+                                        bgcolor: '#fafafa',
                                       }}
                                     >
                                       <Box sx={{ flex: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 'medium', color: '#333' }}>
                                           <Chip label={shift.car} size="small" sx={{ mr: 1 }} />
                                           {shift.role} / {shift.staff} / {shift.start} - {shift.end}
                                           {shift.note && (
@@ -1079,12 +1085,12 @@ export function ShiftEditPage() {
                                       sx={{
                                         p: 2,
                                         border: '1px solid',
-                                        borderColor: 'primary.main',
+                                        borderColor: '#1976d2',
                                         borderRadius: 1,
-                                        bgcolor: 'background.default',
+                                        bgcolor: '#fafafa',
                                       }}
                                     >
-                                      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold' }}>
+                                      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#333' }}>
                                         シフト編集
                                       </Typography>
                                       <Grid container spacing={2}>
@@ -1191,7 +1197,7 @@ export function ShiftEditPage() {
                                             >
                                               キャンセル
                                             </Button>
-                                            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 'auto' }}>
+                                            <Typography variant="caption" sx={{ alignSelf: 'center', ml: 'auto', color: '#666' }}>
                                               編集内容は「一括保存」ボタンで保存されます
                                             </Typography>
                                           </Stack>
@@ -1207,7 +1213,7 @@ export function ShiftEditPage() {
                       )}
 
                       {dateShifts.length === 0 && !isEditing && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
                           シフトが設定されていません
                         </Typography>
                       )}
@@ -1226,7 +1232,7 @@ export function ShiftEditPage() {
       <Dialog open={copyDialogOpen} onClose={() => setCopyDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>他の日からシフトをコピー</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
             コピー元の日付を選択してください
           </Typography>
           <FormControl fullWidth>
@@ -1251,7 +1257,7 @@ export function ShiftEditPage() {
                     <MenuItem key={date} value={date}>
                       <Box sx={{ width: '100%' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: dateShifts.length > 0 ? 0.5 : 0 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 'medium', color: '#333' }}>
                             {day}日 ({dow})
                           </Typography>
                           {dateShifts.length > 0 && (
@@ -1269,15 +1275,14 @@ export function ShiftEditPage() {
                               <Typography 
                                 key={shift.id || index} 
                                 variant="caption" 
-                                color="text.secondary"
-                                sx={{ display: 'block', fontSize: '0.75rem' }}
+                                sx={{ display: 'block', fontSize: '0.75rem', color: '#666' }}
                               >
                                 {shift.staff} / {shift.start} - {shift.end}
                               </Typography>
                             ))}
                           </Box>
                         ) : (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#666' }}>
                             シフト未設定
                           </Typography>
                         )}
