@@ -1015,6 +1015,13 @@ export function ShiftEditPage() {
               value=""
               onChange={(e) => handleCopyFromDate(e.target.value)}
               label="日付を選択"
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    maxHeight: 400,
+                  },
+                },
+              }}
             >
               {days
                 .filter(({ date }) => date !== copyTargetDate)
@@ -1022,7 +1029,39 @@ export function ShiftEditPage() {
                   const dateShifts = getShiftsForDate(date)
                   return (
                     <MenuItem key={date} value={date}>
-                      {day}日 ({dow}) {dateShifts.length > 0 && `- ${dateShifts.length}件`}
+                      <Box sx={{ width: '100%' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: dateShifts.length > 0 ? 0.5 : 0 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                            {day}日 ({dow})
+                          </Typography>
+                          {dateShifts.length > 0 && (
+                            <Chip 
+                              label={`${dateShifts.length}件`} 
+                              size="small" 
+                              color="primary"
+                              variant="outlined"
+                            />
+                          )}
+                        </Box>
+                        {dateShifts.length > 0 ? (
+                          <Box sx={{ mt: 0.5 }}>
+                            {dateShifts.map((shift, index) => (
+                              <Typography 
+                                key={shift.id || index} 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ display: 'block', fontSize: '0.75rem' }}
+                              >
+                                {shift.staff} / {shift.start} - {shift.end}
+                              </Typography>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            シフト未設定
+                          </Typography>
+                        )}
+                      </Box>
                     </MenuItem>
                   )
                 })}
