@@ -31,12 +31,49 @@ import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
+import './ShiftEditPage.css'
 
 const CAR_OPTIONS = ['1', '2']
 const ROLE_OPTIONS = ['代行', '随伴']
 const STAFF_OPTIONS = ['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや']
 const STATUS_OPTIONS = ['休業', '定休日']
 const DOW_MAP = ['日', '月', '火', '水', '木', '金', '土']
+
+// タイムライン表示用の定数
+const TIMELINE_START = 19 // 19:00から表示
+const TIMELINE_END = 6    // 06:00まで表示（翌日）
+const TIMELINE_WIDTH = 960 // 時間軸の幅（px）
+const PIXELS_PER_HOUR = TIMELINE_WIDTH / 12 // 12時間 = 960px
+
+// 時間文字列（HH:MM）を分に変換（19:00基準）
+function timeToMinutes(timeStr) {
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  // 19:00 = 0分、20:00 = 60分、...、23:00 = 240分、00:00 = 300分、...、06:00 = 660分
+  if (hours >= TIMELINE_START) {
+    return (hours - TIMELINE_START) * 60 + minutes
+  } else {
+    // 翌日の時間（00:00〜06:00）
+    return (24 - TIMELINE_START + hours) * 60 + minutes
+  }
+}
+
+// 分をピクセル位置に変換
+function minutesToPixels(minutes) {
+  return (minutes / 60) * PIXELS_PER_HOUR
+}
+
+// スタッフ名をCSSクラス名に変換
+function staffToClass(staff) {
+  const map = {
+    '西村': 'nishimura',
+    '鈴木': 'suzuki',
+    'チョロモン': 'choromon',
+    'たかし': 'takashi',
+    'なみ': 'nami',
+    'しゅうや': 'shuya'
+  }
+  return map[staff] || ''
+}
 
 // 月の日付リストを生成
 function getDaysInMonth(year, month) {
@@ -485,6 +522,170 @@ export function ShiftEditPage() {
 
   const monthLabel = year && month ? `${year}年${month}月` : ''
 
+  // タイムライン表示用のコンポーネント
+  const TimeAxis = () => {
+    const markers = []
+    
+    // ピーク帯（23:00〜02:00）の背景
+    const peakStart = minutesToPixels(timeToMinutes('23:00'))
+    const peakEnd = minutesToPixels(timeToMinutes('02:00'))
+
+    // 1時間刻みのマーカー
+    for (let hour = TIMELINE_START; hour <= 23; hour++) {
+      markers.push({
+        type: 'major',
+        left: minutesToPixels((hour - TIMELINE_START) * 60),
+        label: String(hour).padStart(2, '0') + ':00'
+      })
+    }
+    for (let hour = 0; hour <= TIMELINE_END; hour++) {
+      markers.push({
+        type: 'major',
+        left: minutesToPixels((24 - TIMELINE_START + hour) * 60),
+        label: String(hour).padStart(2, '0') + ':00'
+      })
+    }
+
+    // 30分補助線
+    for (let hour = TIMELINE_START; hour <= 23; hour++) {
+      markers.push({
+        type: 'minor',
+        left: minutesToPixels((hour - TIMELINE_START) * 60 + 30),
+        label: ''
+      })
+    }
+    for (let hour = 0; hour <= TIMELINE_END; hour++) {
+      markers.push({
+        type: 'minor',
+        left: minutesToPixels((24 - TIMELINE_START + hour) * 60 + 30),
+        label: ''
+      })
+    }
+
+    return (
+      <Box className="time-axis" sx={{ position: 'relative', height: '30px', borderBottom: '2px solid #ddd', mb: 1.25 }}>
+        <Box
+          className="peak-zone"
+          sx={{
+            position: 'absolute',
+            top: 0,
+            height: '100%',
+            background: 'rgba(255, 240, 200, 0.3)',
+            borderLeft: '1px solid rgba(255, 200, 0, 0.3)',
+            borderRight: '1px solid rgba(255, 200, 0, 0.3)',
+            left: `${peakStart}px`,
+            width: `${peakEnd - peakStart}px`
+          }}
+        />
+        {markers.map((marker, idx) => (
+          <Box
+            key={idx}
+            className={`time-marker ${marker.type}`}
+            sx={{
+              position: 'absolute',
+              height: '100%',
+              borderLeft: marker.type === 'major' ? '2px solid #ddd' : '1px dashed #ddd',
+              fontSize: '11px',
+              pl: 0.5,
+              color: '#666',
+              fontWeight: marker.type === 'major' ? 'bold' : 'normal',
+              opacity: marker.type === 'minor' ? 0.5 : 1,
+              left: `${marker.left}px`
+            }}
+          >
+            {marker.label}
+          </Box>
+        ))}
+      </Box>
+    )
+  }
+
+  const CarBlock = ({ carNum, shifts }) => {
+    const driverShifts = shifts.filter(s => s.car === carNum && s.role === '代行')
+    const companionShifts = shifts.filter(s => s.car === carNum && s.role === '随伴')
+
+    return (
+      <Box className="car-block" sx={{ mb: 2.5 }}>
+        <Box className="car-header" sx={{ fontWeight: 'bold', mb: 1, fontSize: '14px', color: '#555' }}>
+          {carNum}号車
+        </Box>
+        <Lane role="代行" shifts={driverShifts} />
+        <Lane role="随伴" shifts={companionShifts} />
+      </Box>
+    )
+  }
+
+  const Lane = ({ role, shifts }) => {
+    return (
+      <Box className="lane" sx={{ position: 'relative', height: '40px', border: '1px solid #e0e0e0', borderRadius: 1, mb: 0.625, bgcolor: '#fafafa', overflow: 'hidden' }}>
+        <Box className="lane-label" sx={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#666', zIndex: 1, bgcolor: 'rgba(255,255,255,0.8)', px: 0.75, py: 0.25, borderRadius: 0.375 }}>
+          {role}
+        </Box>
+        {shifts.map((shift, idx) => (
+          <ShiftBar key={shift.id || idx} shift={shift} />
+        ))}
+      </Box>
+    )
+  }
+
+  const ShiftBar = ({ shift }) => {
+    const startMinutes = timeToMinutes(shift.start)
+    const endMinutes = timeToMinutes(shift.end)
+    const left = minutesToPixels(startMinutes)
+    const width = minutesToPixels(endMinutes - startMinutes)
+    const staffClass = staffToClass(shift.staff)
+
+    const title = shift.note
+      ? `${shift.staff} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
+      : `${shift.staff} (${shift.role}) ${shift.start}-${shift.end}`
+
+    const staffColors = {
+      nishimura: '#FFA500',
+      suzuki: '#FFD700',
+      choromon: '#8A2BE2',
+      takashi: '#00BFFF',
+      nami: '#FF69B4',
+      shuya: '#32CD32'
+    }
+
+    return (
+      <Box
+        className={`bar ${staffClass}`}
+        title={title}
+        sx={{
+          position: 'absolute',
+          left: `${left}px`,
+          width: `${width}px`,
+          height: '32px',
+          top: '4px',
+          borderRadius: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          pl: 0.5,
+          fontSize: '11px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          transition: 'opacity 0.2s',
+          border: '1px solid rgba(0,0,0,0.2)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          bgcolor: staffColors[staffClass] || '#ccc',
+          '&:hover': {
+            opacity: 0.8,
+            zIndex: 10
+          }
+        }}
+      >
+        <Typography component="span" className="bar-text" sx={{ whiteSpace: 'nowrap', textShadow: '0 0 3px rgba(255,255,255,0.8)', fontSize: '11px' }}>
+          {shift.staff}
+        </Typography>
+        <Typography component="span" className="bar-time" sx={{ fontSize: '10px', ml: 0.5, opacity: 0.9 }}>
+          {shift.start}-{shift.end}
+        </Typography>
+      </Box>
+    )
+  }
+
   return (
     <Box sx={{ p: 3, maxWidth: '1400px', mx: 'auto' }}>
       {/* ヘッダー */}
@@ -670,6 +871,25 @@ export function ShiftEditPage() {
                     />
                   ) : (
                     <>
+                      {/* タイムライン表示 */}
+                      {dateShifts.length > 0 && (
+                        <Box sx={{ mb: 3, mt: 1 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                            シフト表
+                          </Typography>
+                          <Box className="timeline-container" sx={{ position: 'relative', mt: 1.25, width: `${TIMELINE_WIDTH}px`, overflowX: 'auto' }}>
+                            <TimeAxis />
+                            {[...new Set(dateShifts.map(s => s.car))].sort().map(carNum => (
+                              <CarBlock
+                                key={carNum}
+                                carNum={carNum}
+                                shifts={dateShifts}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+
                       {/* 新規シフト追加フォーム */}
                       <Collapse in={isEditing}>
                         <Box sx={{ mb: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>

@@ -1,0 +1,115 @@
+/* タイムライン表示用のスタイル */
+.timeline-container {
+  position: relative;
+  margin-top: 10px;
+}
+
+.time-axis {
+  position: relative;
+  height: 30px;
+  border-bottom: 2px solid #ddd;
+  margin-bottom: 10px;
+}
+
+.time-marker {
+  position: absolute;
+  height: 100%;
+  border-left: 1px solid #ddd;
+  font-size: 11px;
+  padding-left: 4px;
+  color: #666;
+}
+
+.time-marker.major {
+  border-left-width: 2px;
+  font-weight: bold;
+}
+
+.time-marker.minor {
+  border-left-style: dashed;
+  opacity: 0.5;
+}
+
+.peak-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(255, 240, 200, 0.3);
+  border-left: 1px solid rgba(255, 200, 0, 0.3);
+  border-right: 1px solid rgba(255, 200, 0, 0.3);
+}
+
+.car-block {
+  margin-bottom: 20px;
+}
+
+.car-header {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.lane {
+  position: relative;
+  height: 40px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.lane-label {
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #666;
+  z-index: 1;
+  background: rgba(255,255,255,0.8);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.bar {
+  position: absolute;
+  height: 32px;
+  top: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  border: 1px solid rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.bar:hover {
+  opacity: 0.8;
+  z-index: 10;
+}
+
+.bar-text {
+  white-space: nowrap;
+  text-shadow: 0 0 3px rgba(255,255,255,0.8);
+}
+
+.bar-time {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.9;
+}
+
+/* スタッフ別の色 */
+.bar.nishimura { background: #FFA500; }
+.bar.suzuki { background: #FFD700; }
+.bar.choromon { background: #8A2BE2; }
+.bar.takashi { background: #00BFFF; }
+.bar.nami { background: #FF69B4; }
+.bar.shuya { background: #32CD32; }
