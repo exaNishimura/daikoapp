@@ -697,7 +697,17 @@ export function ShiftEditPage() {
       {/* ヘッダー */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/shift')} sx={{ mr: 1 }}>
+          <IconButton 
+            onClick={() => navigate('/shift')} 
+            sx={{ 
+              mr: 1,
+              color: '#666',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                color: '#333'
+              }
+            }}
+          >
             <ArrowBackIcon />
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -709,6 +719,16 @@ export function ShiftEditPage() {
               }}
               disabled={loading}
               size="large"
+              sx={{
+                color: '#666',
+                '&:hover': {
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  color: '#333'
+                },
+                '&.Mui-disabled': {
+                  color: '#bdbdbd'
+                }
+              }}
             >
               <ChevronLeftIcon />
             </IconButton>
@@ -723,6 +743,16 @@ export function ShiftEditPage() {
               }}
               disabled={loading}
               size="large"
+              sx={{
+                color: '#666',
+                '&:hover': {
+                  bgcolor: 'rgba(0, 0, 0, 0.04)',
+                  color: '#333'
+                },
+                '&.Mui-disabled': {
+                  color: '#bdbdbd'
+                }
+              }}
             >
               <ChevronRightIcon />
             </IconButton>
