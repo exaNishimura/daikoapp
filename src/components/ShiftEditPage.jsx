@@ -31,6 +31,8 @@ import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import './ShiftEditPage.css'
 
 const CAR_OPTIONS = ['1', '2']
@@ -122,6 +124,10 @@ export function ShiftEditPage() {
   const [statuses, setStatuses] = useState({}) // 日付ごとのステータス
   const [copyDialogOpen, setCopyDialogOpen] = useState(false) // コピー用ダイアログの開閉状態
   const [copyTargetDate, setCopyTargetDate] = useState(null) // コピー対象の日付
+  /** 一括コピーのコピー先（日付キー・チェック状態） */
+  const [copyDestDates, setCopyDestDates] = useState({})
+  const [bulkCopyDialogOpen, setBulkCopyDialogOpen] = useState(false)
+  const [bulkCopySourceDate, setBulkCopySourceDate] = useState('')
   const [expandedDates, setExpandedDates] = useState(() => {
     // デフォルトで全て展開
     const expanded = {}
@@ -137,6 +143,15 @@ export function ShiftEditPage() {
   const days = useMemo(() => {
     if (!year || !month) return []
     return getDaysInMonth(year, month)
+  }, [year, month])
+
+  const selectedCopyDestCount = useMemo(
+    () => Object.values(copyDestDates).filter(Boolean).length,
+    [copyDestDates]
+  )
+
+  useEffect(() => {
+    setCopyDestDates({})
   }, [year, month])
 
   // ページが開かれたときにシフトデータを取得
@@ -474,6 +489,73 @@ export function ShiftEditPage() {
     }
   }
 
+  const handleBulkCopyExecute = async () => {
+    if (!bulkCopySourceDate) {
+      setError('コピー元の日付を選択してください')
+      return
+    }
+    const sourceShifts = getShiftsForDate(bulkCopySourceDate)
+    if (sourceShifts.length === 0) {
+      setError('コピー元にシフトが設定されていません')
+      return
+    }
+    const targets = days
+      .map(({ date }) => date)
+      .filter((date) => copyDestDates[date] && date !== bulkCopySourceDate)
+
+    if (targets.length === 0) {
+      setError(
+        'コピー先がありません。コピー元以外の日にチェックを入れてください。'
+      )
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const createPromises = []
+      for (const targetDate of targets) {
+        const dateObj = new Date(targetDate)
+        const dow = DOW_MAP[dateObj.getDay()]
+        for (const shift of sourceShifts) {
+          createPromises.push(
+            createShift({
+              date: targetDate,
+              dow,
+              car: shift.car,
+              role: shift.role,
+              staff: shift.staff,
+              start: shift.start,
+              end: shift.end,
+              note: shift.note || null,
+            })
+          )
+        }
+      }
+
+      const results = await Promise.all(createPromises)
+      const errors = results.filter((r) => r.error)
+
+      if (errors.length > 0) {
+        setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
+      } else {
+        await loadShifts()
+        setCopyDestDates({})
+        setBulkCopyDialogOpen(false)
+        setBulkCopySourceDate('')
+        setSuccess(
+          `${bulkCopySourceDate}の${sourceShifts.length}件を${targets.length}日にコピーしました`
+        )
+      }
+    } catch (err) {
+      setError(`エラーが発生しました: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDeleteShift = async (id, date) => {
     if (!confirm('このシフトを削除しますか？')) {
       return
@@ -802,6 +884,18 @@ export function ShiftEditPage() {
           >
             再読み込み
           </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<ContentCopyIcon />}
+            onClick={() => {
+              setBulkCopySourceDate('')
+              setBulkCopyDialogOpen(true)
+            }}
+            disabled={loading || selectedCopyDestCount === 0}
+          >
+            一括コピー{selectedCopyDestCount > 0 ? `（${selectedCopyDestCount}日）` : ''}
+          </Button>
         </Box>
       </Box>
 
@@ -861,6 +955,25 @@ export function ShiftEditPage() {
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isExpanded ? 2 : 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={!!copyDestDates[date]}
+                            onChange={() =>
+                              setCopyDestDates((prev) => ({
+                                ...prev,
+                                [date]: !prev[date],
+                              }))
+                            }
+                            disabled={loading}
+                            inputProps={{ 'aria-label': `${day}日を一括コピーのコピー先に含める` }}
+                            sx={{ p: 0.5 }}
+                          />
+                        }
+                        label={<Typography variant="caption" sx={{ color: '#666' }}>コピー先</Typography>}
+                        sx={{ mr: 0.5, ml: 0 }}
+                      />
                       <IconButton
                         size="small"
                         onClick={toggleExpand}
@@ -1659,6 +1772,136 @@ export function ShiftEditPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCopyDialogOpen(false)}>キャンセル</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 一括コピー用ダイアログ */}
+      <Dialog
+        open={bulkCopyDialogOpen}
+        onClose={() => {
+          setBulkCopyDialogOpen(false)
+          setBulkCopySourceDate('')
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: '#ffffff',
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: '#333' }}>一括コピー</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
+            チェックした{selectedCopyDestCount}日に、コピー元のシフトを複製します（コピー元の日は自動で除外されます。既存シフトは消さずに追加されます）。
+          </Typography>
+          {days.every(({ date }) => getShiftsForDate(date).length === 0) ? (
+            <Typography variant="body2" sx={{ color: '#c62828' }}>
+              この月にコピー元にできるシフトがありません。
+            </Typography>
+          ) : (
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel sx={{ color: '#666' }}>コピー元の日付</InputLabel>
+            <Select
+              value={bulkCopySourceDate}
+              onChange={(e) => setBulkCopySourceDate(e.target.value)}
+              label="コピー元の日付"
+              displayEmpty
+              sx={{
+                color: '#333',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#bdbdbd',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#666',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2',
+                },
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    maxHeight: 400,
+                    bgcolor: '#ffffff',
+                    '& .MuiMenuItem-root': {
+                      color: '#333',
+                      '&:hover': {
+                        bgcolor: 'rgba(0, 0, 0, 0.04)',
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              <MenuItem value="">
+                <em>選択してください</em>
+              </MenuItem>
+              {days
+                .filter(({ date }) => getShiftsForDate(date).length > 0)
+                .map(({ date, day, dow }) => {
+                  const dateShifts = getShiftsForDate(date)
+                  return (
+                    <MenuItem key={date} value={date}>
+                      <Box sx={{ width: '100%' }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: dateShifts.length > 0 ? 0.5 : 0,
+                          }}
+                        >
+                          <Typography variant="body1" sx={{ fontWeight: 'medium', color: '#333' }}>
+                            {day}日 ({dow})
+                          </Typography>
+                          <Chip
+                            label={`${dateShifts.length}件`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        </Box>
+                        <Box sx={{ mt: 0.5 }}>
+                          {dateShifts.map((shift, index) => (
+                            <Typography
+                              key={shift.id || index}
+                              variant="caption"
+                              sx={{ display: 'block', fontSize: '0.75rem', color: '#666' }}
+                            >
+                              {shift.staff} / {shift.start} - {shift.end}
+                            </Typography>
+                          ))}
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  )
+                })}
+            </Select>
+          </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setBulkCopyDialogOpen(false)
+              setBulkCopySourceDate('')
+            }}
+          >
+            キャンセル
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleBulkCopyExecute}
+            disabled={
+              loading ||
+              !bulkCopySourceDate ||
+              days.every(({ date }) => getShiftsForDate(date).length === 0)
+            }
+            startIcon={<ContentCopyIcon />}
+          >
+            複製する
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
