@@ -32,7 +32,6 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Checkbox from '@mui/material/Checkbox'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import './ShiftEditPage.css'
 
 const CAR_OPTIONS = ['1', '2']
@@ -955,24 +954,35 @@ export function ShiftEditPage() {
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isExpanded ? 2 : 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={!!copyDestDates[date]}
-                            onChange={() =>
-                              setCopyDestDates((prev) => ({
-                                ...prev,
-                                [date]: !prev[date],
-                              }))
-                            }
-                            disabled={loading}
-                            inputProps={{ 'aria-label': `${day}日を一括コピーのコピー先に含める` }}
-                            sx={{ p: 0.5 }}
-                          />
+                      <Checkbox
+                        size="small"
+                        checked={!!copyDestDates[date]}
+                        onChange={() =>
+                          setCopyDestDates((prev) => ({
+                            ...prev,
+                            [date]: !prev[date],
+                          }))
                         }
-                        label={<Typography variant="caption" sx={{ color: '#666' }}>コピー先</Typography>}
-                        sx={{ mr: 0.5, ml: 0 }}
+                        disabled={loading}
+                        title="一括コピーのコピー先に含める"
+                        inputProps={{ 'aria-label': `${day}日を一括コピーのコピー先に含める` }}
+                        sx={{
+                          p: 0.5,
+                          mr: 0.25,
+                          bgcolor: '#fff',
+                          border: '1px solid #9e9e9e',
+                          borderRadius: '4px',
+                          color: '#424242',
+                          '&.Mui-checked': {
+                            color: '#1565c0',
+                            bgcolor: '#e3f2fd',
+                            borderColor: '#1565c0',
+                          },
+                          '&.Mui-disabled': {
+                            borderColor: '#e0e0e0',
+                            bgcolor: '#f5f5f5',
+                          },
+                        }}
                       />
                       <IconButton
                         size="small"
