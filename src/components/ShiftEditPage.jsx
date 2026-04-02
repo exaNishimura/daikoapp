@@ -454,10 +454,15 @@ export function ShiftEditPage() {
     setSuccess(null)
 
     try {
+      const { error: deleteError } = await deleteShiftsByDate(copyTargetDate)
+      if (deleteError) {
+        setError(`コピー先の既存シフト削除に失敗しました: ${deleteError.message}`)
+        return
+      }
+
       const dateObj = new Date(copyTargetDate)
       const dow = DOW_MAP[dateObj.getDay()]
 
-      // 全てのシフトをコピーして作成
       const createPromises = sourceShifts.map(shift =>
         createShift({
           date: copyTargetDate,
@@ -478,7 +483,7 @@ export function ShiftEditPage() {
         setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
       } else {
         await loadShifts()
-        setSuccess(`${sourceDate}から${sourceShifts.length}件のシフトをコピーしました`)
+        setSuccess(`${sourceDate}の${sourceShifts.length}件をコピー先に上書きしました`)
       }
     } catch (err) {
       setError(`エラーが発生しました: ${err.message}`)
@@ -514,12 +519,17 @@ export function ShiftEditPage() {
     setSuccess(null)
 
     try {
-      const createPromises = []
       for (const targetDate of targets) {
+        const { error: deleteError } = await deleteShiftsByDate(targetDate)
+        if (deleteError) {
+          setError(`コピー先の既存シフト削除に失敗しました: ${deleteError.message}`)
+          await loadShifts()
+          return
+        }
         const dateObj = new Date(targetDate)
         const dow = DOW_MAP[dateObj.getDay()]
-        for (const shift of sourceShifts) {
-          createPromises.push(
+        const results = await Promise.all(
+          sourceShifts.map((shift) =>
             createShift({
               date: targetDate,
               dow,
@@ -531,23 +541,22 @@ export function ShiftEditPage() {
               note: shift.note || null,
             })
           )
+        )
+        const errors = results.filter((r) => r.error)
+        if (errors.length > 0) {
+          setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
+          await loadShifts()
+          return
         }
       }
 
-      const results = await Promise.all(createPromises)
-      const errors = results.filter((r) => r.error)
-
-      if (errors.length > 0) {
-        setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
-      } else {
-        await loadShifts()
-        setCopyDestDates({})
-        setBulkCopyDialogOpen(false)
-        setBulkCopySourceDate('')
-        setSuccess(
-          `${bulkCopySourceDate}の${sourceShifts.length}件を${targets.length}日にコピーしました`
-        )
-      }
+      await loadShifts()
+      setCopyDestDates({})
+      setBulkCopyDialogOpen(false)
+      setBulkCopySourceDate('')
+      setSuccess(
+        `${bulkCopySourceDate}の${sourceShifts.length}件を${targets.length}日分上書きしました`
+      )
     } catch (err) {
       setError(`エラーが発生しました: ${err.message}`)
     } finally {
@@ -1701,7 +1710,7 @@ export function ShiftEditPage() {
         <DialogTitle sx={{ color: '#333' }}>他の日からシフトをコピー</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
-            コピー元の日付を選択してください
+            コピー元の日付を選択してください。この日のシフトでコピー先を上書きします（コピー先の当日データはすべて削除されます）。
           </Typography>
           <FormControl fullWidth>
             <InputLabel sx={{ color: '#666' }}>日付を選択</InputLabel>
@@ -1803,7 +1812,7 @@ export function ShiftEditPage() {
         <DialogTitle sx={{ color: '#333' }}>一括コピー</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
-            チェックした{selectedCopyDestCount}日に、コピー元のシフトを複製します（コピー元の日は自動で除外されます。既存シフトは消さずに追加されます）。
+            チェックした{selectedCopyDestCount}日に、コピー元のシフトで上書きします（各コピー先の当日のシフト・ステータスはいったんすべて削除されてから複製されます。コピー元の日は対象外です）。
           </Typography>
           {days.every(({ date }) => getShiftsForDate(date).length === 0) ? (
             <Typography variant="body2" sx={{ color: '#c62828' }}>
@@ -1817,6 +1826,11 @@ export function ShiftEditPage() {
               onChange={(e) => setBulkCopySourceDate(e.target.value)}
               label="コピー元の日付"
               displayEmpty
+              renderValue={(selected) => {
+                if (!selected) return ''
+                const d = days.find((x) => x.date === selected)
+                return d ? `${d.day}日 (${d.dow})` : selected
+              }}
               sx={{
                 color: '#333',
                 '& .MuiOutlinedInput-notchedOutline': {
@@ -1844,9 +1858,7 @@ export function ShiftEditPage() {
                 },
               }}
             >
-              <MenuItem value="">
-                <em>選択してください</em>
-              </MenuItem>
+              <MenuItem value="" sx={{ display: 'none' }} aria-hidden />
               {days
                 .filter(({ date }) => getShiftsForDate(date).length > 0)
                 .map(({ date, day, dow }) => {
