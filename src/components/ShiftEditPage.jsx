@@ -89,11 +89,27 @@ function getDaysInMonth(year, month) {
   return days
 }
 
+/**
+ * クエリ未指定時の表示月（ローカル日付基準・年・月は 1–12）
+ * 20日以降は翌月、19日以前は当月
+ */
+function getDefaultShiftEditYearMonth(reference = new Date()) {
+  if (reference.getDate() >= 20) {
+    const d = new Date(reference.getFullYear(), reference.getMonth() + 1, 1)
+    return { year: d.getFullYear(), month: d.getMonth() + 1 }
+  }
+  return {
+    year: reference.getFullYear(),
+    month: reference.getMonth() + 1,
+  }
+}
+
 export function ShiftEditPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const year = parseInt(searchParams.get('year') || '2026')
-  const month = parseInt(searchParams.get('month') || '1')
+  const defaultYM = getDefaultShiftEditYearMonth()
+  const year = parseInt(searchParams.get('year') || String(defaultYM.year), 10)
+  const month = parseInt(searchParams.get('month') || String(defaultYM.month), 10)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
