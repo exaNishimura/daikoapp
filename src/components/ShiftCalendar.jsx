@@ -2,6 +2,11 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getShifts } from '@/services/shiftService'
 import { getEmployees } from '@/services/employeeService'
+import {
+  getActiveStaffNamesOrdered,
+  mergeStaffNamesForSelect,
+  buildStaffColorByName,
+} from '@/lib/staffFromEmployees'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -180,19 +185,6 @@ function minutesToPixels(minutes) {
   return (minutes / 60) * PIXELS_PER_HOUR
 }
 
-// スタッフ名をCSSクラス名に変換
-function staffToClass(staff) {
-  const map = {
-    '西村': 'nishimura',
-    '鈴木': 'suzuki',
-    'チョロモン': 'choromon',
-    'たかし': 'takashi',
-    'なみ': 'nami',
-    'しゅうや': 'shuya'
-  }
-  return map[staff] || ''
-}
-
 // 日付をグループ化
 function groupByDate(data) {
   const grouped = {}
@@ -214,7 +206,7 @@ function groupByDate(data) {
 
 export function ShiftCalendar() {
   const navigate = useNavigate()
-  const [visibleStaff, setVisibleStaff] = useState(['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや'])
+  const [visibleStaff, setVisibleStaff] = useState([])
   const [searchText, setSearchText] = useState('')
   const [shifts, setShifts] = useState([])
   const [employees, setEmployees] = useState([])
@@ -271,6 +263,14 @@ export function ShiftCalendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, selectedMonth])
 
+  const colorByName = useMemo(() => buildStaffColorByName(employees), [employees])
+
+  const staffFilterNames = useMemo(() => {
+    const activeOrdered = getActiveStaffNamesOrdered(employees)
+    const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
+    return mergeStaffNamesForSelect(activeOrdered, shiftNames)
+  }, [employees, shifts])
+
   // 本日の日付まで自動スクロール
   useEffect(() => {
     if (loading || hasScrolledRef.current) return
@@ -322,11 +322,19 @@ export function ShiftCalendar() {
   }, [groupedData, searchText])
 
   const handleStaffFilterChange = (staff, checked) => {
-    if (checked) {
-      setVisibleStaff(prev => [...prev, staff])
-    } else {
-      setVisibleStaff(prev => prev.filter(s => s !== staff))
-    }
+    setVisibleStaff((prev) => {
+      const allNames = staffFilterNames
+      if (checked) {
+        if (prev.length === 0) return []
+        const next = [...new Set([...prev, staff])]
+        if (allNames.length > 0 && next.length >= allNames.length) return []
+        return next
+      }
+      if (prev.length === 0) {
+        return allNames.filter((s) => s !== staff)
+      }
+      return prev.filter((s) => s !== staff)
+    })
   }
 
   const handlePrevMonth = () => {
@@ -542,11 +550,11 @@ export function ShiftCalendar() {
         <Collapse in={searchExpanded}>
           <div className="shift-controls">
             <div className="filter-group">
-              {['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや'].map(staff => (
+              {staffFilterNames.map((staff) => (
                 <label key={staff}>
                   <input
                     type="checkbox"
-                    checked={visibleStaff.includes(staff)}
+                    checked={visibleStaff.length === 0 || visibleStaff.includes(staff)}
                     onChange={(e) => handleStaffFilterChange(staff, e.target.checked)}
                   />
                   {staff}
@@ -563,30 +571,15 @@ export function ShiftCalendar() {
           </div>
         </Collapse>
         <div className="legend">
-          <div className="legend-item">
-            <div className="legend-color nishimura"></div>
-            <span>西村</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color suzuki"></div>
-            <span>鈴木</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color choromon"></div>
-            <span>チョロモン</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color takashi"></div>
-            <span>たかし</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color nami"></div>
-            <span>なみ</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color shuya"></div>
-            <span>しゅうや</span>
-          </div>
+          {getActiveStaffNamesOrdered(employees).map((name) => (
+            <div key={name} className="legend-item">
+              <div
+                className="legend-color"
+                style={{ background: colorByName[name] || '#bdbdbd' }}
+              />
+              <span>{name}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -601,6 +594,7 @@ export function ShiftCalendar() {
                 dayData={groupedData[date]}
                 visibleStaff={visibleStaff}
                 employees={employees}
+                colorByName={colorByName}
               />
             ))}
           </div>
@@ -611,7 +605,7 @@ export function ShiftCalendar() {
   )
 }
 
-function DayBlock({ dayData, visibleStaff, employees }) {
+function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
   const isFriSat = dayData.dow === '金' || dayData.dow === '土'
   const dateParts = dayData.date.split('-')
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
@@ -691,6 +685,7 @@ function DayBlock({ dayData, visibleStaff, employees }) {
               carNum={carNum}
               shifts={dayData.shifts}
               visibleStaff={visibleStaff}
+              colorByName={colorByName}
             />
           ))}
         </div>
@@ -760,20 +755,20 @@ function TimeAxis() {
   )
 }
 
-function CarBlock({ carNum, shifts, visibleStaff }) {
+function CarBlock({ carNum, shifts, visibleStaff, colorByName }) {
   const driverShifts = shifts.filter(s => s.car === carNum && s.role === '代行')
   const companionShifts = shifts.filter(s => s.car === carNum && s.role === '随伴')
 
   return (
     <div className="car-block">
       <div className="car-header">{carNum}号車</div>
-      <Lane role="代行" shifts={driverShifts} visibleStaff={visibleStaff} />
-      <Lane role="随伴" shifts={companionShifts} visibleStaff={visibleStaff} />
+      <Lane role="代行" shifts={driverShifts} visibleStaff={visibleStaff} colorByName={colorByName} />
+      <Lane role="随伴" shifts={companionShifts} visibleStaff={visibleStaff} colorByName={colorByName} />
     </div>
   )
 }
 
-function Lane({ role, shifts, visibleStaff }) {
+function Lane({ role, shifts, visibleStaff, colorByName }) {
   return (
     <div className="lane">
       <div className="lane-label">{role}</div>
@@ -782,18 +777,19 @@ function Lane({ role, shifts, visibleStaff }) {
           key={idx}
           shift={shift}
           visible={visibleStaff.length === 0 || visibleStaff.includes(shift.staff)}
+          colorByName={colorByName}
         />
       ))}
     </div>
   )
 }
 
-function Bar({ shift, visible }) {
+function Bar({ shift, visible, colorByName }) {
   const startMinutes = timeToMinutes(shift.start)
   const endMinutes = timeToMinutes(shift.end)
   const left = minutesToPixels(startMinutes)
   const width = minutesToPixels(endMinutes - startMinutes)
-  const staffClass = staffToClass(shift.staff)
+  const bg = (colorByName && colorByName[shift.staff]) || '#bdbdbd'
 
   const title = shift.note
     ? `${shift.staff} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
@@ -801,10 +797,11 @@ function Bar({ shift, visible }) {
 
   return (
     <div
-      className={`bar ${staffClass} ${!visible ? 'hidden' : ''}`}
+      className={`bar ${!visible ? 'hidden' : ''}`}
       style={{
         left: left + 'px',
-        width: width + 'px'
+        width: width + 'px',
+        backgroundColor: bg,
       }}
       title={title}
     >

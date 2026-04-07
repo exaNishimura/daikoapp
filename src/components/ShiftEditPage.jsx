@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getShifts, createShift, updateShift, deleteShift, deleteShiftsByDate } from '@/services/shiftService'
+import { getEmployees } from '@/services/employeeService'
+import {
+  getActiveStaffNamesOrdered,
+  mergeStaffNamesForSelect,
+  buildStaffColorByName,
+} from '@/lib/staffFromEmployees'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Select from '@mui/material/Select'
@@ -36,7 +42,6 @@ import './ShiftEditPage.css'
 
 const CAR_OPTIONS = ['1', '2']
 const ROLE_OPTIONS = ['代行', '随伴']
-const STAFF_OPTIONS = ['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや']
 const STATUS_OPTIONS = ['休業', '定休日']
 const DOW_MAP = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -61,19 +66,6 @@ function timeToMinutes(timeStr) {
 // 分をピクセル位置に変換
 function minutesToPixels(minutes) {
   return (minutes / 60) * PIXELS_PER_HOUR
-}
-
-// スタッフ名をCSSクラス名に変換
-function staffToClass(staff) {
-  const map = {
-    '西村': 'nishimura',
-    '鈴木': 'suzuki',
-    'チョロモン': 'choromon',
-    'たかし': 'takashi',
-    'なみ': 'nami',
-    'しゅうや': 'shuya'
-  }
-  return map[staff] || ''
 }
 
 // 月の日付リストを生成
@@ -127,6 +119,7 @@ export function ShiftEditPage() {
   const [copyDestDates, setCopyDestDates] = useState({})
   const [bulkCopyDialogOpen, setBulkCopyDialogOpen] = useState(false)
   const [bulkCopySourceDate, setBulkCopySourceDate] = useState('')
+  const [employees, setEmployees] = useState([])
   const [expandedDates, setExpandedDates] = useState(() => {
     // デフォルトで全て展開
     const expanded = {}
@@ -160,6 +153,13 @@ export function ShiftEditPage() {
     }
   }, [year, month])
 
+  const staffColorByName = useMemo(() => buildStaffColorByName(employees), [employees])
+  const staffOptions = useMemo(() => {
+    const activeOrdered = getActiveStaffNamesOrdered(employees)
+    const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
+    return mergeStaffNamesForSelect(activeOrdered, shiftNames)
+  }, [employees, shifts])
+
   const loadShifts = async () => {
     setLoading(true)
     setError(null)
@@ -168,8 +168,17 @@ export function ShiftEditPage() {
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(days.length).padStart(2, '0')}`
-      
-      const { data, error: fetchError } = await getShifts(startDate, endDate)
+
+      const [{ data, error: fetchError }, empRes] = await Promise.all([
+        getShifts(startDate, endDate),
+        getEmployees(),
+      ])
+
+      if (!empRes.error && empRes.data) {
+        setEmployees(empRes.data)
+      } else if (empRes.error) {
+        setEmployees([])
+      }
 
       if (fetchError) {
         setError(`シフトデータの取得に失敗: ${fetchError.message}`)
@@ -739,24 +748,16 @@ export function ShiftEditPage() {
     const endMinutes = timeToMinutes(shift.end)
     const left = minutesToPixels(startMinutes)
     const width = minutesToPixels(endMinutes - startMinutes)
-    const staffClass = staffToClass(shift.staff)
 
     const title = shift.note
       ? `${shift.staff} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
       : `${shift.staff} (${shift.role}) ${shift.start}-${shift.end}`
 
-    const staffColors = {
-      nishimura: '#FFA500',
-      suzuki: '#FFD700',
-      choromon: '#8A2BE2',
-      takashi: '#00BFFF',
-      nami: '#FF69B4',
-      shuya: '#32CD32'
-    }
+    const barBg = staffColorByName[shift.staff] || '#bdbdbd'
 
     return (
       <Box
-        className={`bar ${staffClass}`}
+        className="bar"
         title={title}
         sx={{
           position: 'absolute',
@@ -775,7 +776,7 @@ export function ShiftEditPage() {
           transition: 'opacity 0.2s',
           border: '1px solid rgba(0,0,0,0.2)',
           boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-          bgcolor: staffColors[staffClass] || '#ccc',
+          bgcolor: barBg,
           '&:hover': {
             opacity: 0.8,
             zIndex: 10
@@ -1236,7 +1237,7 @@ export function ShiftEditPage() {
                                     }
                                   }}
                                 >
-                                  {STAFF_OPTIONS.map(staff => (
+                                  {staffOptions.map((staff) => (
                                     <MenuItem key={staff} value={staff}>{staff}</MenuItem>
                                   ))}
                                 </Select>
@@ -1563,7 +1564,7 @@ export function ShiftEditPage() {
                                                 }
                                               }}
                                             >
-                                              {STAFF_OPTIONS.map(staff => (
+                                              {staffOptions.map((staff) => (
                                                 <MenuItem key={staff} value={staff}>{staff}</MenuItem>
                                               ))}
                                             </Select>

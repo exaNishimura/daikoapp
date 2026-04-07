@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { getShifts, createShift, deleteShift, deleteShiftsByDate, createShiftsBulk } from '@/services/shiftService'
+import { getEmployees } from '@/services/employeeService'
+import {
+  getActiveStaffNamesOrdered,
+  mergeStaffNamesForSelect,
+} from '@/lib/staffFromEmployees'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -30,7 +35,6 @@ import Chip from '@mui/material/Chip'
 
 const CAR_OPTIONS = ['1', '2']
 const ROLE_OPTIONS = ['代行', '随伴']
-const STAFF_OPTIONS = ['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや']
 const STATUS_OPTIONS = ['休業', '定休日']
 const DOW_MAP = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -61,6 +65,7 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
     note: '',
   })
   const [statuses, setStatuses] = useState({}) // 日付ごとのステータス
+  const [employees, setEmployees] = useState([])
 
   const days = useMemo(() => {
     if (!year || !month) return []
@@ -74,6 +79,12 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
     }
   }, [open, year, month])
 
+  const staffOptions = useMemo(() => {
+    const activeOrdered = getActiveStaffNamesOrdered(employees)
+    const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
+    return mergeStaffNamesForSelect(activeOrdered, shiftNames)
+  }, [employees, shifts])
+
   const loadShifts = async () => {
     if (!year || !month) return
 
@@ -83,8 +94,14 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`
       const endDate = `${year}-${String(month).padStart(2, '0')}-${String(days.length).padStart(2, '0')}`
-      
-      const { data, error: fetchError } = await getShifts(startDate, endDate)
+
+      const [{ data, error: fetchError }, empRes] = await Promise.all([
+        getShifts(startDate, endDate),
+        getEmployees(),
+      ])
+
+      if (!empRes.error && empRes.data) setEmployees(empRes.data)
+      else if (empRes.error) setEmployees([])
 
       if (fetchError) {
         setError(`シフトデータの取得に失敗: ${fetchError.message}`)
@@ -358,7 +375,7 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
                                         onChange={(e) => setNewShift({ ...newShift, staff: e.target.value })}
                                         label="スタッフ"
                                       >
-                                        {STAFF_OPTIONS.map(staff => (
+                                        {staffOptions.map((staff) => (
                                           <MenuItem key={staff} value={staff}>{staff}</MenuItem>
                                         ))}
                                       </Select>
