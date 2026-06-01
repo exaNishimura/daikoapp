@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getShifts, createShift, updateShift, deleteShift, deleteShiftsByDate, createShiftsBulk } from '@/services/shiftService'
-import { getEmployees } from '@/services/employeeService'
+import { useQuery } from '@tanstack/react-query'
+import {
+  useCreateShift,
+  useDeleteShift,
+  useDeleteShiftsByDate,
+} from '@/hooks/useShifts'
+import { useEmployees } from '@/hooks/useEmployees'
+import { getShifts } from '@/services/shiftService'
 import {
   getActiveStaffNamesOrdered,
   mergeStaffNamesForSelect,
@@ -31,10 +37,7 @@ const ROLE_OPTIONS = ['代行', '随伴']
 const STATUS_OPTIONS = ['休業', '定休日']
 
 export function ShiftEditModal({ open, onClose, date, onSaved }) {
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [shifts, setShifts] = useState([])
-  const [employees, setEmployees] = useState([])
   const [newShift, setNewShift] = useState({
     date: date || '',
     dow: '',
@@ -47,11 +50,32 @@ export function ShiftEditModal({ open, onClose, date, onSaved }) {
     status: '',
   })
 
-  // モーダルが開かれたときにシフトデータを取得
+  const shiftsQuery = useQuery({
+    queryKey: ['shifts', 'byDate', date ?? null],
+    queryFn: async () => {
+      const { data, error: fetchError } = await getShifts(date, date)
+      if (fetchError) throw fetchError
+      return data
+    },
+    enabled: Boolean(open && date),
+  })
+  const employeesQuery = useEmployees()
+  const createShiftMutation = useCreateShift()
+  const deleteShiftMutation = useDeleteShift()
+  const deleteShiftsByDateMutation = useDeleteShiftsByDate()
+
+  const shifts = shiftsQuery.data ?? []
+  const employees = employeesQuery.data ?? []
+  const fetchError = shiftsQuery.error
+  const isMutating =
+    createShiftMutation.isPending ||
+    deleteShiftMutation.isPending ||
+    deleteShiftsByDateMutation.isPending
+  const loading = shiftsQuery.isLoading || isMutating
+
+  // モーダルが開かれたときに曜日を自動設定
   useEffect(() => {
     if (open && date) {
-      loadShifts()
-      // 曜日を自動設定
       const dateObj = new Date(date)
       const dowIndex = dateObj.getDay()
       const dowMap = ['日', '月', '火', '水', '木', '金', '土']
@@ -65,124 +89,70 @@ export function ShiftEditModal({ open, onClose, date, onSaved }) {
     return mergeStaffNamesForSelect(activeOrdered, shiftNames)
   }, [employees, shifts])
 
-  const loadShifts = async () => {
-    if (!date) return
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const [{ data, error: fetchError }, empRes] = await Promise.all([
-        getShifts(date, date),
-        getEmployees(),
-      ])
-
-      if (!empRes.error && empRes.data) setEmployees(empRes.data)
-      else if (empRes.error) setEmployees([])
-
-      if (fetchError) {
-        setError(`シフトデータの取得に失敗: ${fetchError.message}`)
-        setShifts([])
-      } else {
-        setShifts(data || [])
-      }
-    } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-      setShifts([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAddShift = () => {
+  const handleAddShift = async () => {
     if (!newShift.date || !newShift.dow) {
       setError('日付と曜日は必須です')
       return
     }
 
-    // ステータスがある場合は、シフト情報は不要
     if (newShift.status) {
       if (newShift.status === '休業' || newShift.status === '定休日') {
-        // 既存のシフトを削除してからステータスを追加
         handleSaveStatus(newShift.status)
         return
       }
     }
 
-    // シフト情報が必要な場合のバリデーション
     if (!newShift.car || !newShift.role || !newShift.staff || !newShift.start || !newShift.end) {
       setError('車両、役割、スタッフ、開始時刻、終了時刻は必須です')
       return
     }
 
-    setLoading(true)
-    setError(null)
-
-    createShift(newShift)
-      .then(({ data, error: createError }) => {
-        if (createError) {
-          setError(`シフトの追加に失敗: ${createError.message}`)
-        } else {
-          setNewShift({
-            date: date || '',
-            dow: newShift.dow,
-            car: '',
-            role: '',
-            staff: '',
-            start: '',
-            end: '',
-            note: '',
-            status: '',
-          })
-          loadShifts()
-        }
-      })
-      .catch(err => {
-        setError(`エラーが発生しました: ${err.message}`)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }
-
-  const handleSaveStatus = async (status) => {
-    setLoading(true)
     setError(null)
 
     try {
-      // 既存のシフトを削除
-      await deleteShiftsByDate(date)
+      await createShiftMutation.mutateAsync(newShift)
+      setNewShift({
+        date: date || '',
+        dow: newShift.dow,
+        car: '',
+        role: '',
+        staff: '',
+        start: '',
+        end: '',
+        note: '',
+        status: '',
+      })
+    } catch (err) {
+      setError(`シフトの追加に失敗: ${err.message}`)
+    }
+  }
 
-      // ステータスを追加
-      const { error: createError } = await createShift({
+  const handleSaveStatus = async (status) => {
+    setError(null)
+
+    try {
+      await deleteShiftsByDateMutation.mutateAsync(date)
+      await createShiftMutation.mutateAsync({
         date,
         dow: newShift.dow,
         status,
       })
-
-      if (createError) {
-        setError(`ステータスの保存に失敗: ${createError.message}`)
-      } else {
-        setNewShift({
-          date: date || '',
-          dow: newShift.dow,
-          car: '',
-          role: '',
-          staff: '',
-          start: '',
-          end: '',
-          note: '',
-          status: '',
-        })
-        await loadShifts()
-        if (onSaved) {
-          onSaved()
-        }
+      setNewShift({
+        date: date || '',
+        dow: newShift.dow,
+        car: '',
+        role: '',
+        staff: '',
+        start: '',
+        end: '',
+        note: '',
+        status: '',
+      })
+      if (onSaved) {
+        onSaved()
       }
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`ステータスの保存に失敗: ${err.message}`)
     }
   }
 
@@ -191,29 +161,19 @@ export function ShiftEditModal({ open, onClose, date, onSaved }) {
       return
     }
 
-    setLoading(true)
     setError(null)
 
     try {
-      const { error: deleteError } = await deleteShift(id)
-
-      if (deleteError) {
-        setError(`削除に失敗: ${deleteError.message}`)
-      } else {
-        await loadShifts()
-        if (onSaved) {
-          onSaved()
-        }
+      await deleteShiftMutation.mutateAsync(id)
+      if (onSaved) {
+        onSaved()
       }
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`削除に失敗: ${err.message}`)
     }
   }
 
   const handleClose = () => {
-    setShifts([])
     setError(null)
     setNewShift({
       date: date || '',
@@ -238,6 +198,11 @@ export function ShiftEditModal({ open, onClose, date, onSaved }) {
         シフト編集 - {date ? new Date(date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}
       </DialogTitle>
       <DialogContent>
+        {fetchError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            シフトデータの取得に失敗: {fetchError.message}
+          </Alert>
+        )}
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}

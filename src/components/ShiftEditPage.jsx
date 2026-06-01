@@ -1,7 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getShifts, createShift, updateShift, deleteShift, deleteShiftsByDate } from '@/services/shiftService'
-import { getEmployees } from '@/services/employeeService'
+import {
+  useShiftsByMonth,
+  useCreateShift,
+  useUpdateShift,
+  useDeleteShift,
+  useDeleteShiftsByDate,
+} from '@/hooks/useShifts'
+import { useEmployees } from '@/hooks/useEmployees'
 import {
   getActiveStaffNamesOrdered,
   mergeStaffNamesForSelect,
@@ -104,22 +110,18 @@ export function ShiftEditPage() {
   const year = parseInt(searchParams.get('year') || String(defaultYM.year), 10)
   const month = parseInt(searchParams.get('month') || String(defaultYM.month), 10)
 
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [shifts, setShifts] = useState([])
   const [editingDates, setEditingDates] = useState({}) // 日付ごとの編集状態
   const [newShifts, setNewShifts] = useState({}) // 日付ごとの新規シフトデータ
   const [editingShiftIds, setEditingShiftIds] = useState({}) // 編集中のシフトID
   const [editingShifts, setEditingShifts] = useState({}) // 編集中のシフトデータ
-  const [statuses, setStatuses] = useState({}) // 日付ごとのステータス
   const [copyDialogOpen, setCopyDialogOpen] = useState(false) // コピー用ダイアログの開閉状態
   const [copyTargetDate, setCopyTargetDate] = useState(null) // コピー対象の日付
   /** 一括コピーのコピー先（日付キー・チェック状態） */
   const [copyDestDates, setCopyDestDates] = useState({})
   const [bulkCopyDialogOpen, setBulkCopyDialogOpen] = useState(false)
   const [bulkCopySourceDate, setBulkCopySourceDate] = useState('')
-  const [employees, setEmployees] = useState([])
   const [expandedDates, setExpandedDates] = useState(() => {
     // デフォルトで全て展開
     const expanded = {}
@@ -146,12 +148,32 @@ export function ShiftEditPage() {
     setCopyDestDates({})
   }, [year, month])
 
-  // ページが開かれたときにシフトデータを取得
-  useEffect(() => {
-    if (year && month) {
-      loadShifts()
-    }
-  }, [year, month])
+  const shiftsQuery = useShiftsByMonth(year, month)
+  const employeesQuery = useEmployees()
+  const createShiftMutation = useCreateShift()
+  const updateShiftMutation = useUpdateShift()
+  const deleteShiftMutation = useDeleteShift()
+  const deleteShiftsByDateMutation = useDeleteShiftsByDate()
+
+  const shifts = shiftsQuery.data ?? []
+  const employees = employeesQuery.data ?? []
+  const fetchError = shiftsQuery.error
+  const isMutating =
+    createShiftMutation.isPending ||
+    updateShiftMutation.isPending ||
+    deleteShiftMutation.isPending ||
+    deleteShiftsByDateMutation.isPending
+  const loading = shiftsQuery.isLoading || isMutating
+
+  const statuses = useMemo(() => {
+    const map = {}
+    shifts.forEach((shift) => {
+      if (shift.status) {
+        map[shift.date] = shift.status
+      }
+    })
+    return map
+  }, [shifts])
 
   const staffColorByName = useMemo(() => buildStaffColorByName(employees), [employees])
   const staffOptions = useMemo(() => {
@@ -159,49 +181,6 @@ export function ShiftEditPage() {
     const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
     return mergeStaffNamesForSelect(activeOrdered, shiftNames)
   }, [employees, shifts])
-
-  const loadShifts = async () => {
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-      const endDate = `${year}-${String(month).padStart(2, '0')}-${String(days.length).padStart(2, '0')}`
-
-      const [{ data, error: fetchError }, empRes] = await Promise.all([
-        getShifts(startDate, endDate),
-        getEmployees(),
-      ])
-
-      if (!empRes.error && empRes.data) {
-        setEmployees(empRes.data)
-      } else if (empRes.error) {
-        setEmployees([])
-      }
-
-      if (fetchError) {
-        setError(`シフトデータの取得に失敗: ${fetchError.message}`)
-        setShifts([])
-      } else {
-        setShifts(data || [])
-        // ステータスを抽出
-        const statusMap = {}
-        data?.forEach(shift => {
-          if (shift.status) {
-            statusMap[shift.date] = shift.status
-          }
-        })
-
-        setStatuses(statusMap)
-      }
-    } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-      setShifts([])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const getShiftsForDate = (date) => {
     return shifts.filter(s => s.date === date && !s.status)
@@ -242,15 +221,14 @@ export function ShiftEditPage() {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
       const dateObj = new Date(date)
       const dow = DOW_MAP[dateObj.getDay()]
-      
-      const { error: createError } = await createShift({
+
+      await createShiftMutation.mutateAsync({
         date,
         dow,
         car: shiftData.car,
@@ -261,28 +239,21 @@ export function ShiftEditPage() {
         note: shiftData.note || null,
       })
 
-      if (createError) {
-        setError(`シフトの追加に失敗: ${createError.message}`)
-      } else {
-        setNewShifts(prev => {
-          const next = { ...prev }
-          next[date] = {
-            car: '',
-            role: '',
-            staff: '',
-            start: '',
-            end: '',
-            note: '',
-          }
-          return next
-        })
-        await loadShifts()
-        setSuccess('シフトを追加しました')
-      }
+      setNewShifts(prev => {
+        const next = { ...prev }
+        next[date] = {
+          car: '',
+          role: '',
+          staff: '',
+          start: '',
+          end: '',
+          note: '',
+        }
+        return next
+      })
+      setSuccess('シフトを追加しました')
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`シフトの追加に失敗: ${err.message}`)
     }
   }
 
@@ -347,59 +318,46 @@ export function ShiftEditPage() {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const updatePromises = []
       const shiftIdToDateMap = {}
-
-      // シフトIDから日付を取得するためのマップを作成
       shifts.forEach(shift => {
         if (editingShifts[shift.id]) {
           shiftIdToDateMap[shift.id] = shift.date
         }
       })
 
-      // 全ての編集中のシフトを更新
-      Object.keys(editingShifts).forEach(shiftId => {
-        const shiftData = editingShifts[shiftId]
-        const date = shiftIdToDateMap[shiftId]
-        if (!date) return
-
-        const dateObj = new Date(date)
-        const dow = DOW_MAP[dateObj.getDay()]
-
-        updatePromises.push(
-          updateShift(shiftId, {
-            car: shiftData.car,
-            role: shiftData.role,
-            staff: shiftData.staff,
-            start: shiftData.start,
-            end: shiftData.end,
-            note: shiftData.note || null,
-            dow,
+      const updatePromises = Object.keys(editingShifts)
+        .map((shiftId) => {
+          const shiftData = editingShifts[shiftId]
+          const date = shiftIdToDateMap[shiftId]
+          if (!date) return null
+          const dateObj = new Date(date)
+          const dow = DOW_MAP[dateObj.getDay()]
+          return updateShiftMutation.mutateAsync({
+            id: shiftId,
+            shiftData: {
+              car: shiftData.car,
+              role: shiftData.role,
+              staff: shiftData.staff,
+              start: shiftData.start,
+              end: shiftData.end,
+              note: shiftData.note || null,
+              dow,
+            },
           })
-        )
-      })
+        })
+        .filter(Boolean)
 
-      const results = await Promise.all(updatePromises)
-      const errors = results.filter(r => r.error)
+      await Promise.all(updatePromises)
 
-      if (errors.length > 0) {
-        setError(`一部のシフトの更新に失敗しました: ${errors[0].error.message}`)
-      } else {
-        // 編集状態をクリア
-        setEditingShiftIds({})
-        setEditingShifts({})
-        await loadShifts()
-        setSuccess(`${results.length}件のシフトを更新しました`)
-      }
+      setEditingShiftIds({})
+      setEditingShifts({})
+      setSuccess(`${updatePromises.length}件のシフトを更新しました`)
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`一部のシフトの更新に失敗しました: ${err.message}`)
     }
   }
 
@@ -412,46 +370,34 @@ export function ShiftEditPage() {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const { error: deleteError } = await deleteShiftsByDate(copyTargetDate)
-      if (deleteError) {
-        setError(`コピー先の既存シフト削除に失敗しました: ${deleteError.message}`)
-        return
-      }
+      await deleteShiftsByDateMutation.mutateAsync(copyTargetDate)
 
       const dateObj = new Date(copyTargetDate)
       const dow = DOW_MAP[dateObj.getDay()]
 
-      const createPromises = sourceShifts.map(shift =>
-        createShift({
-          date: copyTargetDate,
-          dow,
-          car: shift.car,
-          role: shift.role,
-          staff: shift.staff,
-          start: shift.start,
-          end: shift.end,
-          note: shift.note || null,
-        })
+      await Promise.all(
+        sourceShifts.map((shift) =>
+          createShiftMutation.mutateAsync({
+            date: copyTargetDate,
+            dow,
+            car: shift.car,
+            role: shift.role,
+            staff: shift.staff,
+            start: shift.start,
+            end: shift.end,
+            note: shift.note || null,
+          })
+        )
       )
 
-      const results = await Promise.all(createPromises)
-      const errors = results.filter(r => r.error)
-
-      if (errors.length > 0) {
-        setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
-      } else {
-        await loadShifts()
-        setSuccess(`${sourceDate}の${sourceShifts.length}件をコピー先に上書きしました`)
-      }
+      setSuccess(`${sourceDate}の${sourceShifts.length}件をコピー先に上書きしました`)
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
+      setError(`コピーに失敗しました: ${err.message}`)
     } finally {
-      setLoading(false)
       setCopyDialogOpen(false)
     }
   }
@@ -477,23 +423,17 @@ export function ShiftEditPage() {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
       for (const targetDate of targets) {
-        const { error: deleteError } = await deleteShiftsByDate(targetDate)
-        if (deleteError) {
-          setError(`コピー先の既存シフト削除に失敗しました: ${deleteError.message}`)
-          await loadShifts()
-          return
-        }
+        await deleteShiftsByDateMutation.mutateAsync(targetDate)
         const dateObj = new Date(targetDate)
         const dow = DOW_MAP[dateObj.getDay()]
-        const results = await Promise.all(
+        await Promise.all(
           sourceShifts.map((shift) =>
-            createShift({
+            createShiftMutation.mutateAsync({
               date: targetDate,
               dow,
               car: shift.car,
@@ -505,15 +445,8 @@ export function ShiftEditPage() {
             })
           )
         )
-        const errors = results.filter((r) => r.error)
-        if (errors.length > 0) {
-          setError(`一部のシフトのコピーに失敗しました: ${errors[0].error.message}`)
-          await loadShifts()
-          return
-        }
       }
 
-      await loadShifts()
       setCopyDestDates({})
       setBulkCopyDialogOpen(false)
       setBulkCopySourceDate('')
@@ -521,71 +454,43 @@ export function ShiftEditPage() {
         `${bulkCopySourceDate}の${sourceShifts.length}件を${targets.length}日分上書きしました`
       )
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`一括コピーに失敗しました: ${err.message}`)
     }
   }
 
-  const handleDeleteShift = async (id, date) => {
+  const handleDeleteShift = async (id, _date) => {
     if (!confirm('このシフトを削除しますか？')) {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const { error: deleteError } = await deleteShift(id)
-
-      if (deleteError) {
-        setError(`削除に失敗: ${deleteError.message}`)
-      } else {
-        await loadShifts()
-        setSuccess('シフトを削除しました')
-      }
+      await deleteShiftMutation.mutateAsync(id)
+      setSuccess('シフトを削除しました')
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`削除に失敗: ${err.message}`)
     }
   }
 
   const handleSetStatus = async (date, status) => {
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      // 既存のシフトを削除
-      await deleteShiftsByDate(date)
+      await deleteShiftsByDateMutation.mutateAsync(date)
 
       if (status) {
         const dateObj = new Date(date)
         const dow = DOW_MAP[dateObj.getDay()]
-        
-        // ステータスを追加
-        const { error: createError } = await createShift({
-          date,
-          dow,
-          status,
-        })
-
-        if (createError) {
-          setError(`ステータスの保存に失敗: ${createError.message}`)
-        } else {
-          await loadShifts()
-          setSuccess('ステータスを更新しました')
-        }
+        await createShiftMutation.mutateAsync({ date, dow, status })
+        setSuccess('ステータスを更新しました')
       } else {
-        await loadShifts()
         setSuccess('ステータスを解除しました')
       }
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`ステータスの保存に失敗: ${err.message}`)
     }
   }
 
@@ -842,7 +747,7 @@ export function ShiftEditPage() {
           </Box>
           <Button
             variant="outlined"
-            onClick={loadShifts}
+            onClick={() => shiftsQuery.refetch()}
             disabled={loading}
           >
             再読み込み
@@ -863,6 +768,11 @@ export function ShiftEditPage() {
       </Box>
 
       {/* エラー・成功メッセージ */}
+      {fetchError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          シフトデータの取得に失敗: {fetchError.message}
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}

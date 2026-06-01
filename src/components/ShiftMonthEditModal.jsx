@@ -1,6 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
-import { getShifts, createShift, deleteShift, deleteShiftsByDate, createShiftsBulk } from '@/services/shiftService'
-import { getEmployees } from '@/services/employeeService'
+import { useState, useMemo } from 'react'
+import {
+  useShiftsByMonth,
+  useCreateShift,
+  useDeleteShift,
+  useDeleteShiftsByDate,
+} from '@/hooks/useShifts'
+import { useEmployees } from '@/hooks/useEmployees'
 import {
   getActiveStaffNamesOrdered,
   mergeStaffNamesForSelect,
@@ -52,9 +57,7 @@ function getDaysInMonth(year, month) {
 }
 
 export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [shifts, setShifts] = useState([])
   const [editingDate, setEditingDate] = useState(null)
   const [newShift, setNewShift] = useState({
     car: '',
@@ -64,66 +67,42 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
     end: '',
     note: '',
   })
-  const [statuses, setStatuses] = useState({}) // 日付ごとのステータス
-  const [employees, setEmployees] = useState([])
+
+  const shiftsQuery = useShiftsByMonth(year, month, { enabled: open })
+  const employeesQuery = useEmployees()
+  const createShiftMutation = useCreateShift()
+  const deleteShiftMutation = useDeleteShift()
+  const deleteShiftsByDateMutation = useDeleteShiftsByDate()
+
+  const shifts = shiftsQuery.data ?? []
+  const employees = employeesQuery.data ?? []
+  const fetchError = shiftsQuery.error
+  const isMutating =
+    createShiftMutation.isPending ||
+    deleteShiftMutation.isPending ||
+    deleteShiftsByDateMutation.isPending
+  const loading = shiftsQuery.isLoading || isMutating
 
   const days = useMemo(() => {
     if (!year || !month) return []
     return getDaysInMonth(year, month)
   }, [year, month])
 
-  // モーダルが開かれたときにシフトデータを取得
-  useEffect(() => {
-    if (open && year && month) {
-      loadShifts()
-    }
-  }, [open, year, month])
+  const statuses = useMemo(() => {
+    const map = {}
+    shifts.forEach((shift) => {
+      if (shift.status) {
+        map[shift.date] = shift.status
+      }
+    })
+    return map
+  }, [shifts])
 
   const staffOptions = useMemo(() => {
     const activeOrdered = getActiveStaffNamesOrdered(employees)
     const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
     return mergeStaffNamesForSelect(activeOrdered, shiftNames)
   }, [employees, shifts])
-
-  const loadShifts = async () => {
-    if (!year || !month) return
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-      const endDate = `${year}-${String(month).padStart(2, '0')}-${String(days.length).padStart(2, '0')}`
-
-      const [{ data, error: fetchError }, empRes] = await Promise.all([
-        getShifts(startDate, endDate),
-        getEmployees(),
-      ])
-
-      if (!empRes.error && empRes.data) setEmployees(empRes.data)
-      else if (empRes.error) setEmployees([])
-
-      if (fetchError) {
-        setError(`シフトデータの取得に失敗: ${fetchError.message}`)
-        setShifts([])
-      } else {
-        setShifts(data || [])
-        // ステータスを抽出
-        const statusMap = {}
-        data?.forEach(shift => {
-          if (shift.status) {
-            statusMap[shift.date] = shift.status
-          }
-        })
-        setStatuses(statusMap)
-      }
-    } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-      setShifts([])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const getShiftsForDate = (date) => {
     return shifts.filter(s => s.date === date && !s.status)
@@ -135,14 +114,13 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
       return
     }
 
-    setLoading(true)
     setError(null)
 
     try {
       const dateObj = new Date(date)
       const dow = DOW_MAP[dateObj.getDay()]
-      
-      const { error: createError } = await createShift({
+
+      await createShiftMutation.mutateAsync({
         date,
         dow,
         car: newShift.car,
@@ -153,24 +131,17 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
         note: newShift.note || null,
       })
 
-      if (createError) {
-        setError(`シフトの追加に失敗: ${createError.message}`)
-      } else {
-        setNewShift({
-          car: '',
-          role: '',
-          staff: '',
-          start: '',
-          end: '',
-          note: '',
-        })
-        setEditingDate(null)
-        await loadShifts()
-      }
+      setNewShift({
+        car: '',
+        role: '',
+        staff: '',
+        start: '',
+        end: '',
+        note: '',
+      })
+      setEditingDate(null)
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`シフトの追加に失敗: ${err.message}`)
     }
   }
 
@@ -179,61 +150,32 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
       return
     }
 
-    setLoading(true)
     setError(null)
 
     try {
-      const { error: deleteError } = await deleteShift(id)
-
-      if (deleteError) {
-        setError(`削除に失敗: ${deleteError.message}`)
-      } else {
-        await loadShifts()
-      }
+      await deleteShiftMutation.mutateAsync(id)
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`削除に失敗: ${err.message}`)
     }
   }
 
   const handleSetStatus = async (date, status) => {
-    setLoading(true)
     setError(null)
 
     try {
-      // 既存のシフトを削除
-      await deleteShiftsByDate(date)
+      await deleteShiftsByDateMutation.mutateAsync(date)
 
       if (status) {
         const dateObj = new Date(date)
         const dow = DOW_MAP[dateObj.getDay()]
-        
-        // ステータスを追加
-        const { error: createError } = await createShift({
-          date,
-          dow,
-          status,
-        })
-
-        if (createError) {
-          setError(`ステータスの保存に失敗: ${createError.message}`)
-        } else {
-          await loadShifts()
-        }
-      } else {
-        await loadShifts()
+        await createShiftMutation.mutateAsync({ date, dow, status })
       }
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`ステータスの保存に失敗: ${err.message}`)
     }
   }
 
   const handleClose = () => {
-    setShifts([])
-    setStatuses({})
     setError(null)
     setEditingDate(null)
     setNewShift({
@@ -255,6 +197,11 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
         シフト編集 - {monthLabel}
       </DialogTitle>
       <DialogContent>
+        {fetchError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            シフトデータの取得に失敗: {fetchError.message}
+          </Alert>
+        )}
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
@@ -476,7 +423,7 @@ export function ShiftMonthEditModal({ open, onClose, year, month, onSaved }) {
         </Button>
         <Button
           onClick={async () => {
-            await loadShifts()
+            await shiftsQuery.refetch()
             if (onSaved) {
               onSaved()
             }

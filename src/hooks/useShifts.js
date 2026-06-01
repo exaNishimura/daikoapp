@@ -31,8 +31,13 @@ export function useShifts(startDate, endDate) {
 
 /**
  * 年月指定でシフトデータを取得（カレンダー表示用）
+ * @param {number} year
+ * @param {number} month
+ * @param {Object} [options]
+ * @param {boolean} [options.enabled=true] - false の場合フェッチしない（モーダル未表示時等）
  */
-export function useShiftsByMonth(year, month) {
+export function useShiftsByMonth(year, month, options = {}) {
+  const { enabled = true } = options
   const startDate = year && month ? `${year}-${String(month).padStart(2, '0')}-01` : null
   const endDate =
     year && month
@@ -42,7 +47,7 @@ export function useShiftsByMonth(year, month) {
   return useQuery({
     queryKey: queryKeys.shifts.byMonth(year, month),
     queryFn: () => unwrap(getShifts(startDate, endDate)),
-    enabled: Boolean(startDate && endDate),
+    enabled: enabled && Boolean(startDate && endDate),
   })
 }
 
