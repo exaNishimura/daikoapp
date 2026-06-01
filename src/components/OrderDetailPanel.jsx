@@ -1,24 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
-import { updateOrder, cancelOrder, getOrderById } from '@/services/orderService'
-import { confirmSlot, createSlot } from '@/services/slotService'
-import { estimateDuration, calculateBuffer } from '@/services/routeService'
-import { getVehicles } from '@/services/vehicleService'
-import { supabase } from '@/lib/supabase'
 import { getAddressFromCity } from '@/utils/addressUtils'
-import {
-  STATUS_LABELS,
-  getStatusLabel,
-  getStatusColor,
-  getRevertStatus,
-  getAdvanceStatus,
-} from '@/utils/orderStatusUtils'
-import { formatRouteCalculationError } from '@/lib/routeErrors'
-import {
-  saveOrderEdit,
-  recalculateOrderRoute,
-  confirmOrder,
-  revertOrderStatus,
-} from '@/lib/orderActions'
+import { STATUS_LABELS } from '@/utils/orderStatusUtils'
+import { useOrderDetail } from '@/hooks/useOrderDetail'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -37,232 +19,28 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 
 export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles = [], slots = [] }) {
-  // この依頼に関連する車両を取得
-  const relatedVehicle = slots.length > 0
-    ? vehicles.find(v => v.id === slots[0].vehicle_id)
-    : null
+  const {
+    relatedVehicle,
+    statusLabel,
+    statusColor,
+    advanceStatus,
+    editing,
+    formData,
+    loading,
+    recalculating,
+    waitingLocationDuration,
+    calculatingWaitingDuration,
+    setEditing,
+    setFormData,
+    handleChange,
+    handleSave,
+    handleRecalculateRoute,
+    handleConfirm,
+    handleRevertStatus,
+    handleCancel,
+    handleAdvanceStatus,
+  } = useOrderDetail({ order, vehicles, slots, onUpdate, onDelete, onClose })
 
-  const [editing, setEditing] = useState(false)
-  const [formData, setFormData] = useState({
-    pickup_address: order.pickup_address,
-    dropoff_address: order.dropoff_address,
-    waypoints: order.waypoints || [],
-    contact_phone: order.contact_phone || '',
-    car_model: order.car_model || '',
-    car_plate: order.car_plate || '',
-    car_color: order.car_color || '',
-    parking_note: order.parking_note || '',
-    base_duration_min: order.base_duration_min || 30,
-    buffer_min: order.buffer_min || 0,
-  })
-  const [waitingLocationDuration, setWaitingLocationDuration] = useState(null)
-  const [calculatingWaitingDuration, setCalculatingWaitingDuration] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [recalculating, setRecalculating] = useState(false)
-
-  // orderActions ヘルパーに渡す依存性をひとまとめに
-  const actionDeps = useMemo(
-    () => ({
-      supabase,
-      updateOrder,
-      getOrderById,
-      getVehicles,
-      estimateDuration,
-      calculateBuffer,
-      createSlot,
-      confirmSlot,
-    }),
-    []
-  )
-
-  // 待機場所住所への所要時間を計算（車両の待機場所住所を使用）
-  useEffect(() => {
-    const calculateWaitingLocationDuration = async () => {
-      if (!order.dropoff_address || !relatedVehicle?.waiting_location_address) {
-        setWaitingLocationDuration(null)
-        return
-      }
-
-      setCalculatingWaitingDuration(true)
-      try {
-        const { duration, error } = await estimateDuration(
-          order.dropoff_address,
-          relatedVehicle.waiting_location_address,
-          null
-        )
-
-        if (error) {
-          if (import.meta.env.DEV) {
-            console.error('Error calculating waiting location duration:', error)
-          }
-          setWaitingLocationDuration(null)
-        } else {
-          // 片道時間を表示（往復ではない）
-          setWaitingLocationDuration(duration ? Math.round(duration / 2) : null)
-        }
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Error calculating waiting location duration:', error)
-        }
-        setWaitingLocationDuration(null)
-      } finally {
-        setCalculatingWaitingDuration(false)
-      }
-    }
-
-    calculateWaitingLocationDuration()
-  }, [order.dropoff_address, relatedVehicle?.waiting_location_address])
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSave = async () => {
-    setLoading(true)
-    try {
-      const updatedOrder = await saveOrderEdit({ order, formData, deps: actionDeps })
-      onUpdate(updatedOrder)
-      setEditing(false)
-    } catch (error) {
-      console.error('Error updating order:', error)
-      alert('更新に失敗しました')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRecalculateRoute = async () => {
-    setRecalculating(true)
-    try {
-      const result = await recalculateOrderRoute({
-        order,
-        formData,
-        relatedVehicle,
-        deps: actionDeps,
-      })
-      setFormData((prev) => ({ ...prev, buffer_min: result.buffer }))
-      onUpdate(result.order)
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error recalculating route:', error)
-      }
-      // estimateDuration 由来のエラーは Directions API のコードを含むので
-      // formatRouteCalculationError を通す。それ以外は素のメッセージで OK。
-      const cause = error.cause ?? error.message
-      const message =
-        typeof cause === 'string' && /API|REQUEST|RESULT|LIMIT|key/.test(cause)
-          ? formatRouteCalculationError(cause)
-          : `ルート再計算に失敗しました: ${error.message || error}`
-      alert(message)
-    } finally {
-      setRecalculating(false)
-    }
-  }
-
-  const handleConfirm = async () => {
-    if (!confirm('この依頼を確定しますか？')) return
-
-    setLoading(true)
-    try {
-      const updatedOrder = await confirmOrder({
-        order,
-        vehicles,
-        slots,
-        deps: actionDeps,
-      })
-      onUpdate(updatedOrder)
-      alert('確定しました')
-    } catch (error) {
-      console.error('Error confirming slot:', error)
-      alert(`確定に失敗しました: ${error.message || error}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ひとつ前のステータスに戻す
-  const handleRevertStatus = async () => {
-    const previousStatus = getRevertStatus(order.status)
-    if (!previousStatus) {
-      alert('戻すことができないステータスです')
-      return
-    }
-
-    if (!confirm(`${STATUS_LABELS[previousStatus]}に戻しますか？`)) return
-
-    setLoading(true)
-    try {
-      const updatedOrder = await revertOrderStatus({ order, deps: actionDeps })
-      onUpdate(updatedOrder)
-      alert('ステータスを戻しました')
-    } catch (error) {
-      console.error('Error reverting status:', error)
-      alert(`ステータスの戻しに失敗しました: ${error.message || error}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCancel = async () => {
-    if (!confirm('この依頼をキャンセルしますか？データベースからも削除されます。')) {
-      return
-    }
-
-    setLoading(true)
-    try {
-      // データベースから依頼を削除（dispatch_slotsはON DELETE CASCADEで自動削除される）
-      const { error: cancelError } = await cancelOrder(order.id)
-
-      if (cancelError) {
-        if (import.meta.env.DEV) {
-          console.error('Error cancelling order:', cancelError)
-        }
-        throw cancelError
-      }
-
-      if (import.meta.env.DEV) {
-        console.log('Order deleted successfully:', order.id)
-      }
-
-      // 親コンポーネントに削除を通知
-      if (onDelete) {
-        onDelete(order.id)
-      }
-      
-      // パネルを閉じる
-      onClose()
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error cancelling order:', error)
-      }
-      alert(`キャンセルに失敗しました: ${error.message || error}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const statusColor = getStatusColor(order.status)
-  const statusLabel = getStatusLabel(order.status)
-
-  // CONFIRMED 以降の進行ボタン用のヘルパー
-  const advanceStatus = getAdvanceStatus(order.status)
-  const handleAdvanceStatus = async () => {
-    if (!advanceStatus) return
-    setLoading(true)
-    try {
-      const { data: updatedOrder, error } = await updateOrder(order.id, {
-        status: advanceStatus,
-      })
-      if (error) throw error
-      onUpdate(updatedOrder)
-    } catch (error) {
-      console.error('Error updating status:', error)
-      alert('ステータス更新に失敗しました')
-    } finally {
-      setLoading(false)
-    }
-  }
   const advanceColor = advanceStatus === 'COMPLETED' ? 'success' : 'info'
 
   return (
