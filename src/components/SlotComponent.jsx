@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { dateToRowIndex, rowIndexToPixels, minutesToRows, rowsToMinutes } from '@/utils/rowUtils'
-import { shortenAddress } from '@/utils/addressUtils'
+import { getAddressFromCity } from '@/utils/addressUtils'
 import './SlotComponent.css'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -75,6 +75,26 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
     })
   }
 
+  // ルートテキスト（出発 > 経由 > 目的地）。マーキーで全文表示する
+  const routeText = useMemo(() => {
+    const parts = [order.pickup_address]
+    if (Array.isArray(order.waypoints) && order.waypoints.length > 0) {
+      parts.push(...order.waypoints)
+    }
+    parts.push(order.dropoff_address)
+    return parts
+      .map((p) => getAddressFromCity(p))
+      .filter(Boolean)
+      .join(' > ')
+  }, [order.pickup_address, order.waypoints, order.dropoff_address])
+
+  // 文字数に比例した duration を設定（およそ 5 文字/秒 で流す）
+  // 短すぎても 6 秒、長すぎても 30 秒に丸める
+  const marqueeDuration = useMemo(() => {
+    const charsPerSec = 5
+    const seconds = Math.max(6, Math.min(30, routeText.length / charsPerSec))
+    return `${seconds}s`
+  }, [routeText])
 
   // ドラッグ中はクリックイベントを無視
   const handleClick = (e) => {
@@ -164,21 +184,17 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
         </span>
       </div>
       <div className="slot-body">
-        <div className="slot-route">
-          {shortenAddress(order.pickup_address, 10)}
-          {order.waypoints && order.waypoints.length > 0 && (
-            <>
-              {' → '}
-              {order.waypoints.map((wp, idx) => (
-                <span key={idx}>
-                  {shortenAddress(wp, 10)}
-                  {idx < order.waypoints.length - 1 ? ' → ' : ''}
-                </span>
-              ))}
-              {' → '}
-            </>
-          )}
-          {shortenAddress(order.dropoff_address, 10)}
+        <div
+          className="slot-route"
+          aria-label={`ルート: ${routeText}`}
+          style={{ '--marquee-duration': marqueeDuration }}
+        >
+          <div className="slot-route-track">
+            <span className="slot-route-content">{routeText}</span>
+            <span className="slot-route-content" aria-hidden="true">
+              {routeText}
+            </span>
+          </div>
         </div>
         {/* アイコンは非表示（長押しで情報を表示） */}
       </div>

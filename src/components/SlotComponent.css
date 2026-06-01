@@ -132,10 +132,57 @@
 .slot-route {
   font-size: 0.75rem;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.9);
+  /* マーキーが滲み出ないように左右を少し透明グラデでマスク */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 12px,
+    #000 calc(100% - 12px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 12px,
+    #000 calc(100% - 12px),
+    transparent 100%
+  );
 }
+
+.slot-route-track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  /* duration は親要素の --marquee-duration で上書きされる（テキスト長に応じて 3〜18 秒） */
+  animation-name: slot-route-marquee;
+  animation-duration: var(--marquee-duration, 8s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.slot-route-content {
+  display: inline-block;
+  /* 1 周ぶんのコンテンツ間に余白を入れて視認性を確保（短いテキストでも空白が見える） */
+  padding-right: 4rem;
+}
+
+.slot-component:hover .slot-route-track,
+.slot-component.dragging .slot-route-track {
+  animation-play-state: paused;
+}
+
+@keyframes slot-route-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 
 .slot-icons {
   display: flex;
