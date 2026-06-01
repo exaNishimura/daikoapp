@@ -41,36 +41,36 @@
 
 ## 2. 純関数ライブラリ（Excel パース・生成）
 
-- [ ] 2.1 値パーサー
+- [x] 2.1 値パーサー
   - `src/lib/excel/value-parsers.js` に `parseAmount` `parseKm` `parseHours` `parseDay` `parseJpDate` を実装
   - `src/lib/excel/value-parsers.test.js` で `"¥41,000"` `"¥27,000-"` `"175km"` `"9.50h"` `"5日"` `"2026年5月31日"` の各パターンを assertion
   - _Requirements: 6.4, 6.7, 8.1_
 
-- [ ] 2.2 (P) フォーマッター
+- [x] 2.2 (P) フォーマッター
   - `src/lib/excel/formatters.js` に `formatYen` `formatYenWithDash` `formatJpDate` `formatDay` を実装
   - `formatYen(3000) === '¥3,000'` `formatYenWithDash(27000) === '¥27,000- '` `formatJpDate(new Date(2026,4,8)) === '2026年05月08日'` などのテスト
   - _Requirements: 3.7_
 
-- [ ] 2.3 集計シートパーサー
+- [x] 2.3 集計シートパーサー
   - `src/lib/excel/parseDailySheet.js` を実装
   - 日次行（行 3..33）から `DailySaleRow[]` `StaffSaleRow[]` を生成
   - 末尾サマリ領域（行 38 以降）から `FixedExpenseRow[]` を抽出（重複ラベルは suffix 付与）
   - 列定数 `COL` を design.md に従って定義
   - _Requirements: 6.4, 6.5_
 
-- [ ] 2.4 売掛シートパーサー
+- [x] 2.4 売掛シートパーサー
   - `src/lib/excel/parseReceivablesSheet.js` を実装
   - 企業ブロック × 空行区切りのステートマシン処理
   - 「企業名だけ」の行（明細なし）はスキップしつつ、その企業を `seenCompanies` に登録
   - _Requirements: 6.4, 6.5_
 
-- [ ] 2.5 ワークブック統合パーサー
+- [x] 2.5 ワークブック統合パーサー
   - `src/lib/excel/parseSalesWorkbook.js` を実装
   - SheetJS で読み、シート名検証 → ファイル名から `period` 抽出 → 2 シートを並列パース → `ParseResult` を返す
   - エラー（行番号・シート名・列名付き）を `errors` 配列に集約
   - _Requirements: 6.2, 6.3, 6.7, 8.5_
 
-- [ ] 2.6 パーサー統合テスト（**実データ検証**）
+- [x] 2.6 パーサー統合テスト（**実データ検証**）
   - `src/lib/excel/parseSalesWorkbook.test.js`
   - `excel-imports/sales/202605稼働管理表new.xlsx` を読み込んで Validation Targets と一致することを assertion：
     - 売掛全体合計 = 104,000
@@ -82,13 +82,13 @@
     - 取引先 15 社の登場（`seenCompanies`）
   - _Requirements: Validation Targets, 8.1_
 
-- [ ] 2.7 請求書生成器
+- [x] 2.7 請求書生成器
   - `src/assets/invoice-template.xlsx` を `excel-imports/templates/202605鈴友.xlsx` を加工して同梱（明細を空にしたテンプレ版）
   - `src/lib/excel/generateInvoice.js` を実装、ExcelJS でテンプレを読み込みセル位置仕様に従って値を埋める
   - 18 件超のときは例外を投げる（呼び出し側で戦略決定）
   - _Requirements: 3.7_
 
-- [ ] 2.8 請求書生成テスト（**実データ検証**）
+- [x] 2.8 請求書生成テスト（**実データ検証**）
   - `src/lib/excel/generateInvoice.test.js`
   - 鈴友 5 月分 8 件のデータを与えて生成、出力 .xlsx を読み戻し：
     - `B5 === '株式会社 鈴友'`
@@ -97,7 +97,7 @@
     - `H18 === 'P1000円　一ノ宮経由'`
   - _Requirements: Validation Targets_
 
-- [ ] 2.9 (P) 取引先マッチャー
+- [x] 2.9 (P) 取引先マッチャー
   - `src/lib/billing/matchCompany.js` を実装
   - 入力 `(rawName, companies[])` → `(companyId | null, candidates[])`
   - 完全一致 → エイリアス一致 → 正規化（半角/全角・株式会社接頭辞除去）一致 の順で候補を返す
