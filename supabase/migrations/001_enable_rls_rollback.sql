@@ -3,12 +3,17 @@
 -- ログイン機能が壊れたときに anon キーでもアクセス可能な状態に戻す。
 -- 適用後はセキュリティ的に脆弱な状態になるので、復旧後すぐに再適用すること。
 
-DROP POLICY IF EXISTS "authenticated_all_access" ON public.vehicles;
-DROP POLICY IF EXISTS "authenticated_all_access" ON public.orders;
-DROP POLICY IF EXISTS "authenticated_all_access" ON public.dispatch_slots;
-DROP POLICY IF EXISTS "authenticated_all_access" ON public.vehicle_operation_status;
-DROP POLICY IF EXISTS "authenticated_all_access" ON public.shifts;
-DROP POLICY IF EXISTS "authenticated_all_access" ON public.employees;
+-- 配車関連
+DROP POLICY IF EXISTS "public_all_access" ON public.vehicles;
+DROP POLICY IF EXISTS "public_all_access" ON public.orders;
+DROP POLICY IF EXISTS "public_all_access" ON public.dispatch_slots;
+DROP POLICY IF EXISTS "public_all_access" ON public.vehicle_operation_status;
+
+-- シフト/従業員
+DROP POLICY IF EXISTS "public_read" ON public.shifts;
+DROP POLICY IF EXISTS "authenticated_write" ON public.shifts;
+DROP POLICY IF EXISTS "public_read" ON public.employees;
+DROP POLICY IF EXISTS "authenticated_write" ON public.employees;
 
 ALTER TABLE public.vehicles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;

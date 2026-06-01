@@ -15,7 +15,7 @@ function NavBar() {
 
   const handleLogout = async () => {
     await logout()
-    navigate('/login')
+    navigate('/')
   }
 
   const handleLogin = () => {
@@ -36,14 +36,14 @@ function NavBar() {
       }}
     >
       <div>
+        <Link to="/" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
+          配車画面
+        </Link>
+        <Link to="/shift" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
+          シフト表
+        </Link>
         {isAuthenticated && (
           <>
-            <Link to="/" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
-              配車画面
-            </Link>
-            <Link to="/shift" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
-              シフト表
-            </Link>
             <Link
               to="/shift/edit"
               style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
@@ -98,23 +98,9 @@ function AppRoutes() {
   return (
     <div style={{ flex: 1, overflow: 'auto' }}>
       <Routes>
+        <Route path="/" element={<DispatchBoard />} />
+        <Route path="/shift" element={<ShiftCalendar />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <DispatchBoard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/shift"
-          element={
-            <ProtectedRoute>
-              <ShiftCalendar />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/shift/edit"
           element={

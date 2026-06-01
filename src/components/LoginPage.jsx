@@ -19,7 +19,7 @@ export function LoginPage() {
 
   if (loading) return null
   if (isAuthenticated) {
-    const from = location.state?.from?.pathname || '/'
+    const from = location.state?.from?.pathname || '/shift/edit'
     return <Navigate to={from} replace />
   }
 
