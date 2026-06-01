@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { TimelineGrid } from './TimelineGrid'
 import { OrderDetailPanel } from './OrderDetailPanel'
@@ -7,18 +7,9 @@ import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { DispatchHeader } from './DispatchBoard/DispatchHeader'
 import { VehicleSelectDialog } from './DispatchBoard/VehicleSelectDialog'
 import { useDispatchData } from '@/hooks/useDispatchData'
+import { useDispatchDnD } from '@/hooks/useDispatchDnD'
 import { getOrderById } from '@/services/orderService'
-import { createSlot, updateSlot } from '@/services/slotService'
-import { calculateBuffer } from '@/services/routeService'
-import { exceedsBusinessHours } from '@/utils/timeUtils'
-import {
-  pixelsToRowIndex,
-  rowIndexToDate,
-  snapToRowIndex,
-  dateToRowIndex,
-  rowIndexToPixels,
-} from '@/utils/rowUtils'
-import { isVehicleOperational } from '@/utils/operationStatusUtils'
+import { createSlot } from '@/services/slotService'
 import { findAutoPlacementSlot } from '@/lib/orderPlacement'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -50,9 +41,6 @@ export function DispatchBoard() {
   const [isOperationStatusModalOpen, setIsOperationStatusModalOpen] = useState(false)
   const [isVehicleSelectDialogOpen, setIsVehicleSelectDialogOpen] = useState(false)
   const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null)
-  const [dragOverPosition, setDragOverPosition] = useState(null) // { vehicleId, top }
-  const [mousePosition, setMousePosition] = useState(null) // { x, y }
-  const [draggingSlotVehicleId, setDraggingSlotVehicleId] = useState(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -60,55 +48,14 @@ export function DispatchBoard() {
     })
   )
 
-  // マウス/タッチ位置を追跡し、ドラッグ中のハイライト位置をリアルタイム更新
-  useEffect(() => {
-    const updatePosition = (clientX, clientY) => {
-      setMousePosition({ x: clientX, y: clientY })
-
-      // ドラッグ中の場合、ハイライト位置をリアルタイム更新
-      if (dragOverPosition !== null) {
-        const timelineBody = document.querySelector('.timeline-content-wrapper')
-        if (timelineBody) {
-          const timelineRect = timelineBody.getBoundingClientRect()
-          const scrollTop = timelineBody.scrollTop
-          const mouseY = clientY - timelineRect.top + scrollTop
-
-          // 現在のvehicleIdを確認
-          const vehicleElement = document.querySelector(
-            `[data-vehicle-id="${dragOverPosition.vehicleId}"]`
-          )
-          if (vehicleElement) {
-            setDragOverPosition({
-              vehicleId: dragOverPosition.vehicleId,
-              top: mouseY,
-            })
-          }
-        }
-      }
-    }
-
-    const handleMouseMove = (e) => {
-      updatePosition(e.clientX, e.clientY)
-    }
-
-    const handleTouchMove = (e) => {
-      // タッチイベントのデフォルト動作を防ぐ（スクロールを許可）
-      if (dragOverPosition === null) return
-
-      e.preventDefault() // ドラッグ中のみスクロールを防ぐ
-      if (e.touches.length > 0) {
-        const touch = e.touches[0]
-        updatePosition(touch.clientX, touch.clientY)
-      }
-    }
-
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('touchmove', handleTouchMove, { passive: false })
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('touchmove', handleTouchMove)
-    }
-  }, [dragOverPosition])
+  const {
+    dragOverPosition,
+    draggingSlotVehicleId,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useDispatchDnD({ vehicles, slots, operationStatuses, setSlots, setOrders })
 
   const handleOrderCreated = async (newOrder) => {
     setOrders((prev) => [newOrder, ...prev])
@@ -217,303 +164,6 @@ export function DispatchBoard() {
     if (vehicles.length > 0) {
       await loadSlots(vehicles)
       await loadOperationStatuses(vehicles)
-    }
-  }
-
-  // マウス/タッチ位置からタイムライン内のY座標を計算する関数
-  const calculateTimelineY = (clientY) => {
-    const timelineBody = document.querySelector('.timeline-content-wrapper')
-    if (!timelineBody) return null
-
-    const timelineRect = timelineBody.getBoundingClientRect()
-    const scrollTop = timelineBody.scrollTop
-    return clientY - timelineRect.top + scrollTop
-  }
-
-  // イベントからclientYを取得する関数（マウス/タッチ両対応）
-  const getClientYFromEvent = (event) => {
-    if (!event) return null
-
-    // タッチイベントの場合
-    if (event.touches && event.touches.length > 0) {
-      return event.touches[0].clientY
-    }
-
-    // マウスイベントの場合
-    if (event.clientY !== undefined) {
-      return event.clientY
-    }
-
-    return null
-  }
-
-  const handleDragStart = (event) => {
-    // ドラッグ開始時にマウス位置をリセット（すぐに更新される）
-    setMousePosition(null)
-
-    // SlotComponentをドラッグしている場合、元のvehicleIdを記録
-    if (event.active.data.current?.type === 'slot' && event.active.data.current?.slot) {
-      setDraggingSlotVehicleId(event.active.data.current.slot.vehicle_id)
-    } else {
-      setDraggingSlotVehicleId(null)
-    }
-  }
-
-  const handleDragCancel = () => {
-    // ドラッグキャンセル時にクリア
-    setDragOverPosition(null)
-    setMousePosition(null)
-    setDraggingSlotVehicleId(null)
-  }
-
-  const handleDragOver = (event) => {
-    const { active, over } = event
-
-    if (!over || over.data.current?.type !== 'vehicle') {
-      setDragOverPosition(null)
-      return
-    }
-
-    // マウス/タッチ位置を直接取得（優先順位: activatorEvent > mousePosition）
-    let clientY = null
-
-    // event.activatorEventから直接位置を取得（リアルタイム更新のため優先）
-    if (event.activatorEvent) {
-      clientY = getClientYFromEvent(event.activatorEvent)
-    }
-
-    // フォールバック: mousePositionを使用
-    if (clientY === null && mousePosition) {
-      clientY = mousePosition.y
-    }
-
-    // さらにフォールバック: delta.yを使用する場合、元の位置を計算
-    if (clientY === null) {
-      if (active.data.current?.type === 'slot' && active.data.current?.slot) {
-        const slot = active.data.current.slot
-        const startDate = new Date(slot.start_at)
-        const startRowIndex = dateToRowIndex(startDate)
-        const originalTop = rowIndexToPixels(startRowIndex)
-
-        if (event.delta?.y !== undefined) {
-          const mouseY = originalTop + event.delta.y
-          setDragOverPosition({
-            vehicleId: over.data.current.vehicleId,
-            top: mouseY,
-          })
-          return
-        }
-      }
-
-      setDragOverPosition(null)
-      return
-    }
-
-    // タイムライン内のY座標を計算
-    const mouseY = calculateTimelineY(clientY)
-    if (mouseY === null) {
-      setDragOverPosition(null)
-      return
-    }
-
-    // スナップせずに実際の位置を使用（負の値も許可）
-    setDragOverPosition({
-      vehicleId: over.data.current.vehicleId,
-      top: mouseY,
-    })
-  }
-
-  const handleDragEnd = async (event) => {
-    const { active, over } = event
-
-    if (!over) {
-      setDragOverPosition(null)
-      setMousePosition(null)
-      setDraggingSlotVehicleId(null)
-      return
-    }
-
-    // ドラッグ終了時にハイライトとマウス位置を保存（クリア前に）
-    const currentDragOverPosition = dragOverPosition
-    const currentMousePosition = mousePosition
-    setDragOverPosition(null)
-    setMousePosition(null)
-    setDraggingSlotVehicleId(null)
-
-    // ドロップ位置から時刻を計算する関数
-    const calculateTimeFromDropPosition = (targetVehicleId) => {
-      // マウス/タッチ位置を取得（優先順位: currentMousePosition > currentDragOverPosition > activatorEvent）
-      let dropY = null
-
-      if (currentMousePosition) {
-        // マウス位置からタイムライン内のY座標を計算
-        dropY = calculateTimelineY(currentMousePosition.y)
-      } else if (currentDragOverPosition && currentDragOverPosition.vehicleId === targetVehicleId) {
-        // dragOverPositionから計算（タイムライン内のY座標を直接使用）
-        dropY = currentDragOverPosition.top
-      } else if (event.activatorEvent) {
-        // activatorEventから計算（マウス/タッチ両対応）
-        const clientY = getClientYFromEvent(event.activatorEvent)
-        if (clientY !== null) {
-          dropY = calculateTimelineY(clientY)
-        }
-      }
-
-      if (dropY === null) return null
-
-      // Y座標を行番号に変換（15分 = 20px = 1行）
-      const rowIndex = pixelsToRowIndex(dropY)
-
-      // 15分刻みでスナップ（ドロップ時のみ）
-      const snappedRowIndex = snapToRowIndex(rowIndex)
-
-      // 営業日の基準日を計算
-      const now = new Date()
-      const localHours = now.getHours()
-      let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-      if (localHours < 6) {
-        // 06:00未満の場合は前日の営業日として扱う
-        businessDay.setDate(businessDay.getDate() - 1)
-      }
-
-      // 行番号からDateオブジェクトに変換
-      return rowIndexToDate(snappedRowIndex, businessDay)
-    }
-
-    // Slotの移動
-    if (active.data.current?.type === 'slot' && over.data.current?.vehicleId) {
-      const slot = active.data.current.slot
-      const order = active.data.current.order
-      const newVehicleId = over.data.current.vehicleId
-
-      if (!slot || !order) {
-        console.error('Slot or order data not found')
-        return
-      }
-
-      // 最新の依頼データを取得（base_duration_minとbuffer_minが正しく設定されているか確認）
-      const { data: latestOrder, error: orderError } = await getOrderById(order.id)
-      if (orderError) {
-        console.error('Error fetching latest order:', orderError)
-        alert('依頼データの取得に失敗しました')
-        return
-      }
-
-      // ドロップ位置から時刻を計算
-      const newStartAt = calculateTimeFromDropPosition(newVehicleId)
-
-      // 依頼の最新の所要時間を使用（既存のslotの長さではなく）
-      const baseDuration = latestOrder?.base_duration_min || 30
-      const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
-      const totalDuration = baseDuration + buffer
-
-      // 新しい開始時刻を設定（ドロップ位置から計算、または既存の時刻を維持）
-      const startAt = newStartAt || new Date(slot.start_at)
-      const endAt = new Date(startAt)
-      endAt.setMinutes(endAt.getMinutes() + totalDuration)
-
-      // 稼働状況チェック
-      const statuses = operationStatuses[newVehicleId] || []
-      if (!isVehicleOperational(newVehicleId, startAt, statuses)) {
-        alert('この時間帯は車両が稼働していないため配置できません。')
-        return
-      }
-
-      // 06:00超過チェック
-      if (exceedsBusinessHours(endAt)) {
-        alert('06:00を超えるため配置できません。開始時刻を前にずらしてください。')
-        return
-      }
-
-      // 確定済みslotの移動時は確定解除
-      const updateData = {
-        vehicle_id: newVehicleId,
-        start_at: startAt.toISOString(),
-        end_at: endAt.toISOString(),
-      }
-
-      if (slot.status === 'CONFIRMED') {
-        updateData.status = 'TENTATIVE'
-      }
-
-      const { data: updatedSlot, error } = await updateSlot(slot.id, updateData)
-      if (error) {
-        console.error('Error updating slot:', error)
-        return
-      }
-
-      // スロットを即座に更新（タイムラインにすぐ反映）
-      // updateSlot の戻り値で十分なので 500ms 後の再フェッチは廃止
-      if (updatedSlot) {
-        setSlots((prev) => prev.map((s) => (s.id === slot.id ? updatedSlot : s)))
-      }
-    }
-
-    // 未割当依頼のドラッグ&ドロップ
-    if (active.data.current?.type === 'order' && over.data.current?.vehicleId) {
-      const order = active.data.current.order
-      const targetVehicleId = over.data.current.vehicleId
-
-      if (!order) {
-        console.error('Order data not found')
-        return
-      }
-
-      // ドロップ位置から時刻を計算
-      const newStartAt = calculateTimeFromDropPosition(targetVehicleId)
-
-      if (!newStartAt) {
-        alert('ドロップ位置から時刻を計算できませんでした')
-        return
-      }
-
-      // 稼働状況チェック
-      const statuses = operationStatuses[targetVehicleId] || []
-      if (!isVehicleOperational(targetVehicleId, newStartAt, statuses)) {
-        alert('この時間帯は車両が稼働していないため配置できません。')
-        return
-      }
-
-      // 依頼の所要時間を計算
-      const baseDuration = order.base_duration_min || 30
-      const buffer = order.buffer_min || calculateBuffer(baseDuration)
-      const totalDuration = baseDuration + buffer
-
-      const endAt = new Date(newStartAt)
-      endAt.setMinutes(endAt.getMinutes() + totalDuration)
-
-      // 06:00超過チェック
-      if (exceedsBusinessHours(endAt)) {
-        alert('06:00を超えるため配置できません。開始時刻を前にずらしてください。')
-        return
-      }
-
-      // スロットを作成
-      const { data: newSlot, error: slotError } = await createSlot({
-        order_id: order.id,
-        vehicle_id: targetVehicleId,
-        start_at: newStartAt.toISOString(),
-        end_at: endAt.toISOString(),
-        status: 'TENTATIVE',
-      })
-
-      if (slotError) {
-        console.error('Error creating slot:', slotError)
-        alert('スロットの作成に失敗しました')
-        return
-      }
-
-      // スロットを即座に追加（createSlot の戻り値で十分なため再フェッチは廃止）
-      if (newSlot) {
-        setSlots((prev) => [...prev, newSlot])
-      }
-
-      // 依頼のステータスを更新
-      const { data: updatedOrder, error: orderUpdateError } = await getOrderById(order.id)
-      if (!orderUpdateError && updatedOrder) {
-        setOrders((prev) => prev.map((o) => (o.id === order.id ? updatedOrder : o)))
-      }
     }
   }
 
