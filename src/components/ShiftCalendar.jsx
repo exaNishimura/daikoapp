@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getShifts } from '@/services/shiftService'
-import { getEmployees } from '@/services/employeeService'
+import { useShiftsByMonth } from '@/hooks/useShifts'
+import { useEmployees } from '@/hooks/useEmployees'
 import {
   getActiveStaffNamesOrdered,
   mergeStaffNamesForSelect,
@@ -77,9 +77,6 @@ export function ShiftCalendar() {
   const navigate = useNavigate()
   const [visibleStaff, setVisibleStaff] = useState([])
   const [searchText, setSearchText] = useState('')
-  const [shifts, setShifts] = useState([])
-  const [employees, setEmployees] = useState([])
-  const [loading, setLoading] = useState(true)
   // 現在の年月を初期値として設定
   const today = new Date()
   const [selectedYear, setSelectedYear] = useState(today.getFullYear())
@@ -88,48 +85,16 @@ export function ShiftCalendar() {
   const hasScrolledRef = useRef(false)
   const [searchExpanded, setSearchExpanded] = useState(false) // デフォルトは閉じた状態
 
+  const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
+  const employeesQuery = useEmployees()
 
-  const loadShifts = async () => {
-    setLoading(true)
-    try {
-      // 選択された年月のデータを取得
-      const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
-      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate()
-      const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`
-      
-      const [shiftsResult, employeesResult] = await Promise.all([
-        getShifts(startDate, endDate),
-        getEmployees()
-      ])
+  const shifts = shiftsQuery.data ?? []
+  const employees = employeesQuery.data ?? []
+  const loading = shiftsQuery.isLoading || employeesQuery.isLoading
 
-      if (shiftsResult.error) {
-        console.error('Error loading shifts:', shiftsResult.error)
-        setShifts([])
-      } else {
-        setShifts(shiftsResult.data || [])
-      }
-
-      if (employeesResult.error) {
-        console.error('Error loading employees:', employeesResult.error)
-        setEmployees([])
-      } else {
-        setEmployees(employeesResult.data || [])
-      }
-    } catch (err) {
-      console.error('Error loading data:', err)
-      setShifts([])
-      setEmployees([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // 月が変わったらスクロールフラグをリセット
   useEffect(() => {
-    if (selectedYear && selectedMonth) {
-      hasScrolledRef.current = false
-      loadShifts()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    hasScrolledRef.current = false
   }, [selectedYear, selectedMonth])
 
   const colorByName = useMemo(() => buildStaffColorByName(employees), [employees])
