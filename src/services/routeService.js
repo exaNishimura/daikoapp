@@ -11,14 +11,14 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
  */
 export async function estimateDuration(pickupAddress, dropoffAddress, waypoints = null, waitingLocationAddress = null) {
   if (!GOOGLE_MAPS_API_KEY) {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.warn('Google Maps API key not configured')
     }
     return { duration: null, error: 'API key not configured' }
   }
 
   if (!pickupAddress || !dropoffAddress) {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.warn('Pickup or dropoff address is missing')
     }
     return { duration: null, error: 'Address is missing' }
@@ -40,7 +40,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
       }
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('Fetching route:', { pickupAddress, dropoffAddress, waypoints })
     }
 
@@ -48,7 +48,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
     
     if (!response.ok) {
       const errorText = await response.text()
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error('Google Maps API error response:', response.status, errorText)
       }
       return { duration: null, error: `HTTP ${response.status}: ${errorText}` }
@@ -56,7 +56,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
 
     const data = await response.json()
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('Google Maps API response status:', data.status)
       if (data.error_message) {
         console.error('Google Maps API error message:', data.error_message)
@@ -112,7 +112,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
       try {
         const returnUrl = `/api/google-maps/directions/json?origin=${encodeURIComponent(dropoffAddress)}&destination=${encodeURIComponent(waitingLocationAddress.trim())}&key=${GOOGLE_MAPS_API_KEY}&language=ja`
         
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.log('Fetching return route:', { from: dropoffAddress, to: waitingLocationAddress })
         }
 
@@ -128,7 +128,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
             }
             returnTripMinutes = Math.round(returnDurationSeconds / 60)
             
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.log('Return route calculated:', {
                 from: dropoffAddress,
                 to: waitingLocationAddress,
@@ -136,13 +136,13 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
               })
             }
           } else {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.warn('Return route calculation failed:', returnData.status)
             }
           }
         }
       } catch (returnError) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Error calculating return route:', returnError)
         }
         // 復路計算エラーは無視して続行（片道時間のみを使用）
@@ -155,7 +155,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
       ? oneWayMinutes + returnTripMinutes
       : oneWayMinutes * 2
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('=== Route Duration Calculation ===')
       console.log('Origin:', pickupAddress)
       console.log('Destination:', dropoffAddress)
@@ -188,7 +188,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
 
     return { duration: roundTripMinutes, error: null }
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('Error estimating route duration:', error)
     }
     return { duration: null, error: error.message }

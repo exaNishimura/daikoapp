@@ -229,7 +229,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
           time: null,
         })
         if (dayOffError) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.error(`Error setting DAY_OFF for vehicle ${vehicle.id}:`, dayOffError)
           }
         } else {
@@ -246,7 +246,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
           time: null,
         })
         if (dayOffError) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.error(`Error setting DAY_OFF for vehicle ${vehicle.id}:`, dayOffError)
           }
         } else {
@@ -293,7 +293,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
           time: null,
         })
         if (dayOffError) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.error(`Error setting DAY_OFF for vehicle ${vehicle.id}:`, dayOffError)
           }
         } else {
@@ -310,7 +310,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
             time: startTime,
           })
           if (startError) {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error(`Error setting START for vehicle ${vehicle.id}:`, startError)
             }
           } else {
@@ -332,7 +332,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
             time: stopTime,
           })
           if (stopError) {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error(`Error setting STOP for vehicle ${vehicle.id}:`, stopError)
             }
           } else {
@@ -358,7 +358,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
               time: stopTime,
             })
             if (stopError) {
-              if (process.env.NODE_ENV === 'development') {
+              if (import.meta.env.DEV) {
                 console.error(`Error setting STOP for vehicle ${vehicle.id}:`, stopError)
               }
             } else {
@@ -376,7 +376,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
               time: startTime,
             })
             if (startError) {
-              if (process.env.NODE_ENV === 'development') {
+              if (import.meta.env.DEV) {
                 console.error(`Error setting START for vehicle ${vehicle.id}:`, startError)
               }
             } else {

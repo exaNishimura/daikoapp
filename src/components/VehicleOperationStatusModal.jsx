@@ -74,7 +74,7 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
     try {
       const { data: vehicles, error: fetchError } = await getVehicles()
       if (fetchError) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Error loading vehicle:', fetchError)
         }
         return
@@ -86,7 +86,7 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
         setWaitingLocationAddress(foundVehicle.waiting_location_address || '')
       }
     } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error('Error loading vehicle:', err)
       }
     }

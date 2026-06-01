@@ -117,7 +117,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
           }
         }
         
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.log('🔍 出発地のref確認:', {
             originalRef: pickupAddressAutocompleteRef.current,
             inputElement,
@@ -168,7 +168,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             }
             
             // デバッグ用のイベントリスナー
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               // 入力イベントを監視
               inputElement.addEventListener('input', (e) => {
                 console.log('⌨️ 入力イベント:', e.target.value)
@@ -200,7 +200,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             
             autocomplete.addListener('place_changed', () => {
               const place = autocomplete.getPlace()
-              if (process.env.NODE_ENV === 'development') {
+              if (import.meta.env.DEV) {
                 console.log('📍 place_changed イベント発火:', place)
               }
               if (place.formatted_address) {
@@ -209,19 +209,19 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                 setErrors((prev) => ({ ...prev, pickup_address: null }))
               }
             })
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.log('✅ 出発地のAutocompleteを初期化しました', {
                 inputElement,
                 autocomplete,
               })
             }
           } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error('❌ 出発地のAutocomplete初期化エラー:', error, inputElement)
             }
           }
         } else {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.warn('⚠️ 出発地のinput要素が見つかりません:', {
               ref: pickupAddressAutocompleteRef.current,
               inputElement,
@@ -256,16 +256,16 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                 setErrors((prev) => ({ ...prev, dropoff_address: null }))
               }
             })
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.log('✅ 目的地のAutocompleteを初期化しました', inputElement)
             }
           } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error('❌ 目的地のAutocomplete初期化エラー:', error, inputElement)
             }
           }
         } else {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.warn('⚠️ 目的地のrefがHTMLInputElementではありません:', dropoffAddressAutocompleteRef.current)
           }
         }
@@ -316,7 +316,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             inputRef._autocomplete = autocomplete
             autocomplete.addListener('place_changed', () => {
               const place = autocomplete.getPlace()
-              if (process.env.NODE_ENV === 'development') {
+              if (import.meta.env.DEV) {
                 console.log(`📍 経由地 ${waypointIndex + 1}のplace_changed イベント発火:`, place)
               }
               if (place.formatted_address) {
@@ -324,7 +324,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                   const newWaypoints = [...prev.waypoints]
                   if (waypointIndex >= 0 && waypointIndex < newWaypoints.length) {
                     newWaypoints[waypointIndex] = place.formatted_address
-                    if (process.env.NODE_ENV === 'development') {
+                    if (import.meta.env.DEV) {
                       console.log(`✅ 経由地 ${waypointIndex + 1}を更新:`, place.formatted_address)
                     }
                   }
@@ -332,11 +332,11 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                 })
               }
             })
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.log(`✅ 経由地 ${waypointIndex + 1}のAutocompleteを初期化しました`, { waypointIndex, inputRef })
             }
           } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error(`❌ 経由地 ${indexStr}のAutocomplete初期化エラー:`, error)
             }
           }
@@ -499,7 +499,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
           waitingLocationAddress = vehicles[0].waiting_location_address || null
         }
       } catch (vehicleError) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Error fetching vehicles for waiting location:', vehicleError)
         }
         // エラーでも続行（待機場所なしで計算）
@@ -513,7 +513,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
       )
       
       if (error) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Route calculation error:', error)
         }
         // エラーでも依頼は作成済みなので、デフォルト値で更新
@@ -535,7 +535,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
         })
 
         if (updateError) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.error('Failed to update order with route data:', updateError)
           }
         }

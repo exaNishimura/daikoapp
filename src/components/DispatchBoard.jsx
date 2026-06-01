@@ -306,7 +306,7 @@ export function DispatchBoard() {
               const { data: shiftsByCar, error: shiftsError } = await getShiftsByDate(shiftDate)
 
               if (shiftsError) {
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                   console.error('Error fetching shifts for sync:', shiftsError)
                 }
                 return
@@ -320,7 +320,7 @@ export function DispatchBoard() {
               )
 
               if (syncError) {
-                if (process.env.NODE_ENV === 'development') {
+                if (import.meta.env.DEV) {
                   console.error('Error syncing operation status from shifts:', syncError)
                 }
               } else {
@@ -328,7 +328,7 @@ export function DispatchBoard() {
                 await loadOperationStatuses(vehicles)
               }
             } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
+              if (import.meta.env.DEV) {
                 console.error('Error handling shift change:', error)
               }
             }
@@ -489,7 +489,7 @@ export function DispatchBoard() {
           })
 
           if (error) {
-            if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
               console.error('Error auto-placing order:', error)
             }
             alert('自動配置に失敗しました')
@@ -521,7 +521,7 @@ export function DispatchBoard() {
           alert('配置可能な時間が見つかりませんでした。')
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Error in auto-placement:', error)
         }
         alert('自動配置中にエラーが発生しました')

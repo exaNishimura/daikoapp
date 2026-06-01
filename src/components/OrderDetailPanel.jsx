@@ -21,6 +21,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CancelIcon from '@mui/icons-material/Cancel'
 import RouteIcon from '@mui/icons-material/Route'
 import DeleteIcon from '@mui/icons-material/Delete'
+import AddIcon from '@mui/icons-material/Add'
 
 export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles = [], slots = [] }) {
   // この依頼に関連する車両を取得
@@ -104,7 +105,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
         )
 
         if (error) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.error('Error calculating waiting location duration:', error)
           }
           setWaitingLocationDuration(null)
@@ -113,7 +114,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
           setWaitingLocationDuration(duration ? Math.round(duration / 2) : null)
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Error calculating waiting location duration:', error)
         }
         setWaitingLocationDuration(null)
@@ -223,7 +224,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
             waitingLocationAddress = allVehicles[0].waiting_location_address || null
           }
         } catch (vehicleError) {
-          if (process.env.NODE_ENV === 'development') {
+          if (import.meta.env.DEV) {
             console.error('Error fetching vehicles for waiting location:', vehicleError)
           }
         }
@@ -237,7 +238,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       )
 
       if (error) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Route calculation error:', error)
         }
         
@@ -290,7 +291,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       )
 
       if (updateError) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Failed to update order:', updateError)
         }
         throw updateError
@@ -303,7 +304,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       onUpdate(updatedOrder)
       
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error('Error recalculating route:', error)
       }
       alert(`ルート再計算に失敗しました: ${error.message || error}`)
@@ -528,13 +529,13 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       const { error: cancelError } = await cancelOrder(order.id)
 
       if (cancelError) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.error('Error cancelling order:', cancelError)
         }
         throw cancelError
       }
 
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log('Order deleted successfully:', order.id)
       }
 
@@ -546,7 +547,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       // パネルを閉じる
       onClose()
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.error('Error cancelling order:', error)
       }
       alert(`キャンセルに失敗しました: ${error.message || error}`)
