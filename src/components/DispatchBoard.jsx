@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { TimelineGrid } from './TimelineGrid'
 import { OrderDetailPanel } from './OrderDetailPanel'
@@ -6,19 +6,11 @@ import { OrderFormModal } from './OrderFormModal'
 import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { DispatchHeader } from './DispatchBoard/DispatchHeader'
 import { VehicleSelectDialog } from './DispatchBoard/VehicleSelectDialog'
-import { getOrders, getOrderById } from '@/services/orderService'
-import { getVehicles } from '@/services/vehicleService'
-import { createSlot, updateSlot, getSlotsByVehicleAndDate } from '@/services/slotService'
-import {
-  getVehicleOperationStatuses,
-  syncOperationStatusFromShifts,
-} from '@/services/vehicleOperationService'
-import { getShiftsByDate } from '@/services/shiftService'
+import { useDispatchData } from '@/hooks/useDispatchData'
+import { getOrderById } from '@/services/orderService'
+import { createSlot, updateSlot } from '@/services/slotService'
 import { calculateBuffer } from '@/services/routeService'
-import { supabase } from '@/lib/supabase'
-import { exceedsBusinessHours, formatBusinessDay } from '@/utils/timeUtils'
-import { getBusinessDayBoundaries } from '@/utils/businessDayUtils'
-import { getEarliestAvailableTimeWithSlots } from '@/utils/earliestTimeUtils'
+import { exceedsBusinessHours } from '@/utils/timeUtils'
 import {
   pixelsToRowIndex,
   rowIndexToDate,
@@ -37,269 +29,36 @@ import CircularProgress from '@mui/material/CircularProgress'
 import RefreshIcon from '@mui/icons-material/Refresh'
 
 export function DispatchBoard() {
-  const [orders, setOrders] = useState([])
-  const [vehicles, setVehicles] = useState([])
-  const [slots, setSlots] = useState([])
-  const [operationStatuses, setOperationStatuses] = useState({}) // vehicleIdをキーとした稼働状況マップ
+  const {
+    orders,
+    vehicles,
+    slots,
+    operationStatuses,
+    loading,
+    error,
+    setOrders,
+    setSlots,
+    loadData,
+    loadSlots,
+    loadOperationStatuses,
+    earliestAvailableTime,
+    businessDayText,
+  } = useDispatchData()
+
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isOperationStatusModalOpen, setIsOperationStatusModalOpen] = useState(false)
   const [isVehicleSelectDialogOpen, setIsVehicleSelectDialogOpen] = useState(false)
   const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [dragOverPosition, setDragOverPosition] = useState(null) // { vehicleId, top }
   const [mousePosition, setMousePosition] = useState(null) // { x, y }
-  const [draggingSlotVehicleId, setDraggingSlotVehicleId] = useState(null) // ドラッグ中のslotのvehicleId
+  const [draggingSlotVehicleId, setDraggingSlotVehicleId] = useState(null)
 
-  // ドラッグ&ドロップ用のsensors設定
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px移動したらドラッグ開始
-      },
+      activationConstraint: { distance: 8 },
     })
   )
-
-  // 営業日（今日の日付）
-  const businessDate = new Date()
-  const businessDayText = formatBusinessDay(businessDate)
-
-  const earliestAvailableTime = useMemo(() => {
-    return getEarliestAvailableTimeWithSlots(vehicles, slots, 30, operationStatuses)
-  }, [vehicles, slots, operationStatuses])
-
-  // 稼働状況データを取得
-  const loadOperationStatuses = useCallback(async (vehiclesList) => {
-    if (!vehiclesList || vehiclesList.length === 0) {
-      setOperationStatuses({})
-      return
-    }
-
-    try {
-      const vehicleIds = vehiclesList.map((v) => v.id)
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
-
-      const { data, error } = await getVehicleOperationStatuses(vehicleIds, todayStr)
-
-      if (error) {
-        console.error('Error loading operation statuses:', error)
-        setOperationStatuses({})
-      } else {
-        setOperationStatuses(data || {})
-      }
-    } catch (error) {
-      console.error('Error loading operation statuses:', error)
-      setOperationStatuses({})
-    }
-  }, [])
-
-  // loadSlotsとloadDataを先に定義（useEffectで使用するため）
-  const loadSlots = useCallback(async (vehiclesList) => {
-    // 営業日の開始（18:00）と終了（翌 06:00）を取得
-    // 06:00 未満は前日の営業日として扱われる
-    const { start, end } = getBusinessDayBoundaries(new Date())
-
-    const allSlots = []
-    for (const vehicle of vehiclesList) {
-      try {
-        const { data, error } = await getSlotsByVehicleAndDate(vehicle.id, start, end)
-        if (error) continue
-        if (data) allSlots.push(...data)
-      } catch {
-        continue
-      }
-    }
-
-    setSlots(allSlots)
-  }, [])
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [ordersResult, vehiclesResult] = await Promise.all([getOrders(), getVehicles()])
-
-      if (ordersResult.error) {
-        console.error('Error loading orders:', ordersResult.error)
-        setError(`依頼データの読み込みに失敗: ${ordersResult.error.message || ordersResult.error}`)
-        setOrders([])
-      } else {
-        setOrders(ordersResult.data || [])
-      }
-
-      if (vehiclesResult.error) {
-        console.error('Error loading vehicles:', vehiclesResult.error)
-        setError(
-          `車両データの読み込みに失敗: ${vehiclesResult.error.message || vehiclesResult.error}`
-        )
-        setVehicles([])
-      } else {
-        setVehicles(vehiclesResult.data || [])
-        // 車両が読み込まれたらスロットと稼働状況も取得
-        if (vehiclesResult.data && vehiclesResult.data.length > 0) {
-          loadSlots(vehiclesResult.data)
-
-          // シフトから稼働状況を自動生成
-          const today = new Date()
-          const todayStr = today.toISOString().split('T')[0]
-
-          getShiftsByDate(todayStr).then(({ data: shiftsByCar, error: shiftsError }) => {
-            if (!shiftsError && shiftsByCar) {
-              syncOperationStatusFromShifts(vehiclesResult.data, todayStr, shiftsByCar).then(() => {
-                // 稼働状況を再読み込み
-                loadOperationStatuses(vehiclesResult.data)
-              })
-            } else {
-              // シフトデータがない場合は通常の読み込み
-              loadOperationStatuses(vehiclesResult.data)
-            }
-          })
-        } else {
-          setSlots([])
-          setOperationStatuses({})
-        }
-      }
-    } catch (error) {
-      console.error('Error loading data:', error)
-      setError(`データの読み込みに失敗: ${error.message}`)
-      setOrders([])
-      setVehicles([])
-      setSlots([])
-    } finally {
-      setLoading(false)
-    }
-  }, [loadSlots])
-
-  // 初期データ取得
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  // Supabase Realtimeで変更を監視
-  useEffect(() => {
-    if (!supabase) return
-
-    // ordersテーブルの変更を監視
-    const ordersChannel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE すべて
-          schema: 'public',
-          table: 'orders',
-        },
-        (payload) => {
-          // データを再読み込み
-          loadData()
-        }
-      )
-      .subscribe()
-
-    // dispatch_slotsテーブルの変更を監視
-    const slotsChannel = supabase
-      .channel('slots-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE すべて
-          schema: 'public',
-          table: 'dispatch_slots',
-        },
-        (payload) => {
-          // スロットを再読み込み（車両データが必要）
-          if (vehicles.length > 0) {
-            loadSlots(vehicles)
-          }
-        }
-      )
-      .subscribe()
-
-    // vehicle_operation_statusテーブルの変更を監視
-    const operationStatusChannel = supabase
-      .channel('operation-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE すべて
-          schema: 'public',
-          table: 'vehicle_operation_status',
-        },
-        (payload) => {
-          // 稼働状況を再読み込み（車両データが必要）
-          if (vehicles.length > 0) {
-            loadOperationStatuses(vehicles)
-          }
-        }
-      )
-      .subscribe()
-
-    // shiftsテーブルの変更を監視（シフト変更時に稼働状況を自動更新）
-    const shiftsChannel = supabase
-      .channel('shifts-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE すべて
-          schema: 'public',
-          table: 'shifts',
-        },
-        async (payload) => {
-          // シフト変更時に稼働状況を自動更新
-          if (vehicles.length > 0) {
-            try {
-              // 今日の日付を取得
-              const today = new Date()
-              const todayStr = today.toISOString().split('T')[0]
-
-              // 変更されたシフトの日付を取得
-              const shiftDate = payload.new?.date || payload.old?.date || todayStr
-
-              // その日のシフトデータを取得
-              const { data: shiftsByCar, error: shiftsError } = await getShiftsByDate(shiftDate)
-
-              if (shiftsError) {
-                if (import.meta.env.DEV) {
-                  console.error('Error fetching shifts for sync:', shiftsError)
-                }
-                return
-              }
-
-              // シフトから稼働状況を自動生成
-              const { error: syncError } = await syncOperationStatusFromShifts(
-                vehicles,
-                shiftDate,
-                shiftsByCar || {}
-              )
-
-              if (syncError) {
-                if (import.meta.env.DEV) {
-                  console.error('Error syncing operation status from shifts:', syncError)
-                }
-              } else {
-                // 稼働状況を再読み込み
-                await loadOperationStatuses(vehicles)
-              }
-            } catch (error) {
-              if (import.meta.env.DEV) {
-                console.error('Error handling shift change:', error)
-              }
-            }
-          }
-        }
-      )
-      .subscribe()
-
-    // クリーンアップ
-    return () => {
-      ordersChannel.unsubscribe()
-      slotsChannel.unsubscribe()
-      operationStatusChannel.unsubscribe()
-      shiftsChannel.unsubscribe()
-    }
-  }, [vehicles, loadData, loadSlots, loadOperationStatuses])
 
   // マウス/タッチ位置を追跡し、ドラッグ中のハイライト位置をリアルタイム更新
   useEffect(() => {
