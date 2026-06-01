@@ -7,6 +7,7 @@ import {
   isWithinBusinessHours,
   getMinBusinessDateTime,
 } from '@/utils/businessDayUtils'
+import { setupPlacesAutocomplete } from '@/lib/places'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -46,269 +47,54 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
   const dropoffAddressAutocompleteRef = useRef(null)
   const waypointAutocompleteRefs = useRef({})
 
-  // Google Places APIが読み込まれたらAutocompleteを初期化
+  // 出発地・目的地の Autocomplete を初期化
   useEffect(() => {
     if (!open) return
 
-    const initAutocomplete = () => {
-      if (typeof window === 'undefined' || !window.google || !window.google.maps || !window.google.maps.places) {
-        // Google Places APIがまだ読み込まれていない場合は再試行
-        setTimeout(initAutocomplete, 100)
-        return
+    const cleanupPickup = setupPlacesAutocomplete(
+      () => pickupAddressAutocompleteRef.current,
+      (formattedAddress) => {
+        setFormData((prev) => ({ ...prev, pickup_address: formattedAddress }))
+        setErrors((prev) => ({ ...prev, pickup_address: null }))
       }
-
-      const { Autocomplete } = window.google.maps.places
-
-      // 三重県のboundsを設定（県外の候補を除外）
-      const mieBounds = new window.google.maps.LatLngBounds(
-        new window.google.maps.LatLng(33.7, 135.8),  // 三重県の南西の角（南牟婁郡）
-        new window.google.maps.LatLng(35.2, 136.9)     // 三重県の北東の角（桑名市周辺）
-      )
-
-      // 出発地
-      if (pickupAddressAutocompleteRef.current) {
-        // Material-UIのTextFieldのinputRefは、実際のinput要素を参照する
-        // ただし、TextFieldの内部構造により、直接input要素を取得する必要がある場合がある
-        let inputElement = pickupAddressAutocompleteRef.current
-        
-        // inputRefがinput要素を直接参照していない場合、親要素からinput要素を探す
-        if (!(inputElement instanceof HTMLInputElement)) {
-          // TextFieldの内部構造を考慮して、input要素を探す
-          const textFieldContainer = inputElement.closest ? inputElement.closest('.MuiInputBase-root') : null
-          if (textFieldContainer) {
-            inputElement = textFieldContainer.querySelector('input')
-          }
-        }
-        
-        if (import.meta.env.DEV) {
-          console.log('🔍 出発地のref確認:', {
-            originalRef: pickupAddressAutocompleteRef.current,
-            inputElement,
-            isInputElement: inputElement instanceof HTMLInputElement,
-            tagName: inputElement?.tagName,
-          })
-        }
-        
-        if (inputElement && inputElement instanceof HTMLInputElement) {
-          try {
-            // 既存のAutocompleteがあれば削除
-            if (inputElement._autocomplete) {
-              window.google.maps.event.clearInstanceListeners(inputElement._autocomplete)
-              delete inputElement._autocomplete
-            }
-            const autocomplete = new Autocomplete(inputElement, {
-              componentRestrictions: { country: 'jp' },
-              fields: ['formatted_address'],
-              language: 'ja',
-              bounds: mieBounds,
-              strictBounds: true, // bounds外の候補を完全に除外（県外を非表示）
-            })
-            inputElement._autocomplete = autocomplete
-            
-            // Autocompleteのドロップダウンが表示されるように、z-indexを調整
-            // Google Places Autocompleteのドロップダウンは通常、body要素の直下に追加される
-            // しかし、Material-UIのDialog内では表示されない場合があるため、スタイルを調整
-            if (!document.getElementById('pac-container-style')) {
-              const style = document.createElement('style')
-              style.id = 'pac-container-style'
-              style.textContent = `
-                .pac-container {
-                  z-index: 1400 !important;
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                }
-                .pac-item {
-                  cursor: pointer;
-                  padding: 8px;
-                }
-                .pac-item:hover {
-                  background-color: #f5f5f5;
-                }
-                .pac-item-selected {
-                  background-color: #e3f2fd;
-                }
-              `
-              document.head.appendChild(style)
-            }
-            
-            // デバッグ用のイベントリスナー
-            if (import.meta.env.DEV) {
-              // 入力イベントを監視
-              inputElement.addEventListener('input', (e) => {
-                console.log('⌨️ 入力イベント:', e.target.value)
-                // Autocompleteの候補を手動で取得して確認
-                if (window.google && window.google.maps && window.google.maps.places) {
-                  const service = new window.google.maps.places.AutocompleteService()
-                  service.getPlacePredictions(
-                    {
-                      input: e.target.value,
-                      componentRestrictions: { country: 'jp' },
-                      bounds: mieBounds,
-                      strictBounds: true,
-                    },
-                    (predictions, status) => {
-                      if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-                        console.log('🔍 候補が見つかりました:', predictions)
-                      } else {
-                        console.log('⚠️ 候補が見つかりません:', status)
-                      }
-                    }
-                  )
-                }
-              })
-              // フォーカスイベントを監視
-              inputElement.addEventListener('focus', () => {
-                console.log('👁️ フォーカスイベント')
-              })
-            }
-            
-            autocomplete.addListener('place_changed', () => {
-              const place = autocomplete.getPlace()
-              if (import.meta.env.DEV) {
-                console.log('📍 place_changed イベント発火:', place)
-              }
-              if (place.formatted_address) {
-                setFormData((prev) => ({ ...prev, pickup_address: place.formatted_address }))
-                // エラーをクリア
-                setErrors((prev) => ({ ...prev, pickup_address: null }))
-              }
-            })
-            if (import.meta.env.DEV) {
-              console.log('✅ 出発地のAutocompleteを初期化しました', {
-                inputElement,
-                autocomplete,
-              })
-            }
-          } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error('❌ 出発地のAutocomplete初期化エラー:', error, inputElement)
-            }
-          }
-        } else {
-          if (import.meta.env.DEV) {
-            console.warn('⚠️ 出発地のinput要素が見つかりません:', {
-              ref: pickupAddressAutocompleteRef.current,
-              inputElement,
-            })
-          }
-        }
+    )
+    const cleanupDropoff = setupPlacesAutocomplete(
+      () => dropoffAddressAutocompleteRef.current,
+      (formattedAddress) => {
+        setFormData((prev) => ({ ...prev, dropoff_address: formattedAddress }))
+        setErrors((prev) => ({ ...prev, dropoff_address: null }))
       }
+    )
 
-      // 目的地
-      if (dropoffAddressAutocompleteRef.current) {
-        const inputElement = dropoffAddressAutocompleteRef.current
-        if (inputElement && inputElement instanceof HTMLInputElement) {
-          try {
-            // 既存のAutocompleteがあれば削除
-            if (inputElement._autocomplete) {
-              window.google.maps.event.clearInstanceListeners(inputElement._autocomplete)
-              delete inputElement._autocomplete
-            }
-            const autocomplete = new Autocomplete(inputElement, {
-              componentRestrictions: { country: 'jp' },
-              fields: ['formatted_address'],
-              language: 'ja',
-              bounds: mieBounds,
-              strictBounds: true, // bounds外の候補を完全に除外（県外を非表示）
-            })
-            inputElement._autocomplete = autocomplete
-            autocomplete.addListener('place_changed', () => {
-              const place = autocomplete.getPlace()
-              if (place.formatted_address) {
-                setFormData((prev) => ({ ...prev, dropoff_address: place.formatted_address }))
-                // エラーをクリア
-                setErrors((prev) => ({ ...prev, dropoff_address: null }))
-              }
-            })
-            if (import.meta.env.DEV) {
-              console.log('✅ 目的地のAutocompleteを初期化しました', inputElement)
-            }
-          } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error('❌ 目的地のAutocomplete初期化エラー:', error, inputElement)
-            }
-          }
-        } else {
-          if (import.meta.env.DEV) {
-            console.warn('⚠️ 目的地のrefがHTMLInputElementではありません:', dropoffAddressAutocompleteRef.current)
-          }
-        }
-      }
+    return () => {
+      cleanupPickup()
+      cleanupDropoff()
     }
-
-    // モーダルが開かれたら少し待ってから初期化（DOMが準備されるまで）
-    const timer = setTimeout(initAutocomplete, 500)
-    return () => clearTimeout(timer)
   }, [open])
 
-  // 経由地のAutocompleteを初期化
+  // 経由地の Autocomplete を初期化（経由地数が変わるたびに再構築）
   useEffect(() => {
     if (!open) return
 
-    const initWaypointAutocomplete = () => {
-      if (typeof window === 'undefined' || !window.google || !window.google.maps || !window.google.maps.places) {
-        setTimeout(initWaypointAutocomplete, 100)
-        return
-      }
-
-      const { Autocomplete } = window.google.maps.places
-
-      // 三重県のboundsを設定（県外の候補を除外）
-      const mieBounds = new window.google.maps.LatLngBounds(
-        new window.google.maps.LatLng(33.7, 135.8),  // 三重県の南西の角（南牟婁郡）
-        new window.google.maps.LatLng(35.2, 136.9)     // 三重県の北東の角（桑名市周辺）
-      )
-
-      // 既存の経由地フィールドにAutocompleteを適用
-      Object.keys(waypointAutocompleteRefs.current).forEach((indexStr) => {
-        const inputRef = waypointAutocompleteRefs.current[indexStr]
-        if (inputRef && inputRef instanceof HTMLInputElement) {
-          try {
-            // 既存のAutocompleteがあれば削除
-            if (inputRef._autocomplete) {
-              window.google.maps.event.clearInstanceListeners(inputRef._autocomplete)
-              delete inputRef._autocomplete
+    const cleanups = Object.keys(waypointAutocompleteRefs.current).map((indexStr) => {
+      const waypointIndex = parseInt(indexStr, 10)
+      return setupPlacesAutocomplete(
+        () => waypointAutocompleteRefs.current[indexStr],
+        (formattedAddress) => {
+          setFormData((prev) => {
+            const newWaypoints = [...prev.waypoints]
+            if (waypointIndex >= 0 && waypointIndex < newWaypoints.length) {
+              newWaypoints[waypointIndex] = formattedAddress
             }
-            const waypointIndex = parseInt(indexStr, 10)
-            const autocomplete = new Autocomplete(inputRef, {
-              componentRestrictions: { country: 'jp' },
-              fields: ['formatted_address'],
-              language: 'ja',
-              bounds: mieBounds,
-              strictBounds: true, // bounds外の候補を完全に除外（県外を非表示）
-            })
-            inputRef._autocomplete = autocomplete
-            autocomplete.addListener('place_changed', () => {
-              const place = autocomplete.getPlace()
-              if (import.meta.env.DEV) {
-                console.log(`📍 経由地 ${waypointIndex + 1}のplace_changed イベント発火:`, place)
-              }
-              if (place.formatted_address) {
-                setFormData((prev) => {
-                  const newWaypoints = [...prev.waypoints]
-                  if (waypointIndex >= 0 && waypointIndex < newWaypoints.length) {
-                    newWaypoints[waypointIndex] = place.formatted_address
-                    if (import.meta.env.DEV) {
-                      console.log(`✅ 経由地 ${waypointIndex + 1}を更新:`, place.formatted_address)
-                    }
-                  }
-                  return { ...prev, waypoints: newWaypoints }
-                })
-              }
-            })
-            if (import.meta.env.DEV) {
-              console.log(`✅ 経由地 ${waypointIndex + 1}のAutocompleteを初期化しました`, { waypointIndex, inputRef })
-            }
-          } catch (error) {
-            if (import.meta.env.DEV) {
-              console.error(`❌ 経由地 ${indexStr}のAutocomplete初期化エラー:`, error)
-            }
-          }
+            return { ...prev, waypoints: newWaypoints }
+          })
         }
-      })
-    }
+      )
+    })
 
-    const timer = setTimeout(initWaypointAutocomplete, 500)
-    return () => clearTimeout(timer)
+    return () => {
+      cleanups.forEach((fn) => fn())
+    }
   }, [open, formData.waypoints.length])
 
   // モーダルが開かれたときにフォームをリセット
