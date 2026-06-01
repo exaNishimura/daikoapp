@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react'
 import { updateOrder, cancelOrder } from '@/services/orderService'
-import { confirmSlot, deleteSlot, createSlot } from '@/services/slotService'
+import { confirmSlot, createSlot } from '@/services/slotService'
 import { estimateDuration, calculateBuffer } from '@/services/routeService'
 import { getOrderById } from '@/services/orderService'
 import { getVehicles } from '@/services/vehicleService'
 import { supabase } from '@/lib/supabase'
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
+import {
+  STATUS_LABELS,
+  getStatusLabel,
+  getStatusColor,
+  getRevertStatus,
+  getAdvanceStatus,
+} from '@/utils/orderStatusUtils'
+import { formatRouteCalculationError } from '@/lib/routeErrors'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -201,33 +209,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
         if (import.meta.env.DEV) {
           console.error('Route calculation error:', error)
         }
-        
-        // エラーメッセージを詳細化
-        let errorMessage = 'ルート計算に失敗しました'
-        if (error === 'API key not configured') {
-          errorMessage = 'Google Maps APIキーが設定されていません。.env.localファイルを確認してください。'
-        } else if (error === 'Address is missing') {
-          errorMessage = '出発地または目的地が入力されていません'
-        } else if (error.includes('REQUEST_DENIED')) {
-          if (error.includes('referer restrictions') || error.includes('referer restriction')) {
-            errorMessage = 'APIキーにHTTPリファラー制限が設定されています。\n\n解決方法:\n1. Google Cloud Console (https://console.cloud.google.com/apis/credentials) にアクセス\n2. APIキーを選択\n3. 「アプリケーションの制限」を「なし」に変更（開発環境の場合）\n4. 「保存」をクリック\n\n※本番環境では、バックエンドAPI経由で呼び出すことを推奨します。'
-          } else if (error.includes('This API project is not authorized')) {
-            errorMessage = 'Directions APIが有効になっていません。\n\n解決方法:\n1. Google Cloud Console (https://console.cloud.google.com/apis/library) にアクセス\n2. 「Directions API」を検索\n3. 「有効にする」をクリック'
-          } else {
-            errorMessage = `APIキーの権限がありません。\n\nエラー詳細: ${error}\n\n確認事項:\n1. Directions APIが有効になっているか\n2. APIキーの制限設定が適切か（開発環境では「なし」を推奨）\n3. APIキーが正しく設定されているか\n\nGoogle Cloud Console: https://console.cloud.google.com/apis/credentials`
-          }
-        } else if (error.includes('OVER_QUERY_LIMIT')) {
-          errorMessage = 'APIの使用量制限に達しました。課金設定を確認してください。'
-        } else if (error.includes('ZERO_RESULTS')) {
-          errorMessage = 'ルートが見つかりませんでした。住所を確認してください。'
-        } else if (error.includes('INVALID_REQUEST')) {
-          errorMessage = '無効なリクエストです。住所を確認してください。'
-        } else {
-          // その他のエラーも表示
-          errorMessage = `ルート計算に失敗しました: ${error}`
-        }
-        
-        alert(errorMessage)
+        alert(formatRouteCalculationError(error))
         setRecalculating(false)
         return
       }
@@ -400,30 +382,13 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
 
   // ひとつ前のステータスに戻す
   const handleRevertStatus = async () => {
-    // ステータスの遷移を定義
-    const statusRevertMap = {
-      'COMPLETED': 'IN_TRANSIT',
-      'IN_TRANSIT': 'PICKING_UP',
-      'PICKING_UP': 'ARRIVED',
-      'ARRIVED': 'CONFIRMED',
-      'CONFIRMED': 'TENTATIVE',
-    }
-
-    const previousStatus = statusRevertMap[order.status]
+    const previousStatus = getRevertStatus(order.status)
     if (!previousStatus) {
       alert('戻すことができないステータスです')
       return
     }
 
-    const statusLabels = {
-      'IN_TRANSIT': '送客中',
-      'PICKING_UP': '客車引取',
-      'ARRIVED': '現地到着',
-      'CONFIRMED': '確定',
-      'TENTATIVE': '仮配置',
-    }
-
-    if (!confirm(`${statusLabels[previousStatus]}に戻しますか？`)) {
+    if (!confirm(`${STATUS_LABELS[previousStatus]}に戻しますか？`)) {
       return
     }
 
@@ -516,27 +481,28 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
     }
   }
 
-  const statusColor = {
-    UNASSIGNED: 'default',
-    TENTATIVE: 'warning',
-    CONFIRMED: 'success',
-    ARRIVED: 'info',
-    PICKING_UP: 'info',
-    IN_TRANSIT: 'info',
-    COMPLETED: 'success',
-    CANCELLED: 'error',
-  }[order.status] || 'default'
+  const statusColor = getStatusColor(order.status)
+  const statusLabel = getStatusLabel(order.status)
 
-  const statusLabel = {
-    UNASSIGNED: '未割当',
-    TENTATIVE: '仮配置',
-    CONFIRMED: '確定',
-    ARRIVED: '現地到着',
-    PICKING_UP: '客車引取',
-    IN_TRANSIT: '送客中',
-    COMPLETED: '送客完了',
-    CANCELLED: 'キャンセル',
-  }[order.status] || '不明'
+  // CONFIRMED 以降の進行ボタン用のヘルパー
+  const advanceStatus = getAdvanceStatus(order.status)
+  const handleAdvanceStatus = async () => {
+    if (!advanceStatus) return
+    setLoading(true)
+    try {
+      const { data: updatedOrder, error } = await updateOrder(order.id, {
+        status: advanceStatus,
+      })
+      if (error) throw error
+      onUpdate(updatedOrder)
+    } catch (error) {
+      console.error('Error updating status:', error)
+      alert('ステータス更新に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+  const advanceColor = advanceStatus === 'COMPLETED' ? 'success' : 'info'
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -1047,97 +1013,15 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
                 </Button>
               )}
               
-              {/* 確定後のステータスボタン */}
-              {order.status === 'CONFIRMED' && (
+              {advanceStatus && (
                 <Button
                   variant="contained"
-                  color="info"
-                  onClick={async () => {
-                    setLoading(true)
-                    try {
-                      const { data: updatedOrder, error } = await updateOrder(order.id, { status: 'ARRIVED' })
-                      if (error) throw error
-                      onUpdate(updatedOrder)
-                    } catch (error) {
-                      console.error('Error updating status:', error)
-                      alert('ステータス更新に失敗しました')
-                    } finally {
-                      setLoading(false)
-                    }
-                  }}
+                  color={advanceColor}
+                  onClick={handleAdvanceStatus}
                   disabled={loading}
                   fullWidth
                 >
-                  現地到着
-                </Button>
-              )}
-              {order.status === 'ARRIVED' && (
-                <Button
-                  variant="contained"
-                  color="info"
-                  onClick={async () => {
-                    setLoading(true)
-                    try {
-                      const { data: updatedOrder, error } = await updateOrder(order.id, { status: 'PICKING_UP' })
-                      if (error) throw error
-                      onUpdate(updatedOrder)
-                    } catch (error) {
-                      console.error('Error updating status:', error)
-                      alert('ステータス更新に失敗しました')
-                    } finally {
-                      setLoading(false)
-                    }
-                  }}
-                  disabled={loading}
-                  fullWidth
-                >
-                  客車引取
-                </Button>
-              )}
-              {order.status === 'PICKING_UP' && (
-                <Button
-                  variant="contained"
-                  color="info"
-                  onClick={async () => {
-                    setLoading(true)
-                    try {
-                      const { data: updatedOrder, error } = await updateOrder(order.id, { status: 'IN_TRANSIT' })
-                      if (error) throw error
-                      onUpdate(updatedOrder)
-                    } catch (error) {
-                      console.error('Error updating status:', error)
-                      alert('ステータス更新に失敗しました')
-                    } finally {
-                      setLoading(false)
-                    }
-                  }}
-                  disabled={loading}
-                  fullWidth
-                >
-                  送客中
-                </Button>
-              )}
-              {order.status === 'IN_TRANSIT' && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={async () => {
-                    setLoading(true)
-                    try {
-                      const { data: updatedOrder, error } = await updateOrder(order.id, { status: 'COMPLETED' })
-                      if (error) throw error
-                      onUpdate(updatedOrder)
-                    } catch (error) {
-                      console.error('Error updating status:', error)
-                      alert('ステータス更新に失敗しました')
-                    } finally {
-                      setLoading(false)
-                    }
-                  }}
-                  disabled={loading}
-                  fullWidth
-                >
-                  送客完了
+                  {STATUS_LABELS[advanceStatus]}
                 </Button>
               )}
               <Button
