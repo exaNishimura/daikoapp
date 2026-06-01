@@ -17,6 +17,14 @@ dist-ssr
 .env.local
 .env.production
 
+# Excel imports (実データは管理外、サンプルとREADMEのみコミット)
+excel-imports/**/*.xlsx
+excel-imports/**/*.xls
+excel-imports/**/*.xlsm
+excel-imports/**/*.csv
+!excel-imports/**/*.sample.xlsx
+!excel-imports/**/*.sample.csv
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
