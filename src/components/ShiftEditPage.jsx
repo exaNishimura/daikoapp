@@ -192,54 +192,8 @@ export function ShiftEditPage() {
             statusMap[shift.date] = shift.status
           }
         })
-        
-        // 月曜日を自動的に定休日に設定
-        const mondayDates = days.filter(({ dow }) => dow === '月').map(({ date }) => date)
-        const mondayUpdates = []
-        let hasUpdates = false
-        
-        for (const date of mondayDates) {
-          // 既にステータスが設定されている場合はスキップ
-          if (statusMap[date]) continue
-          
-          // シフトが設定されている場合はスキップ
-          const hasShift = data?.some(s => s.date === date && !s.status)
-          if (hasShift) continue
-          
-          // 定休日を設定
-          const dateObj = new Date(date)
-          const dow = DOW_MAP[dateObj.getDay()]
-          hasUpdates = true
-          mondayUpdates.push(
-            createShift({
-              date,
-              dow,
-              status: '定休日',
-            }).then(() => {
-              statusMap[date] = '定休日'
-            }).catch((err) => {
-              // エラーは無視（既に存在する可能性がある）
-              if (process.env.NODE_ENV === 'development') {
-                console.warn(`Failed to set Monday as holiday for ${date}:`, err)
-              }
-            })
-          )
-        }
-        
-        // 月曜日の定休日設定を並列実行
-        if (mondayUpdates.length > 0) {
-          await Promise.all(mondayUpdates)
-        }
-        
+
         setStatuses(statusMap)
-        
-        // 月曜日の定休日を設定した場合は、シフトデータを再取得
-        if (hasUpdates) {
-          const { data: updatedData } = await getShifts(startDate, endDate)
-          if (updatedData) {
-            setShifts(updatedData)
-          }
-        }
       }
     } catch (err) {
       setError(`エラーが発生しました: ${err.message}`)
