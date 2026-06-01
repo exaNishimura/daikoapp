@@ -113,7 +113,7 @@ export function DispatchBoard() {
   }, [])
 
   // loadSlotsとloadDataを先に定義（useEffectで使用するため）
-  const loadSlots = useCallback(async (vehiclesList, preserveNewSlots = false) => {
+  const loadSlots = useCallback(async (vehiclesList) => {
     // 営業日の開始（18:00）と終了（翌 06:00）を取得
     // 06:00 未満は前日の営業日として扱われる
     const { start, end } = getBusinessDayBoundaries(new Date())
@@ -122,27 +122,14 @@ export function DispatchBoard() {
     for (const vehicle of vehiclesList) {
       try {
         const { data, error } = await getSlotsByVehicleAndDate(vehicle.id, start, end)
-        if (error) {
-          continue
-        }
-        if (data) {
-          allSlots.push(...data)
-        }
-      } catch (err) {
+        if (error) continue
+        if (data) allSlots.push(...data)
+      } catch {
         continue
       }
     }
-    
-    if (preserveNewSlots) {
-      // 既存のスロットと新しいスロットをマージ（重複を避ける）
-      setSlots((prev) => {
-        const existingIds = new Set(allSlots.map((s) => s.id))
-        const newSlots = prev.filter((s) => !existingIds.has(s.id))
-        return [...allSlots, ...newSlots]
-      })
-    } else {
-      setSlots(allSlots)
-    }
+
+    setSlots(allSlots)
   }, [])
 
   const loadData = useCallback(async () => {
@@ -492,16 +479,13 @@ export function DispatchBoard() {
               return [...prev, slot]
             })
             
-            // 依頼を更新
+            // 依頼を更新（base_duration_min / buffer_min 反映済みの最新版で）
+            // ※以前は 1 秒後に loadSlots で再フェッチしていたが、
+            //  createSlot の戻り値で十分なため二重描画を避けるべく削除した。
+            //  他端末との整合性は Realtime 購読で別途解決する。
             if (latestOrder) {
               handleOrderUpdate(latestOrder)
             }
-            
-            // 少し待ってからスロットを再読み込みして確実に同期（データベースへの書き込み完了を待つ）
-            // preserveNewSlots=trueで、追加したスロットを保持する
-            setTimeout(async () => {
-              await loadSlots(vehicles, true)
-            }, 1000)
           }
         } else {
           alert('配置可能な時間が見つかりませんでした。')
@@ -774,17 +758,12 @@ export function DispatchBoard() {
       }
 
       // スロットを即座に更新（タイムラインにすぐ反映）
+      // updateSlot の戻り値で十分なので 500ms 後の再フェッチは廃止
       if (updatedSlot) {
         setSlots((prev) =>
           prev.map((s) => (s.id === slot.id ? updatedSlot : s))
         )
       }
-
-      // 少し待ってからスロットを再読み込みして確実に同期（データベースへの書き込み完了を待つ）
-      // preserveNewSlots=trueで、更新したスロットを保持する
-      setTimeout(async () => {
-        await loadSlots(vehicles, true)
-      }, 500)
     }
 
     // 未割当依頼のドラッグ&ドロップ
@@ -841,7 +820,7 @@ export function DispatchBoard() {
         return
       }
 
-      // スロットを即座に追加
+      // スロットを即座に追加（createSlot の戻り値で十分なため再フェッチは廃止）
       if (newSlot) {
         setSlots((prev) => [...prev, newSlot])
       }
@@ -853,11 +832,6 @@ export function DispatchBoard() {
           prev.map((o) => (o.id === order.id ? updatedOrder : o))
         )
       }
-
-      // 少し待ってからスロットを再読み込み
-      setTimeout(async () => {
-        await loadSlots(vehicles, true)
-      }, 500)
     }
   }
 
