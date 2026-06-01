@@ -1,25 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  useShiftsByMonth,
-  useCreateShift,
-  useUpdateShift,
-  useDeleteShift,
-  useDeleteShiftsByDate,
-} from '@/hooks/useShifts'
-import { useEmployees } from '@/hooks/useEmployees'
-import {
-  getActiveStaffNamesOrdered,
-  mergeStaffNamesForSelect,
-  buildStaffColorByName,
-} from '@/lib/staffFromEmployees'
+import { useShiftEditPage } from '@/hooks/useShiftEditPage'
 import {
   CAR_OPTIONS,
   ROLE_OPTIONS,
   STATUS_OPTIONS,
-  DOW_MAP,
   TIMELINE_WIDTH,
-  getDaysInMonth,
   getDefaultShiftEditYearMonth,
 } from '@/lib/shiftEditUtils'
 import { TimeAxis, CarBlock } from './ShiftEditPage/Timeline'
@@ -63,410 +48,51 @@ export function ShiftEditPage() {
   const year = parseInt(searchParams.get('year') || String(defaultYM.year), 10)
   const month = parseInt(searchParams.get('month') || String(defaultYM.month), 10)
 
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
-  const [editingDates, setEditingDates] = useState({}) // 日付ごとの編集状態
-  const [newShifts, setNewShifts] = useState({}) // 日付ごとの新規シフトデータ
-  const [editingShiftIds, setEditingShiftIds] = useState({}) // 編集中のシフトID
-  const [editingShifts, setEditingShifts] = useState({}) // 編集中のシフトデータ
-  const [copyDialogOpen, setCopyDialogOpen] = useState(false) // コピー用ダイアログの開閉状態
-  const [copyTargetDate, setCopyTargetDate] = useState(null) // コピー対象の日付
-  /** 一括コピーのコピー先（日付キー・チェック状態） */
-  const [copyDestDates, setCopyDestDates] = useState({})
-  const [bulkCopyDialogOpen, setBulkCopyDialogOpen] = useState(false)
-  const [bulkCopySourceDate, setBulkCopySourceDate] = useState('')
-  const [expandedDates, setExpandedDates] = useState(() => {
-    // デフォルトで全て展開
-    const expanded = {}
-    if (year && month) {
-      const days = getDaysInMonth(year, month)
-      days.forEach(({ date }) => {
-        expanded[date] = true
-      })
-    }
-    return expanded
-  }) // 折りたたみ状態
-
-  const days = useMemo(() => {
-    if (!year || !month) return []
-    return getDaysInMonth(year, month)
-  }, [year, month])
-
-  const selectedCopyDestCount = useMemo(
-    () => Object.values(copyDestDates).filter(Boolean).length,
-    [copyDestDates]
-  )
-
-  useEffect(() => {
-    setCopyDestDates({})
-  }, [year, month])
-
-  const shiftsQuery = useShiftsByMonth(year, month)
-  const employeesQuery = useEmployees()
-  const createShiftMutation = useCreateShift()
-  const updateShiftMutation = useUpdateShift()
-  const deleteShiftMutation = useDeleteShift()
-  const deleteShiftsByDateMutation = useDeleteShiftsByDate()
-
-  const shifts = shiftsQuery.data ?? []
-  const employees = employeesQuery.data ?? []
-  const fetchError = shiftsQuery.error
-  const isMutating =
-    createShiftMutation.isPending ||
-    updateShiftMutation.isPending ||
-    deleteShiftMutation.isPending ||
-    deleteShiftsByDateMutation.isPending
-  const loading = shiftsQuery.isLoading || isMutating
-
-  const statuses = useMemo(() => {
-    const map = {}
-    shifts.forEach((shift) => {
-      if (shift.status) {
-        map[shift.date] = shift.status
-      }
-    })
-    return map
-  }, [shifts])
-
-  const staffColorByName = useMemo(() => buildStaffColorByName(employees), [employees])
-  const staffOptions = useMemo(() => {
-    const activeOrdered = getActiveStaffNamesOrdered(employees)
-    const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
-    return mergeStaffNamesForSelect(activeOrdered, shiftNames)
-  }, [employees, shifts])
-
-  const getShiftsForDate = (date) => {
-    return shifts.filter((s) => s.date === date && !s.status)
-  }
-
-  const handleStartEdit = (date) => {
-    setEditingDates((prev) => ({ ...prev, [date]: true }))
-    setNewShifts((prev) => ({
-      ...prev,
-      [date]: {
-        car: '',
-        role: '',
-        staff: '',
-        start: '',
-        end: '',
-        note: '',
-      },
-    }))
-  }
-
-  const handleCancelEdit = (date) => {
-    setEditingDates((prev) => {
-      const next = { ...prev }
-      delete next[date]
-      return next
-    })
-    setNewShifts((prev) => {
-      const next = { ...prev }
-      delete next[date]
-      return next
-    })
-  }
-
-  const handleAddShift = async (date) => {
-    const shiftData = newShifts[date]
-    if (
-      !shiftData ||
-      !shiftData.car ||
-      !shiftData.role ||
-      !shiftData.staff ||
-      !shiftData.start ||
-      !shiftData.end
-    ) {
-      setError('車両、役割、スタッフ、開始時刻、終了時刻は必須です')
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const dateObj = new Date(date)
-      const dow = DOW_MAP[dateObj.getDay()]
-
-      await createShiftMutation.mutateAsync({
-        date,
-        dow,
-        car: shiftData.car,
-        role: shiftData.role,
-        staff: shiftData.staff,
-        start: shiftData.start,
-        end: shiftData.end,
-        note: shiftData.note || null,
-      })
-
-      setNewShifts((prev) => {
-        const next = { ...prev }
-        next[date] = {
-          car: '',
-          role: '',
-          staff: '',
-          start: '',
-          end: '',
-          note: '',
-        }
-        return next
-      })
-      setSuccess('シフトを追加しました')
-    } catch (err) {
-      setError(`シフトの追加に失敗: ${err.message}`)
-    }
-  }
-
-  const handleStartEditShift = (shift) => {
-    setEditingShiftIds((prev) => ({ ...prev, [shift.id]: true }))
-    setEditingShifts((prev) => ({
-      ...prev,
-      [shift.id]: {
-        car: shift.car,
-        role: shift.role,
-        staff: shift.staff,
-        start: shift.start,
-        end: shift.end,
-        note: shift.note || '',
-      },
-    }))
-  }
-
-  const handleCancelEditShift = (shiftId) => {
-    setEditingShiftIds((prev) => {
-      const next = { ...prev }
-      delete next[shiftId]
-      return next
-    })
-    setEditingShifts((prev) => {
-      const next = { ...prev }
-      delete next[shiftId]
-      return next
-    })
-  }
-
-  const handleUpdateShift = async (shiftId, date) => {
-    const shiftData = editingShifts[shiftId]
-    if (
-      !shiftData ||
-      !shiftData.car ||
-      !shiftData.role ||
-      !shiftData.staff ||
-      !shiftData.start ||
-      !shiftData.end
-    ) {
-      setError('車両、役割、スタッフ、開始時刻、終了時刻は必須です')
-      return
-    }
-
-    // 一括保存用に編集状態を保持（個別保存は行わない）
-    // 実際の保存は handleSaveAll で一括実行
-  }
-
-  // 一括保存処理
-  const handleSaveAll = async () => {
-    // 編集中のシフトがない場合
-    if (Object.keys(editingShifts).length === 0) {
-      setError('保存するシフトがありません。シフトを編集してから保存してください。')
-      return
-    }
-
-    // バリデーション
-    const invalidShifts = []
-    Object.keys(editingShifts).forEach((shiftId) => {
-      const shiftData = editingShifts[shiftId]
-      if (
-        !shiftData ||
-        !shiftData.car ||
-        !shiftData.role ||
-        !shiftData.staff ||
-        !shiftData.start ||
-        !shiftData.end
-      ) {
-        invalidShifts.push(shiftId)
-      }
-    })
-
-    if (invalidShifts.length > 0) {
-      setError(
-        '編集中のシフトに必須項目が未入力です。車両、役割、スタッフ、開始時刻、終了時刻は必須です'
-      )
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const shiftIdToDateMap = {}
-      shifts.forEach((shift) => {
-        if (editingShifts[shift.id]) {
-          shiftIdToDateMap[shift.id] = shift.date
-        }
-      })
-
-      const updatePromises = Object.keys(editingShifts)
-        .map((shiftId) => {
-          const shiftData = editingShifts[shiftId]
-          const date = shiftIdToDateMap[shiftId]
-          if (!date) return null
-          const dateObj = new Date(date)
-          const dow = DOW_MAP[dateObj.getDay()]
-          return updateShiftMutation.mutateAsync({
-            id: shiftId,
-            shiftData: {
-              car: shiftData.car,
-              role: shiftData.role,
-              staff: shiftData.staff,
-              start: shiftData.start,
-              end: shiftData.end,
-              note: shiftData.note || null,
-              dow,
-            },
-          })
-        })
-        .filter(Boolean)
-
-      await Promise.all(updatePromises)
-
-      setEditingShiftIds({})
-      setEditingShifts({})
-      setSuccess(`${updatePromises.length}件のシフトを更新しました`)
-    } catch (err) {
-      setError(`一部のシフトの更新に失敗しました: ${err.message}`)
-    }
-  }
-
-  // 他の日からシフトをコピー
-  const handleCopyFromDate = async (sourceDate) => {
-    const sourceShifts = getShiftsForDate(sourceDate)
-    if (sourceShifts.length === 0) {
-      setError('選択した日付にシフトが設定されていません')
-      setCopyDialogOpen(false)
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-
-    try {
-      await deleteShiftsByDateMutation.mutateAsync(copyTargetDate)
-
-      const dateObj = new Date(copyTargetDate)
-      const dow = DOW_MAP[dateObj.getDay()]
-
-      await Promise.all(
-        sourceShifts.map((shift) =>
-          createShiftMutation.mutateAsync({
-            date: copyTargetDate,
-            dow,
-            car: shift.car,
-            role: shift.role,
-            staff: shift.staff,
-            start: shift.start,
-            end: shift.end,
-            note: shift.note || null,
-          })
-        )
-      )
-
-      setSuccess(`${sourceDate}の${sourceShifts.length}件をコピー先に上書きしました`)
-    } catch (err) {
-      setError(`コピーに失敗しました: ${err.message}`)
-    } finally {
-      setCopyDialogOpen(false)
-    }
-  }
-
-  const handleBulkCopyExecute = async () => {
-    if (!bulkCopySourceDate) {
-      setError('コピー元の日付を選択してください')
-      return
-    }
-    const sourceShifts = getShiftsForDate(bulkCopySourceDate)
-    if (sourceShifts.length === 0) {
-      setError('コピー元にシフトが設定されていません')
-      return
-    }
-    const targets = days
-      .map(({ date }) => date)
-      .filter((date) => copyDestDates[date] && date !== bulkCopySourceDate)
-
-    if (targets.length === 0) {
-      setError('コピー先がありません。コピー元以外の日にチェックを入れてください。')
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-
-    try {
-      for (const targetDate of targets) {
-        await deleteShiftsByDateMutation.mutateAsync(targetDate)
-        const dateObj = new Date(targetDate)
-        const dow = DOW_MAP[dateObj.getDay()]
-        await Promise.all(
-          sourceShifts.map((shift) =>
-            createShiftMutation.mutateAsync({
-              date: targetDate,
-              dow,
-              car: shift.car,
-              role: shift.role,
-              staff: shift.staff,
-              start: shift.start,
-              end: shift.end,
-              note: shift.note || null,
-            })
-          )
-        )
-      }
-
-      setCopyDestDates({})
-      setBulkCopyDialogOpen(false)
-      setBulkCopySourceDate('')
-      setSuccess(
-        `${bulkCopySourceDate}の${sourceShifts.length}件を${targets.length}日分上書きしました`
-      )
-    } catch (err) {
-      setError(`一括コピーに失敗しました: ${err.message}`)
-    }
-  }
-
-  const handleDeleteShift = async (id, _date) => {
-    if (!confirm('このシフトを削除しますか？')) {
-      return
-    }
-
-    setError(null)
-    setSuccess(null)
-
-    try {
-      await deleteShiftMutation.mutateAsync(id)
-      setSuccess('シフトを削除しました')
-    } catch (err) {
-      setError(`削除に失敗: ${err.message}`)
-    }
-  }
-
-  const handleSetStatus = async (date, status) => {
-    setError(null)
-    setSuccess(null)
-
-    try {
-      await deleteShiftsByDateMutation.mutateAsync(date)
-
-      if (status) {
-        const dateObj = new Date(date)
-        const dow = DOW_MAP[dateObj.getDay()]
-        await createShiftMutation.mutateAsync({ date, dow, status })
-        setSuccess('ステータスを更新しました')
-      } else {
-        setSuccess('ステータスを解除しました')
-      }
-    } catch (err) {
-      setError(`ステータスの保存に失敗: ${err.message}`)
-    }
-  }
+  const {
+    shifts,
+    fetchError,
+    loading,
+    days,
+    statuses,
+    staffColorByName,
+    staffOptions,
+    getShiftsForDate,
+    refetchShifts,
+    error,
+    success,
+    setError,
+    setSuccess,
+    expandedDates,
+    setExpandedDates,
+    editingDates,
+    newShifts,
+    setNewShifts,
+    handleStartEdit,
+    handleCancelEdit,
+    handleAddShift,
+    editingShiftIds,
+    editingShifts,
+    setEditingShifts,
+    handleStartEditShift,
+    handleCancelEditShift,
+    handleUpdateShift,
+    handleSaveAll,
+    copyDialogOpen,
+    setCopyDialogOpen,
+    copyTargetDate,
+    setCopyTargetDate,
+    handleCopyFromDate,
+    copyDestDates,
+    setCopyDestDates,
+    selectedCopyDestCount,
+    bulkCopyDialogOpen,
+    setBulkCopyDialogOpen,
+    bulkCopySourceDate,
+    setBulkCopySourceDate,
+    handleBulkCopyExecute,
+    handleDeleteShift,
+    handleSetStatus,
+  } = useShiftEditPage({ year, month })
 
   const monthLabel = year && month ? `${year}年${month}月` : ''
 
@@ -578,7 +204,7 @@ export function ShiftEditPage() {
               />
             )}
           </Box>
-          <Button variant="outlined" onClick={() => shiftsQuery.refetch()} disabled={loading}>
+          <Button variant="outlined" onClick={() => refetchShifts()} disabled={loading}>
             再読み込み
           </Button>
           <Button
