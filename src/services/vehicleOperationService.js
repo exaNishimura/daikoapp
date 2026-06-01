@@ -55,8 +55,8 @@ export async function getVehicleOperationStatuses(vehicleIds, date) {
 
     // vehicleIdをキーとしたオブジェクトに変換
     const result = {}
-    vehicleIds.forEach(id => {
-      result[id] = (data || []).filter(status => status.vehicle_id === id)
+    vehicleIds.forEach((id) => {
+      result[id] = (data || []).filter((status) => status.vehicle_id === id)
     })
 
     return { data: result, error: null }
@@ -110,14 +110,17 @@ export async function setVehicleOperationStatus(vehicleId, statusData) {
     // UNIQUE制約により、同じvehicle_id, date, typeの組み合わせは自動的にUPDATEされる
     const { data, error } = await supabase
       .from('vehicle_operation_status')
-      .upsert({
-        vehicle_id: vehicleId,
-        type,
-        date: dateStr,
-        time: timeStr || null,
-      }, {
-        onConflict: 'vehicle_id,date,type'
-      })
+      .upsert(
+        {
+          vehicle_id: vehicleId,
+          type,
+          date: dateStr,
+          time: timeStr || null,
+        },
+        {
+          onConflict: 'vehicle_id,date,type',
+        }
+      )
       .select()
       .single()
 
@@ -206,14 +209,14 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
     for (const vehicle of vehicles) {
       // 車両名から号車番号を抽出（例: '1号車' → '1'）
       const carNumber = vehicle.name.replace('号車', '').trim()
-      
+
       // 該当するシフトを取得
       const vehicleShifts = shifts[carNumber] || []
-      
+
       // その日の全シフトを確認（carがnullの場合も含む）
       const allShiftsForDate = Object.values(shifts).flat()
       const hasDayOffStatus = allShiftsForDate.some(
-        shift => !shift.car && (shift.status === '休業' || shift.status === '定休日')
+        (shift) => !shift.car && (shift.status === '休業' || shift.status === '定休日')
       )
 
       // まず、その日の既存の稼働状況を削除（シフトから自動生成されたもののみ）
@@ -258,22 +261,22 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
       // シフトがある場合、startとendを分析してSTOP/STARTを設定
       // 営業時間は18:00-06:00（翌日）
       // シフトのstartとendは既に営業時間内（18:00-06:00）の時間帯になっていると仮定
-      
+
       // シフトのstartとendを時刻（分）に変換してソート
       const shiftTimes = vehicleShifts
-        .filter(shift => shift.start && shift.end)
-        .map(shift => {
+        .filter((shift) => shift.start && shift.end)
+        .map((shift) => {
           const [startHour, startMin] = shift.start.split(':').map(Number)
           const [endHour, endMin] = shift.end.split(':').map(Number)
           // 時刻を分に変換（endが06:00以前の場合は翌日として扱う）
           let startMinutes = startHour * 60 + startMin
           let endMinutes = endHour * 60 + endMin
-          
+
           // 営業時間は18:00-06:00（翌日）なので、endが06:00以前の場合は翌日として扱う
           if (endMinutes < 6 * 60 && startMinutes >= 18 * 60) {
             endMinutes += 24 * 60 // 翌日の時刻として扱う
           }
-          
+
           return {
             start: startMinutes,
             end: endMinutes,
@@ -344,7 +347,7 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
         for (let i = 0; i < shiftTimes.length - 1; i++) {
           const currentEnd = shiftTimes[i].end
           const nextStart = shiftTimes[i + 1].start
-          
+
           // シフト間に隙間がある場合（15分以上の隙間）
           if (nextStart - currentEnd >= 15) {
             // 前のシフトの終了時刻でSTOP
@@ -393,4 +396,3 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
     return { data: null, error }
   }
 }
-

@@ -10,7 +10,17 @@ import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen'
 import Tooltip from '@mui/material/Tooltip'
 import './TimelineGrid.css'
 
-export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosition, draggingSlotVehicleId, onOrderSelect, onOrderUpdate, onSlotsUpdate, operationStatuses = {} }) {
+export function TimelineGrid({
+  vehicles,
+  orders,
+  slots: propsSlots,
+  dragOverPosition,
+  draggingSlotVehicleId,
+  onOrderSelect,
+  onOrderUpdate,
+  onSlotsUpdate,
+  operationStatuses = {},
+}) {
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [expandedVehicles, setExpandedVehicles] = useState(new Set()) // 拡大されている号車列のIDセット
@@ -128,7 +138,7 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
     // 営業時間内の場合、18:00を基準に1分単位で正確な位置を計算
     try {
       let minutesFromStart = 0
-      
+
       if (hours >= 18) {
         // 18:00以降（当日）
         // 例: 20:30 = (20-18)*60 + 30 = 150分
@@ -138,18 +148,18 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
         // 例: 02:30 = (24-18)*60 + 2*60 + 30 = 360 + 120 + 30 = 510分
         minutesFromStart = (24 - 18) * 60 + hours * 60 + minutes
       }
-      
+
       // 秒も考慮（1分 = 20/15 = 4/3 px、1秒 = (4/3)/60 px）
       const totalSeconds = minutesFromStart * 60 + seconds
-      const pixelsPerSecond = (20 / 15) / 60 // 1秒あたりのピクセル数
+      const pixelsPerSecond = 20 / 15 / 60 // 1秒あたりのピクセル数
       const position = totalSeconds * pixelsPerSecond
-      
+
       // タイムラインの範囲内かチェック（0〜totalHeight）
       // totalHeight = 48行 * 20px = 960px
       if (position < 0 || position > totalHeight) {
         return null
       }
-      
+
       return position
     } catch (error) {
       // エラーの場合はnullを返す
@@ -163,20 +173,20 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
   useEffect(() => {
     // timeline-bodyまたはtimeline-content-wrapperのどちらかがスクロールコンテナ
     const scrollContainer = timelineBodyRef.current || bodyScrollRef.current
-    
+
     if (currentTimePosition !== null && scrollContainer) {
       // DOMが完全にレンダリングされるまで少し待つ
       const timeoutId = setTimeout(() => {
         if (!scrollContainer) return
-        
+
         // 現在時刻の位置を中央付近に表示するようにスクロール
         const containerHeight = scrollContainer.clientHeight
         const scrollPosition = currentTimePosition - containerHeight / 2
-        
+
         // スクロール位置を設定（負の値にならないように）
         scrollContainer.scrollTop = Math.max(0, scrollPosition)
       }, 200) // 200ms待ってからスクロール
-      
+
       return () => clearTimeout(timeoutId)
     }
   }, [currentTimePosition, vehicles.length]) // vehicles.lengthが変わったときも再スクロール
@@ -203,7 +213,9 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
     <div className="timeline-grid">
       <div className="timeline-header-wrapper" ref={headerScrollRef}>
         <div className="timeline-header">
-          <div className="time-axis-label" style={{ padding: '12px 16px' }}>時間</div>
+          <div className="time-axis-label" style={{ padding: '12px 16px' }}>
+            時間
+          </div>
           <div className="vehicles-header">
             {vehicles.map((vehicle) => {
               // 稼働状況を判定（現在時刻で判定）
@@ -212,10 +224,21 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
               const isOperational = isVehicleOperational(vehicle.id, now, statuses)
               const isExpanded = expandedVehicles.has(vehicle.id)
               const vehicleHeaderWidth = isExpanded ? '60vw' : '40vw'
-              
+
               return (
-                <div key={vehicle.id} className="vehicle-header-label" style={{ padding: '12px 16px', width: vehicleHeaderWidth }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <div
+                  key={vehicle.id}
+                  className="vehicle-header-label"
+                  style={{ padding: '12px 16px', width: vehicleHeaderWidth }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
                     <span>{vehicle.name}</span>
                     {!isOperational && (
                       <span
@@ -238,15 +261,19 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
                           e.stopPropagation()
                           toggleVehicleExpand(vehicle.id)
                         }}
-                        sx={{ 
+                        sx={{
                           color: 'rgba(255, 255, 255, 0.7)',
                           padding: '4px',
                           '&:hover': {
                             backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          }
+                          },
                         }}
                       >
-                        {isExpanded ? <CloseFullscreenIcon fontSize="small" /> : <OpenInFullIcon fontSize="small" />}
+                        {isExpanded ? (
+                          <CloseFullscreenIcon fontSize="small" />
+                        ) : (
+                          <OpenInFullIcon fontSize="small" />
+                        )}
                       </IconButton>
                     </Tooltip>
                   </div>
@@ -268,7 +295,8 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
             <div className="time-axis-column">
               {timeSlots.map((ts, index) => {
                 // 15分刻みで表示（0, 15, 30, 45分）
-                const showMarker = ts.minute === 0 || ts.minute === 15 || ts.minute === 30 || ts.minute === 45
+                const showMarker =
+                  ts.minute === 0 || ts.minute === 15 || ts.minute === 30 || ts.minute === 45
                 const isHourMark = ts.minute === 0
                 return (
                   <div key={index} className="time-marker-row" style={{ height: '20px' }}>
@@ -294,7 +322,7 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
               {vehicles.map((vehicle) => {
                 const isExpanded = expandedVehicles.has(vehicle.id)
                 const vehicleColumnWidth = isExpanded ? '60vw' : '40vw'
-                
+
                 return (
                   <VehicleColumn
                     key={vehicle.id}
@@ -304,7 +332,9 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
                     orders={orders}
                     timeSlots={timeSlots}
                     totalHeight={totalHeight}
-                    dragOverPosition={dragOverPosition?.vehicleId === vehicle.id ? dragOverPosition : null}
+                    dragOverPosition={
+                      dragOverPosition?.vehicleId === vehicle.id ? dragOverPosition : null
+                    }
                     draggingSlotVehicleId={draggingSlotVehicleId}
                     onSlotSelect={onOrderSelect}
                     operationStatuses={operationStatuses[vehicle.id] || []}
@@ -325,7 +355,7 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
                   right: 0,
                   height: '2px',
                   backgroundColor: '#ff4444',
-                  zIndex: 0, /* 依頼カードの下に表示 */
+                  zIndex: 0 /* 依頼カードの下に表示 */,
                   pointerEvents: 'none',
                   boxShadow: '0 0 4px rgba(255, 68, 68, 0.8)',
                 }}
@@ -352,12 +382,24 @@ export function TimelineGrid({ vehicles, orders, slots: propsSlots, dragOverPosi
   )
 }
 
-function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeight, dragOverPosition, onSlotSelect, draggingSlotVehicleId, operationStatuses = [], columnWidth = '40vw' }) {
+function VehicleColumn({
+  vehicle,
+  slots,
+  conflicts,
+  orders,
+  timeSlots,
+  totalHeight,
+  dragOverPosition,
+  onSlotSelect,
+  draggingSlotVehicleId,
+  operationStatuses = [],
+  columnWidth = '40vw',
+}) {
   // 営業日の基準日を計算
   const now = new Date()
   const localHours = now.getHours()
   let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  
+
   if (localHours < 6) {
     // 06:00未満の場合は前日の営業日として扱う
     businessDay.setDate(businessDay.getDate() - 1)
@@ -413,7 +455,8 @@ function VehicleColumn({ vehicle, slots, conflicts, orders, timeSlots, totalHeig
                   right: 0,
                   height: '20px',
                   backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                  backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 4px, rgba(0, 0, 0, 0.1) 8px)',
+                  backgroundImage:
+                    'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 4px, rgba(0, 0, 0, 0.1) 8px)',
                   pointerEvents: 'none',
                   zIndex: 1,
                 }}

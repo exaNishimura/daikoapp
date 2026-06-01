@@ -15,8 +15,7 @@ async function unwrap(promise) {
   return data
 }
 
-const dateKey = (date) =>
-  date instanceof Date ? date.toISOString().split('T')[0] : date
+const dateKey = (date) => (date instanceof Date ? date.toISOString().split('T')[0] : date)
 
 /**
  * 指定車両・指定日の稼働状況を取得

@@ -24,12 +24,15 @@ export async function getVehicles(options = {}) {
 
     // 稼働状況チェックが指定されている場合
     if (options.targetTime) {
-      const vehicleIds = (data || []).map(v => v.id)
+      const vehicleIds = (data || []).map((v) => v.id)
       const today = new Date(options.targetTime)
       const todayStr = today.toISOString().split('T')[0]
 
       // 稼働状況を取得
-      const { data: operationStatusesMap, error: statusError } = await getVehicleOperationStatuses(vehicleIds, todayStr)
+      const { data: operationStatusesMap, error: statusError } = await getVehicleOperationStatuses(
+        vehicleIds,
+        todayStr
+      )
 
       if (statusError) {
         // エラーが発生した場合は全車両を返す（フォールバック）
@@ -37,7 +40,11 @@ export async function getVehicles(options = {}) {
       }
 
       // 稼働中の車両のみをフィルタ
-      const operationalVehicles = getOperationalVehicles(data || [], options.targetTime, operationStatusesMap || {})
+      const operationalVehicles = getOperationalVehicles(
+        data || [],
+        options.targetTime,
+        operationStatusesMap || {}
+      )
       return { data: operationalVehicles, error: null }
     }
 
@@ -57,11 +64,7 @@ export async function createVehicle(vehicleData) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('vehicles')
-      .insert([vehicleData])
-      .select()
-      .single()
+    const { data, error } = await supabase.from('vehicles').insert([vehicleData]).select().single()
 
     if (error) throw error
     return { data, error: null }
@@ -118,10 +121,7 @@ export async function deleteVehicleByName(name) {
     }
 
     // 削除実行
-    const { error: deleteError } = await supabase
-      .from('vehicles')
-      .delete()
-      .eq('id', vehicles[0].id)
+    const { error: deleteError } = await supabase.from('vehicles').delete().eq('id', vehicles[0].id)
 
     if (deleteError) throw deleteError
     return { data: { id: vehicles[0].id }, error: null }
@@ -130,4 +130,3 @@ export async function deleteVehicleByName(name) {
     return { data: null, error }
   }
 }
-

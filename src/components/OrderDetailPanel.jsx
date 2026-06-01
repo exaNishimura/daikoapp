@@ -69,11 +69,7 @@ export function OrderDetailPanel({
       {/* コンテンツ */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
         <Stack spacing={3.5}>
-          <OrderInfoSection
-            order={order}
-            statusLabel={statusLabel}
-            statusColor={statusColor}
-          />
+          <OrderInfoSection order={order} statusLabel={statusLabel} statusColor={statusColor} />
           <OrderRouteSection
             editing={editing}
             order={order}

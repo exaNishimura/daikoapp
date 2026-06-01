@@ -35,7 +35,11 @@ describe('checkSlotConflict', () => {
 
   it('同一車両で時間が重なる場合は競合', () => {
     const a = baseSlot({ id: 'a' })
-    const b = baseSlot({ id: 'b', start_at: '2026-06-01T20:30:00Z', end_at: '2026-06-01T21:30:00Z' })
+    const b = baseSlot({
+      id: 'b',
+      start_at: '2026-06-01T20:30:00Z',
+      end_at: '2026-06-01T21:30:00Z',
+    })
     expect(checkSlotConflict(a, b)).toBe(true)
   })
 })

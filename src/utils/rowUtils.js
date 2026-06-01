@@ -32,7 +32,7 @@ export function rowIndexToTime(rowIndex) {
   if (rowIndex < 0 || rowIndex > 47) {
     throw new Error(`Invalid row index: ${rowIndex}. Must be between 0 and 47.`)
   }
-  
+
   if (rowIndex < 24) {
     // 18:00〜23:45（当日）
     const hour = 18 + Math.floor(rowIndex / 4)
@@ -68,11 +68,11 @@ export function dateToEndRowIndex(date) {
   const minute = date.getMinutes()
   const seconds = date.getSeconds()
   const milliseconds = date.getMilliseconds()
-  
+
   // 分が15の倍数で、秒・ミリ秒が0の場合、その行の開始時刻なので、その行番号を返す
   // それ以外の場合（行の途中）、次の行番号を返す
-  const isExactRowStart = (minute % 15 === 0) && (seconds === 0) && (milliseconds === 0)
-  
+  const isExactRowStart = minute % 15 === 0 && seconds === 0 && milliseconds === 0
+
   if (isExactRowStart) {
     return timeToRowIndex(hour, minute)
   } else {
@@ -91,7 +91,7 @@ export function dateToEndRowIndex(date) {
 export function rowIndexToDate(rowIndex, baseDate) {
   const { hour, minute } = rowIndexToTime(rowIndex)
   const date = new Date(baseDate)
-  
+
   if (hour >= 18) {
     // 18:00以降（当日）
     date.setHours(hour, minute, 0, 0)
@@ -100,7 +100,7 @@ export function rowIndexToDate(rowIndex, baseDate) {
     date.setDate(date.getDate() + 1)
     date.setHours(hour, minute, 0, 0)
   }
-  
+
   return date
 }
 
@@ -148,4 +148,3 @@ export function rowsToMinutes(rows) {
 export function snapToRowIndex(rowIndex) {
   return Math.max(0, Math.min(47, Math.round(rowIndex)))
 }
-

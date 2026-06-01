@@ -7,14 +7,14 @@ import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { getOrders, getOrderById } from '@/services/orderService'
 import { getVehicles } from '@/services/vehicleService'
 import { createSlot, updateSlot, getSlotsByVehicleAndDate } from '@/services/slotService'
-import { getVehicleOperationStatuses, syncOperationStatusFromShifts } from '@/services/vehicleOperationService'
+import {
+  getVehicleOperationStatuses,
+  syncOperationStatusFromShifts,
+} from '@/services/vehicleOperationService'
 import { getShiftsByDate } from '@/services/shiftService'
 import { calculateBuffer } from '@/services/routeService'
 import { supabase } from '@/lib/supabase'
-import {
-  exceedsBusinessHours,
-  formatBusinessDay,
-} from '@/utils/timeUtils'
+import { exceedsBusinessHours, formatBusinessDay } from '@/utils/timeUtils'
 import { getBusinessDayBoundaries } from '@/utils/businessDayUtils'
 import { getEarliestAvailableTimeWithSlots } from '@/utils/earliestTimeUtils'
 import {
@@ -75,13 +75,13 @@ export function DispatchBoard() {
   // 営業日（今日の日付）
   const businessDate = new Date()
   const businessDayText = formatBusinessDay(businessDate)
-  
+
   // 直近依頼をとれる時間（vehiclesとslotsが変更されたときに再計算）
   // slotsのID、start_at、end_atを含めて、スロットの位置や時間が変わったときも検知
   const slotsKey = useMemo(() => {
-    return slots.map(s => `${s.id}:${s.start_at}:${s.end_at}`).join('|')
+    return slots.map((s) => `${s.id}:${s.start_at}:${s.end_at}`).join('|')
   }, [slots])
-  
+
   const earliestAvailableTime = useMemo(() => {
     return getEarliestAvailableTimeWithSlots(vehicles, slots, 30, operationStatuses)
   }, [vehicles, slots, operationStatuses])
@@ -94,7 +94,7 @@ export function DispatchBoard() {
     }
 
     try {
-      const vehicleIds = vehiclesList.map(v => v.id)
+      const vehicleIds = vehiclesList.map((v) => v.id)
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0]
 
@@ -136,10 +136,7 @@ export function DispatchBoard() {
     setLoading(true)
     setError(null)
     try {
-      const [ordersResult, vehiclesResult] = await Promise.all([
-        getOrders(),
-        getVehicles(),
-      ])
+      const [ordersResult, vehiclesResult] = await Promise.all([getOrders(), getVehicles()])
 
       if (ordersResult.error) {
         console.error('Error loading orders:', ordersResult.error)
@@ -151,18 +148,20 @@ export function DispatchBoard() {
 
       if (vehiclesResult.error) {
         console.error('Error loading vehicles:', vehiclesResult.error)
-        setError(`車両データの読み込みに失敗: ${vehiclesResult.error.message || vehiclesResult.error}`)
+        setError(
+          `車両データの読み込みに失敗: ${vehiclesResult.error.message || vehiclesResult.error}`
+        )
         setVehicles([])
       } else {
         setVehicles(vehiclesResult.data || [])
         // 車両が読み込まれたらスロットと稼働状況も取得
         if (vehiclesResult.data && vehiclesResult.data.length > 0) {
           loadSlots(vehiclesResult.data)
-          
+
           // シフトから稼働状況を自動生成
           const today = new Date()
           const todayStr = today.toISOString().split('T')[0]
-          
+
           getShiftsByDate(todayStr).then(({ data: shiftsByCar, error: shiftsError }) => {
             if (!shiftsError && shiftsByCar) {
               syncOperationStatusFromShifts(vehiclesResult.data, todayStr, shiftsByCar).then(() => {
@@ -323,7 +322,7 @@ export function DispatchBoard() {
   useEffect(() => {
     const updatePosition = (clientX, clientY) => {
       setMousePosition({ x: clientX, y: clientY })
-      
+
       // ドラッグ中の場合、ハイライト位置をリアルタイム更新
       if (dragOverPosition !== null) {
         const timelineBody = document.querySelector('.timeline-content-wrapper')
@@ -331,9 +330,11 @@ export function DispatchBoard() {
           const timelineRect = timelineBody.getBoundingClientRect()
           const scrollTop = timelineBody.scrollTop
           const mouseY = clientY - timelineRect.top + scrollTop
-          
+
           // 現在のvehicleIdを確認
-          const vehicleElement = document.querySelector(`[data-vehicle-id="${dragOverPosition.vehicleId}"]`)
+          const vehicleElement = document.querySelector(
+            `[data-vehicle-id="${dragOverPosition.vehicleId}"]`
+          )
           if (vehicleElement) {
             setDragOverPosition({
               vehicleId: dragOverPosition.vehicleId,
@@ -351,7 +352,7 @@ export function DispatchBoard() {
     const handleTouchMove = (e) => {
       // タッチイベントのデフォルト動作を防ぐ（スクロールを許可）
       if (dragOverPosition === null) return
-      
+
       e.preventDefault() // ドラッグ中のみスクロールを防ぐ
       if (e.touches.length > 0) {
         const touch = e.touches[0]
@@ -394,30 +395,30 @@ export function DispatchBoard() {
           const now = new Date()
           const hours = now.getHours()
           const minutes = now.getMinutes()
-          
+
           if (hours >= 18 || hours < 6) {
             // 営業時間内の場合、現在時刻を行番号に変換して次の行に切り上げ
             const currentRowIndex = dateToRowIndex(now)
             const nextRowIndex = Math.min(47, currentRowIndex + 1) // 次の行（最大47行）
-            
+
             // 営業日の基準日を計算
             let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
             if (hours < 6) {
               businessDay.setDate(businessDay.getDate() - 1)
             }
-            
+
             // 行番号からDateオブジェクトに変換
             orderStartTime = rowIndexToDate(nextRowIndex, businessDay)
-        } else {
-          // 営業時間外の場合、次の18:00
-          orderStartTime = new Date(now)
-          orderStartTime.setHours(18, 0, 0, 0)
-          orderStartTime.setMinutes(0, 0, 0)
-          // 今日が既に18:00を過ぎている場合は翌日の18:00
-          if (hours >= 18) {
-            orderStartTime.setDate(orderStartTime.getDate() + 1)
+          } else {
+            // 営業時間外の場合、次の18:00
+            orderStartTime = new Date(now)
+            orderStartTime.setHours(18, 0, 0, 0)
+            orderStartTime.setMinutes(0, 0, 0)
+            // 今日が既に18:00を過ぎている場合は翌日の18:00
+            if (hours >= 18) {
+              orderStartTime.setDate(orderStartTime.getDate() + 1)
+            }
           }
-        }
         } else if (newOrder.scheduled_at) {
           // 「日時指定」の場合、指定された時刻を使用
           orderStartTime = new Date(newOrder.scheduled_at)
@@ -425,7 +426,7 @@ export function DispatchBoard() {
           // フォールバック: 現在時刻または18:00
           const now = new Date()
           const hours = now.getHours()
-          
+
           if (hours >= 18 || hours < 6) {
             // 営業時間内の場合、現在時刻を使用
             orderStartTime = new Date(now)
@@ -478,7 +479,7 @@ export function DispatchBoard() {
               }
               return [...prev, slot]
             })
-            
+
             // 依頼を更新（base_duration_min / buffer_min 反映済みの最新版で）
             // ※以前は 1 秒後に loadSlots で再フェッチしていたが、
             //  createSlot の戻り値で十分なため二重描画を避けるべく削除した。
@@ -504,9 +505,7 @@ export function DispatchBoard() {
   }
 
   const handleOrderUpdate = async (updatedOrder) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-    )
+    setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)))
     if (selectedOrder?.id === updatedOrder.id) {
       setSelectedOrder(updatedOrder)
       // キャンセルされた場合はパネルを閉じる
@@ -515,7 +514,11 @@ export function DispatchBoard() {
       }
     }
     // キャンセルまたはスロット関連の変更があった場合はスロットを再読み込み
-    if (updatedOrder.status === 'CANCELLED' || updatedOrder.status === 'TENTATIVE' || updatedOrder.status === 'CONFIRMED') {
+    if (
+      updatedOrder.status === 'CANCELLED' ||
+      updatedOrder.status === 'TENTATIVE' ||
+      updatedOrder.status === 'CONFIRMED'
+    ) {
       if (vehicles.length > 0) {
         await loadSlots(vehicles)
       }
@@ -547,24 +550,24 @@ export function DispatchBoard() {
   // イベントからclientYを取得する関数（マウス/タッチ両対応）
   const getClientYFromEvent = (event) => {
     if (!event) return null
-    
+
     // タッチイベントの場合
     if (event.touches && event.touches.length > 0) {
       return event.touches[0].clientY
     }
-    
+
     // マウスイベントの場合
     if (event.clientY !== undefined) {
       return event.clientY
     }
-    
+
     return null
   }
 
   const handleDragStart = (event) => {
     // ドラッグ開始時にマウス位置をリセット（すぐに更新される）
     setMousePosition(null)
-    
+
     // SlotComponentをドラッグしている場合、元のvehicleIdを記録
     if (event.active.data.current?.type === 'slot' && event.active.data.current?.slot) {
       setDraggingSlotVehicleId(event.active.data.current.slot.vehicle_id)
@@ -590,17 +593,17 @@ export function DispatchBoard() {
 
     // マウス/タッチ位置を直接取得（優先順位: activatorEvent > mousePosition）
     let clientY = null
-    
+
     // event.activatorEventから直接位置を取得（リアルタイム更新のため優先）
     if (event.activatorEvent) {
       clientY = getClientYFromEvent(event.activatorEvent)
     }
-    
+
     // フォールバック: mousePositionを使用
     if (clientY === null && mousePosition) {
       clientY = mousePosition.y
     }
-    
+
     // さらにフォールバック: delta.yを使用する場合、元の位置を計算
     if (clientY === null) {
       if (active.data.current?.type === 'slot' && active.data.current?.slot) {
@@ -608,7 +611,7 @@ export function DispatchBoard() {
         const startDate = new Date(slot.start_at)
         const startRowIndex = dateToRowIndex(startDate)
         const originalTop = rowIndexToPixels(startRowIndex)
-        
+
         if (event.delta?.y !== undefined) {
           const mouseY = originalTop + event.delta.y
           setDragOverPosition({
@@ -618,7 +621,7 @@ export function DispatchBoard() {
           return
         }
       }
-      
+
       setDragOverPosition(null)
       return
     }
@@ -658,7 +661,7 @@ export function DispatchBoard() {
     const calculateTimeFromDropPosition = (targetVehicleId) => {
       // マウス/タッチ位置を取得（優先順位: currentMousePosition > currentDragOverPosition > activatorEvent）
       let dropY = null
-      
+
       if (currentMousePosition) {
         // マウス位置からタイムライン内のY座標を計算
         dropY = calculateTimelineY(currentMousePosition.y)
@@ -672,25 +675,25 @@ export function DispatchBoard() {
           dropY = calculateTimelineY(clientY)
         }
       }
-      
+
       if (dropY === null) return null
 
       // Y座標を行番号に変換（15分 = 20px = 1行）
       const rowIndex = pixelsToRowIndex(dropY)
-      
+
       // 15分刻みでスナップ（ドロップ時のみ）
       const snappedRowIndex = snapToRowIndex(rowIndex)
-      
+
       // 営業日の基準日を計算
       const now = new Date()
       const localHours = now.getHours()
       let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
+
       if (localHours < 6) {
         // 06:00未満の場合は前日の営業日として扱う
         businessDay.setDate(businessDay.getDate() - 1)
       }
-      
+
       // 行番号からDateオブジェクトに変換
       return rowIndexToDate(snappedRowIndex, businessDay)
     }
@@ -716,12 +719,12 @@ export function DispatchBoard() {
 
       // ドロップ位置から時刻を計算
       const newStartAt = calculateTimeFromDropPosition(newVehicleId)
-      
+
       // 依頼の最新の所要時間を使用（既存のslotの長さではなく）
       const baseDuration = latestOrder?.base_duration_min || 30
       const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
       const totalDuration = baseDuration + buffer
-      
+
       // 新しい開始時刻を設定（ドロップ位置から計算、または既存の時刻を維持）
       const startAt = newStartAt || new Date(slot.start_at)
       const endAt = new Date(startAt)
@@ -746,7 +749,7 @@ export function DispatchBoard() {
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
       }
-      
+
       if (slot.status === 'CONFIRMED') {
         updateData.status = 'TENTATIVE'
       }
@@ -760,9 +763,7 @@ export function DispatchBoard() {
       // スロットを即座に更新（タイムラインにすぐ反映）
       // updateSlot の戻り値で十分なので 500ms 後の再フェッチは廃止
       if (updatedSlot) {
-        setSlots((prev) =>
-          prev.map((s) => (s.id === slot.id ? updatedSlot : s))
-        )
+        setSlots((prev) => prev.map((s) => (s.id === slot.id ? updatedSlot : s)))
       }
     }
 
@@ -778,7 +779,7 @@ export function DispatchBoard() {
 
       // ドロップ位置から時刻を計算
       const newStartAt = calculateTimeFromDropPosition(targetVehicleId)
-      
+
       if (!newStartAt) {
         alert('ドロップ位置から時刻を計算できませんでした')
         return
@@ -828,9 +829,7 @@ export function DispatchBoard() {
       // 依頼のステータスを更新
       const { data: updatedOrder, error: orderUpdateError } = await getOrderById(order.id)
       if (!orderUpdateError && updatedOrder) {
-        setOrders((prev) =>
-          prev.map((o) => (o.id === order.id ? updatedOrder : o))
-        )
+        setOrders((prev) => prev.map((o) => (o.id === order.id ? updatedOrder : o)))
       }
     }
   }
@@ -856,27 +855,62 @@ export function DispatchBoard() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
-      <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         {/* ヘッダー */}
-        <AppBar position="fixed" elevation={1} sx={{ bgcolor: "background.paper", zIndex: (theme) => theme.zIndex.drawer + 1, top: '45px' }}>
-          <Toolbar sx={{ justifyContent: "space-between", px: { xs: 2, sm: 3 }, py: 1.5, width: "100%", maxWidth: "100vw" }}>
-            <Box sx={{ display: "flex", flexDirection: "column" }}>
-              <Typography variant="body2" component="div" sx={{ fontWeight: 600, whiteSpace: "nowrap", lineHeight: 1.2, fontSize: "0.875rem" }}>
+        <AppBar
+          position="fixed"
+          elevation={1}
+          sx={{
+            bgcolor: 'background.paper',
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            top: '45px',
+          }}
+        >
+          <Toolbar
+            sx={{
+              justifyContent: 'space-between',
+              px: { xs: 2, sm: 3 },
+              py: 1.5,
+              width: '100%',
+              maxWidth: '100vw',
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography
+                variant="body2"
+                component="div"
+                sx={{
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.2,
+                  fontSize: '0.875rem',
+                }}
+              >
                 {businessDayText}
               </Typography>
-              <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.5, mt: 0.25 }}>
-                <Typography variant="caption" component="span" sx={{ color: "text.secondary", fontSize: "0.75rem", fontWeight: 500 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 0.25 }}>
+                <Typography
+                  variant="caption"
+                  component="span"
+                  sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 500 }}
+                >
                   受付可能時間:
                 </Typography>
                 <Typography
                   variant="h6"
                   component="span"
                   sx={{
-                    color: "error.main",
+                    color: 'error.main',
                     fontWeight: 700,
-                    fontSize: "1.25rem",
-                    whiteSpace: "nowrap",
+                    fontSize: '1.25rem',
+                    whiteSpace: 'nowrap',
                     lineHeight: 1.2,
                   }}
                 >
@@ -884,27 +918,31 @@ export function DispatchBoard() {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: "flex", gap: 1, ml: 2, whiteSpace: "nowrap", flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', gap: 1, ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}>
               <Button
                 variant="outlined"
                 startIcon={<SettingsIcon />}
                 onClick={() => {
                   // 車両選択ダイアログを表示
-                  if (vehicles.length === 0) return;
+                  if (vehicles.length === 0) return
                   if (vehicles.length === 1) {
                     // 車両が1台のみの場合は直接モーダルを開く
-                    setSelectedVehicleForStatus(vehicles[0]);
-                    setIsOperationStatusModalOpen(true);
+                    setSelectedVehicleForStatus(vehicles[0])
+                    setIsOperationStatusModalOpen(true)
                   } else {
                     // 複数車両の場合は選択ダイアログを表示
-                    setIsVehicleSelectDialogOpen(true);
+                    setIsVehicleSelectDialogOpen(true)
                   }
                 }}
                 disabled={vehicles.length === 0}
               >
                 設定
               </Button>
-              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsModalOpen(true)}>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setIsModalOpen(true)}
+              >
                 依頼
               </Button>
             </Box>
@@ -920,30 +958,30 @@ export function DispatchBoard() {
                 再読み込み
               </Button>
             }
-            sx={{ borderRadius: 0, mt: "64px" }}
+            sx={{ borderRadius: 0, mt: '64px' }}
           >
             {error}
           </Alert>
         )}
 
         {/* メインコンテンツ */}
-        <Box sx={{ display: "flex", flex: 1, overflow: "hidden", mt: "70px" }}>
+        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', mt: '70px' }}>
           {/* タイムライン */}
           <Box
             component="main"
             sx={{
               flexGrow: 1,
-              bgcolor: "background.default",
+              bgcolor: 'background.default',
             }}
           >
             {vehicles.length === 0 ? (
               <Box
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "100%",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
                   gap: 1,
                 }}
               >
@@ -955,7 +993,17 @@ export function DispatchBoard() {
                 </Typography>
               </Box>
             ) : (
-              <TimelineGrid vehicles={vehicles} orders={orders} slots={slots} operationStatuses={operationStatuses} dragOverPosition={dragOverPosition} draggingSlotVehicleId={draggingSlotVehicleId} onOrderSelect={handleOrderSelect} onOrderUpdate={handleOrderUpdate} onSlotsUpdate={loadSlots} />
+              <TimelineGrid
+                vehicles={vehicles}
+                orders={orders}
+                slots={slots}
+                operationStatuses={operationStatuses}
+                dragOverPosition={dragOverPosition}
+                draggingSlotVehicleId={draggingSlotVehicleId}
+                onOrderSelect={handleOrderSelect}
+                onOrderUpdate={handleOrderUpdate}
+                onSlotsUpdate={loadSlots}
+              />
             )}
           </Box>
 
@@ -969,24 +1017,40 @@ export function DispatchBoard() {
                 width: 384,
                 flexShrink: 0,
                 zIndex: (theme) => theme.zIndex.drawer + 10,
-                "& .MuiDrawer-paper": {
+                '& .MuiDrawer-paper': {
                   width: 384,
-                  boxSizing: "border-box",
+                  boxSizing: 'border-box',
                   borderLeft: 1,
-                  borderColor: "divider",
+                  borderColor: 'divider',
                   zIndex: (theme) => theme.zIndex.drawer + 10,
                 },
               }}
             >
-              <OrderDetailPanel order={selectedOrder} onUpdate={handleOrderUpdate} onDelete={handleOrderDelete} onClose={() => setSelectedOrder(null)} vehicles={vehicles} slots={slots} />
+              <OrderDetailPanel
+                order={selectedOrder}
+                onUpdate={handleOrderUpdate}
+                onDelete={handleOrderDelete}
+                onClose={() => setSelectedOrder(null)}
+                vehicles={vehicles}
+                slots={slots}
+              />
             </Drawer>
           )}
         </Box>
 
         {/* モーダル */}
-        <OrderFormModal open={isModalOpen} onClose={() => setIsModalOpen(false)} onOrderCreated={handleOrderCreated} />
+        <OrderFormModal
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onOrderCreated={handleOrderCreated}
+        />
         {/* 車両選択ダイアログ */}
-        <Dialog open={isVehicleSelectDialogOpen} onClose={() => setIsVehicleSelectDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={isVehicleSelectDialogOpen}
+          onClose={() => setIsVehicleSelectDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>車両を選択してください</DialogTitle>
           <DialogContent>
             <List>
@@ -994,9 +1058,9 @@ export function DispatchBoard() {
                 <ListItem key={vehicle.id} disablePadding>
                   <ListItemButton
                     onClick={() => {
-                      setSelectedVehicleForStatus(vehicle);
-                      setIsVehicleSelectDialogOpen(false);
-                      setIsOperationStatusModalOpen(true);
+                      setSelectedVehicleForStatus(vehicle)
+                      setIsVehicleSelectDialogOpen(false)
+                      setIsOperationStatusModalOpen(true)
                     }}
                   >
                     <ListItemText primary={vehicle.name} />
@@ -1012,13 +1076,13 @@ export function DispatchBoard() {
         <VehicleOperationStatusModal
           open={isOperationStatusModalOpen}
           onClose={() => {
-            setIsOperationStatusModalOpen(false);
-            setSelectedVehicleForStatus(null);
+            setIsOperationStatusModalOpen(false)
+            setSelectedVehicleForStatus(null)
           }}
           onStatusUpdated={() => {
             // 稼働状況が更新されたら再読み込み
             if (vehicles.length > 0) {
-              loadOperationStatuses(vehicles);
+              loadOperationStatuses(vehicles)
             }
           }}
           vehicleId={selectedVehicleForStatus?.id}
@@ -1026,6 +1090,5 @@ export function DispatchBoard() {
         />
       </Box>
     </DndContext>
-  );
+  )
 }
-

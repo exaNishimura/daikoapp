@@ -61,9 +61,7 @@ function NavBar() {
       </div>
       {isAuthenticated ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {user?.email && (
-            <span style={{ color: '#aaa', fontSize: 13 }}>{user.email}</span>
-          )}
+          {user?.email && <span style={{ color: '#aaa', fontSize: 13 }}>{user.email}</span>}
           <Button
             onClick={handleLogout}
             variant="outlined"
@@ -126,7 +124,9 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
+        >
           <NavBar />
           <AppRoutes />
         </div>

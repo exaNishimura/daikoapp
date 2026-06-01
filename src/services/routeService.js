@@ -9,7 +9,12 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
  * @param {string[]|null} waypoints - 経由地の配列（オプション）
  * @param {string|null} waitingLocationAddress - 待機場所住所（復路の目的地、オプション）
  */
-export async function estimateDuration(pickupAddress, dropoffAddress, waypoints = null, waitingLocationAddress = null) {
+export async function estimateDuration(
+  pickupAddress,
+  dropoffAddress,
+  waypoints = null,
+  waitingLocationAddress = null
+) {
   if (!GOOGLE_MAPS_API_KEY) {
     if (import.meta.env.DEV) {
       console.warn('Google Maps API key not configured')
@@ -28,7 +33,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
     // プロキシ経由でAPIを呼び出す（CORSエラーを回避）
     // APIキーはクエリパラメータとして含める（プロキシで転送される）
     let url = `/api/google-maps/directions/json?origin=${encodeURIComponent(pickupAddress)}&destination=${encodeURIComponent(dropoffAddress)}&key=${GOOGLE_MAPS_API_KEY}&language=ja`
-    
+
     // 経由地がある場合は追加
     if (waypoints && waypoints.length > 0) {
       const waypointsParam = waypoints
@@ -45,7 +50,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
     }
 
     const response = await fetch(url)
-    
+
     if (!response.ok) {
       const errorText = await response.text()
       if (import.meta.env.DEV) {
@@ -99,40 +104,48 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
         durationSeconds: legDurationSeconds,
         durationMinutes: Math.round(legDurationSeconds / 60),
         distanceMeters: leg.distance?.value || 0,
-        distanceKm: leg.distance ? (leg.distance.value / 1000).toFixed(2) : '0'
+        distanceKm: leg.distance ? (leg.distance.value / 1000).toFixed(2) : '0',
       })
     }
-    
+
     // 秒→分に変換
     const oneWayMinutes = Math.round(totalDurationSeconds / 60)
-    
+
     // 復路時間を計算（目的地 → 待機場所）
     let returnTripMinutes = 0
     if (waitingLocationAddress && waitingLocationAddress.trim().length > 0) {
       try {
         const returnUrl = `/api/google-maps/directions/json?origin=${encodeURIComponent(dropoffAddress)}&destination=${encodeURIComponent(waitingLocationAddress.trim())}&key=${GOOGLE_MAPS_API_KEY}&language=ja`
-        
+
         if (import.meta.env.DEV) {
-          console.log('Fetching return route:', { from: dropoffAddress, to: waitingLocationAddress })
+          console.log('Fetching return route:', {
+            from: dropoffAddress,
+            to: waitingLocationAddress,
+          })
         }
 
         const returnResponse = await fetch(returnUrl)
-        
+
         if (returnResponse.ok) {
           const returnData = await returnResponse.json()
-          
-          if (returnData.status === 'OK' && returnData.routes && returnData.routes.length > 0 && returnData.routes[0].legs) {
+
+          if (
+            returnData.status === 'OK' &&
+            returnData.routes &&
+            returnData.routes.length > 0 &&
+            returnData.routes[0].legs
+          ) {
             let returnDurationSeconds = 0
             for (const leg of returnData.routes[0].legs) {
               returnDurationSeconds += leg.duration.value
             }
             returnTripMinutes = Math.round(returnDurationSeconds / 60)
-            
+
             if (import.meta.env.DEV) {
               console.log('Return route calculated:', {
                 from: dropoffAddress,
                 to: waitingLocationAddress,
-                duration: `${returnTripMinutes}分`
+                duration: `${returnTripMinutes}分`,
               })
             }
           } else {
@@ -148,12 +161,11 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
         // 復路計算エラーは無視して続行（片道時間のみを使用）
       }
     }
-    
+
     // 往復時間を計算（片道時間 + 復路時間）
     // 復路時間が計算できなかった場合は、片道時間を2倍（従来の動作）
-    const roundTripMinutes = returnTripMinutes > 0 
-      ? oneWayMinutes + returnTripMinutes
-      : oneWayMinutes * 2
+    const roundTripMinutes =
+      returnTripMinutes > 0 ? oneWayMinutes + returnTripMinutes : oneWayMinutes * 2
 
     if (import.meta.env.DEV) {
       console.log('=== Route Duration Calculation ===')
@@ -168,7 +180,7 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
           from: leg.from,
           to: leg.to,
           duration: `${leg.durationMinutes}分 (${leg.durationSeconds}秒)`,
-          distance: `${leg.distanceKm}km`
+          distance: `${leg.distanceKm}km`,
         })
       })
       console.log('--- Summary ---')
@@ -176,7 +188,10 @@ export async function estimateDuration(pickupAddress, dropoffAddress, waypoints 
       console.log('Total duration (minutes, rounded):', oneWayMinutes)
       console.log('One-way duration:', `${oneWayMinutes}分`)
       if (returnTripMinutes > 0) {
-        console.log('Return trip duration (destination → waiting location):', `${returnTripMinutes}分`)
+        console.log(
+          'Return trip duration (destination → waiting location):',
+          `${returnTripMinutes}分`
+        )
         console.log('Round-trip duration (one-way + return):', `${roundTripMinutes}分`)
       } else {
         console.log('Return trip duration: 計算なし（片道時間を2倍）')
@@ -202,4 +217,3 @@ export function calculateBuffer(baseDuration) {
   // バッファは一律0分
   return 0
 }
-

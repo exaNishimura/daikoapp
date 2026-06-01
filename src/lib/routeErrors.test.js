@@ -16,9 +16,9 @@ describe('formatRouteCalculationError', () => {
   })
 
   it('distinguishes REQUEST_DENIED variants', () => {
-    expect(
-      formatRouteCalculationError('REQUEST_DENIED: referer restrictions on key')
-    ).toMatch(/HTTPリファラー制限/)
+    expect(formatRouteCalculationError('REQUEST_DENIED: referer restrictions on key')).toMatch(
+      /HTTPリファラー制限/
+    )
     expect(
       formatRouteCalculationError('REQUEST_DENIED: This API project is not authorized')
     ).toMatch(/Directions APIが有効になっていません/)
@@ -32,8 +32,6 @@ describe('formatRouteCalculationError', () => {
   })
 
   it('accepts Error instances', () => {
-    expect(formatRouteCalculationError(new Error('ZERO_RESULTS'))).toMatch(
-      /見つかりませんでした/
-    )
+    expect(formatRouteCalculationError(new Error('ZERO_RESULTS'))).toMatch(/見つかりませんでした/)
   })
 })

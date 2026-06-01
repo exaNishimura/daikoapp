@@ -14,7 +14,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // 環境変数が設定されている場合のみクライアントを作成
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
-
+export const supabase =
+  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null

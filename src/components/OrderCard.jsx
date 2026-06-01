@@ -9,14 +9,13 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 
 export function OrderCard({ order, isSelected, onClick }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `order-${order.id}`,
-      data: {
-        type: 'order',
-        order,
-      },
-    })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `order-${order.id}`,
+    data: {
+      type: 'order',
+      order,
+    },
+  })
 
   const style = transform
     ? {
@@ -36,16 +35,14 @@ export function OrderCard({ order, isSelected, onClick }) {
     order.order_type === 'NOW'
       ? '今すぐ'
       : order.scheduled_at
-      ? new Date(order.scheduled_at).toLocaleTimeString('ja-JP', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      : '日時指定'
-
+        ? new Date(order.scheduled_at).toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '日時指定'
 
   // 所要時間の表示
-  const totalDuration =
-    (order.base_duration_min || 30) + (order.buffer_min || 0)
+  const totalDuration = (order.base_duration_min || 30) + (order.buffer_min || 0)
 
   // 車情報の表示
   const carInfo = []
@@ -56,32 +53,33 @@ export function OrderCard({ order, isSelected, onClick }) {
     carInfo.push(order.car_color)
   }
 
-  const statusColor = {
-    UNASSIGNED: 'default',
-    TENTATIVE: 'warning',
-    CONFIRMED: 'success',
-    ARRIVED: 'info',
-    PICKING_UP: 'info',
-    IN_TRANSIT: 'primary',
-    COMPLETED: 'success',
-  }[order.status] || 'default'
+  const statusColor =
+    {
+      UNASSIGNED: 'default',
+      TENTATIVE: 'warning',
+      CONFIRMED: 'success',
+      ARRIVED: 'info',
+      PICKING_UP: 'info',
+      IN_TRANSIT: 'primary',
+      COMPLETED: 'success',
+    }[order.status] || 'default'
 
   const statusLabel =
     order.status === 'UNASSIGNED'
       ? '未割当'
       : order.status === 'TENTATIVE'
-      ? '仮配置'
-      : order.status === 'CONFIRMED'
-      ? '確定'
-      : order.status === 'ARRIVED'
-      ? '現地到着'
-      : order.status === 'PICKING_UP'
-      ? '客車引取'
-      : order.status === 'IN_TRANSIT'
-      ? '送客中'
-      : order.status === 'COMPLETED'
-      ? '送客完了'
-      : '確定'
+        ? '仮配置'
+        : order.status === 'CONFIRMED'
+          ? '確定'
+          : order.status === 'ARRIVED'
+            ? '現地到着'
+            : order.status === 'PICKING_UP'
+              ? '客車引取'
+              : order.status === 'IN_TRANSIT'
+                ? '送客中'
+                : order.status === 'COMPLETED'
+                  ? '送客完了'
+                  : '確定'
 
   return (
     <Card
@@ -127,7 +125,10 @@ export function OrderCard({ order, isSelected, onClick }) {
               <>
                 {order.waypoints.map((wp, idx) => (
                   <Box key={idx}>
-                    <Typography variant="body2" sx={{ my: 0.25, color: 'rgba(255, 255, 255, 0.6)' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ my: 0.25, color: 'rgba(255, 255, 255, 0.6)' }}
+                    >
                       ↓
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500, color: '#646cff' }}>
@@ -153,7 +154,11 @@ export function OrderCard({ order, isSelected, onClick }) {
                 {carInfo.join(' ')}
               </Typography>
               {order.parking_note && (
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }} title="メモあり">
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                  title="メモあり"
+                >
                   📝
                 </Typography>
               )}

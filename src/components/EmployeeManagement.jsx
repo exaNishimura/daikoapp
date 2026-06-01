@@ -172,7 +172,16 @@ export function EmployeeManagement() {
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', mx: 'auto' }}>
       {/* ヘッダー */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton onClick={() => navigate('/shift')} sx={{ mr: 1 }}>
             <ArrowBackIcon />
@@ -310,9 +319,7 @@ export function EmployeeManagement() {
 
       {/* 編集ダイアログ */}
       <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingId ? '従業員編集' : '新規従業員追加'}
-        </DialogTitle>
+        <DialogTitle>{editingId ? '従業員編集' : '新規従業員追加'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
@@ -332,7 +339,9 @@ export function EmployeeManagement() {
                 disabled={loading}
               >
                 {LICENSE_TYPES.map((type) => (
-                  <MenuItem key={type} value={type}>{type}</MenuItem>
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -376,7 +385,9 @@ export function EmployeeManagement() {
               label="並び順"
               type="number"
               value={formData.sort_order}
-              onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+              onChange={(e) =>
+                setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })
+              }
               fullWidth
               inputProps={{ min: 0 }}
               disabled={loading}

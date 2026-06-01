@@ -9,11 +9,7 @@ export async function createOrder(orderData) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([orderData])
-      .select()
-      .single()
+    const { data, error } = await supabase.from('orders').insert([orderData]).select().single()
 
     if (error) throw error
     return { data, error: null }
@@ -32,10 +28,7 @@ export async function getOrders(status = null) {
   }
 
   try {
-    let query = supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
 
     if (status) {
       query = query.eq('status', status)
@@ -60,11 +53,7 @@ export async function getOrderById(id) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const { data, error } = await supabase.from('orders').select('*').eq('id', id).single()
 
     if (error) throw error
     return { data, error: null }
@@ -109,10 +98,7 @@ export async function cancelOrder(id) {
   try {
     // データベースから物理的に削除
     // dispatch_slotsはON DELETE CASCADEで自動削除される
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('orders').delete().eq('id', id)
 
     if (error) throw error
     return { data: { id }, error: null }
@@ -121,4 +107,3 @@ export async function cancelOrder(id) {
     return { data: null, error }
   }
 }
-

@@ -53,7 +53,7 @@ const DOW_MAP = ['日', '月', '火', '水', '木', '金', '土']
 
 // タイムライン表示用の定数
 const TIMELINE_START = 19 // 19:00から表示
-const TIMELINE_END = 6    // 06:00まで表示（翌日）
+const TIMELINE_END = 6 // 06:00まで表示（翌日）
 const TIMELINE_WIDTH = 960 // 時間軸の幅（px）
 const PIXELS_PER_HOUR = TIMELINE_WIDTH / 12 // 12時間 = 960px
 
@@ -183,12 +183,12 @@ export function ShiftEditPage() {
   }, [employees, shifts])
 
   const getShiftsForDate = (date) => {
-    return shifts.filter(s => s.date === date && !s.status)
+    return shifts.filter((s) => s.date === date && !s.status)
   }
 
   const handleStartEdit = (date) => {
-    setEditingDates(prev => ({ ...prev, [date]: true }))
-    setNewShifts(prev => ({
+    setEditingDates((prev) => ({ ...prev, [date]: true }))
+    setNewShifts((prev) => ({
       ...prev,
       [date]: {
         car: '',
@@ -197,17 +197,17 @@ export function ShiftEditPage() {
         start: '',
         end: '',
         note: '',
-      }
+      },
     }))
   }
 
   const handleCancelEdit = (date) => {
-    setEditingDates(prev => {
+    setEditingDates((prev) => {
       const next = { ...prev }
       delete next[date]
       return next
     })
-    setNewShifts(prev => {
+    setNewShifts((prev) => {
       const next = { ...prev }
       delete next[date]
       return next
@@ -216,7 +216,14 @@ export function ShiftEditPage() {
 
   const handleAddShift = async (date) => {
     const shiftData = newShifts[date]
-    if (!shiftData || !shiftData.car || !shiftData.role || !shiftData.staff || !shiftData.start || !shiftData.end) {
+    if (
+      !shiftData ||
+      !shiftData.car ||
+      !shiftData.role ||
+      !shiftData.staff ||
+      !shiftData.start ||
+      !shiftData.end
+    ) {
       setError('車両、役割、スタッフ、開始時刻、終了時刻は必須です')
       return
     }
@@ -239,7 +246,7 @@ export function ShiftEditPage() {
         note: shiftData.note || null,
       })
 
-      setNewShifts(prev => {
+      setNewShifts((prev) => {
         const next = { ...prev }
         next[date] = {
           car: '',
@@ -258,8 +265,8 @@ export function ShiftEditPage() {
   }
 
   const handleStartEditShift = (shift) => {
-    setEditingShiftIds(prev => ({ ...prev, [shift.id]: true }))
-    setEditingShifts(prev => ({
+    setEditingShiftIds((prev) => ({ ...prev, [shift.id]: true }))
+    setEditingShifts((prev) => ({
       ...prev,
       [shift.id]: {
         car: shift.car,
@@ -268,17 +275,17 @@ export function ShiftEditPage() {
         start: shift.start,
         end: shift.end,
         note: shift.note || '',
-      }
+      },
     }))
   }
 
   const handleCancelEditShift = (shiftId) => {
-    setEditingShiftIds(prev => {
+    setEditingShiftIds((prev) => {
       const next = { ...prev }
       delete next[shiftId]
       return next
     })
-    setEditingShifts(prev => {
+    setEditingShifts((prev) => {
       const next = { ...prev }
       delete next[shiftId]
       return next
@@ -287,7 +294,14 @@ export function ShiftEditPage() {
 
   const handleUpdateShift = async (shiftId, date) => {
     const shiftData = editingShifts[shiftId]
-    if (!shiftData || !shiftData.car || !shiftData.role || !shiftData.staff || !shiftData.start || !shiftData.end) {
+    if (
+      !shiftData ||
+      !shiftData.car ||
+      !shiftData.role ||
+      !shiftData.staff ||
+      !shiftData.start ||
+      !shiftData.end
+    ) {
       setError('車両、役割、スタッフ、開始時刻、終了時刻は必須です')
       return
     }
@@ -306,15 +320,24 @@ export function ShiftEditPage() {
 
     // バリデーション
     const invalidShifts = []
-    Object.keys(editingShifts).forEach(shiftId => {
+    Object.keys(editingShifts).forEach((shiftId) => {
       const shiftData = editingShifts[shiftId]
-      if (!shiftData || !shiftData.car || !shiftData.role || !shiftData.staff || !shiftData.start || !shiftData.end) {
+      if (
+        !shiftData ||
+        !shiftData.car ||
+        !shiftData.role ||
+        !shiftData.staff ||
+        !shiftData.start ||
+        !shiftData.end
+      ) {
         invalidShifts.push(shiftId)
       }
     })
 
     if (invalidShifts.length > 0) {
-      setError('編集中のシフトに必須項目が未入力です。車両、役割、スタッフ、開始時刻、終了時刻は必須です')
+      setError(
+        '編集中のシフトに必須項目が未入力です。車両、役割、スタッフ、開始時刻、終了時刻は必須です'
+      )
       return
     }
 
@@ -323,7 +346,7 @@ export function ShiftEditPage() {
 
     try {
       const shiftIdToDateMap = {}
-      shifts.forEach(shift => {
+      shifts.forEach((shift) => {
         if (editingShifts[shift.id]) {
           shiftIdToDateMap[shift.id] = shift.date
         }
@@ -417,9 +440,7 @@ export function ShiftEditPage() {
       .filter((date) => copyDestDates[date] && date !== bulkCopySourceDate)
 
     if (targets.length === 0) {
-      setError(
-        'コピー先がありません。コピー元以外の日にチェックを入れてください。'
-      )
+      setError('コピー先がありません。コピー元以外の日にチェックを入れてください。')
       return
     }
 
@@ -499,7 +520,7 @@ export function ShiftEditPage() {
   // タイムライン表示用のコンポーネント
   const TimeAxis = () => {
     const markers = []
-    
+
     // ピーク帯（23:00〜02:00）の背景
     const peakStart = minutesToPixels(timeToMinutes('23:00'))
     const peakEnd = minutesToPixels(timeToMinutes('02:00'))
@@ -509,14 +530,14 @@ export function ShiftEditPage() {
       markers.push({
         type: 'major',
         left: minutesToPixels((hour - TIMELINE_START) * 60),
-        label: String(hour).padStart(2, '0') + ':00'
+        label: String(hour).padStart(2, '0') + ':00',
       })
     }
     for (let hour = 0; hour <= TIMELINE_END; hour++) {
       markers.push({
         type: 'major',
         left: minutesToPixels((24 - TIMELINE_START + hour) * 60),
-        label: String(hour).padStart(2, '0') + ':00'
+        label: String(hour).padStart(2, '0') + ':00',
       })
     }
 
@@ -525,19 +546,28 @@ export function ShiftEditPage() {
       markers.push({
         type: 'minor',
         left: minutesToPixels((hour - TIMELINE_START) * 60 + 30),
-        label: ''
+        label: '',
       })
     }
     for (let hour = 0; hour <= TIMELINE_END; hour++) {
       markers.push({
         type: 'minor',
         left: minutesToPixels((24 - TIMELINE_START + hour) * 60 + 30),
-        label: ''
+        label: '',
       })
     }
 
     return (
-      <Box className="time-axis" sx={{ position: 'relative', height: '30px', borderBottom: '2px solid #ddd', mb: 1.25, bgcolor: '#ffffff' }}>
+      <Box
+        className="time-axis"
+        sx={{
+          position: 'relative',
+          height: '30px',
+          borderBottom: '2px solid #ddd',
+          mb: 1.25,
+          bgcolor: '#ffffff',
+        }}
+      >
         <Box
           className="peak-zone"
           sx={{
@@ -548,7 +578,7 @@ export function ShiftEditPage() {
             borderLeft: '1px solid rgba(255, 200, 0, 0.3)',
             borderRight: '1px solid rgba(255, 200, 0, 0.3)',
             left: `${peakStart}px`,
-            width: `${peakEnd - peakStart}px`
+            width: `${peakEnd - peakStart}px`,
           }}
         />
         {markers.map((marker, idx) => (
@@ -564,7 +594,7 @@ export function ShiftEditPage() {
               color: '#333',
               fontWeight: marker.type === 'major' ? 'bold' : 'normal',
               opacity: marker.type === 'minor' ? 0.5 : 1,
-              left: `${marker.left}px`
+              left: `${marker.left}px`,
             }}
           >
             {marker.label}
@@ -575,12 +605,15 @@ export function ShiftEditPage() {
   }
 
   const CarBlock = ({ carNum, shifts }) => {
-    const driverShifts = shifts.filter(s => s.car === carNum && s.role === '代行')
-    const companionShifts = shifts.filter(s => s.car === carNum && s.role === '随伴')
+    const driverShifts = shifts.filter((s) => s.car === carNum && s.role === '代行')
+    const companionShifts = shifts.filter((s) => s.car === carNum && s.role === '随伴')
 
     return (
       <Box className="car-block" sx={{ mb: 2.5, bgcolor: '#ffffff' }}>
-        <Box className="car-header" sx={{ fontWeight: 'bold', mb: 1, fontSize: '14px', color: '#333' }}>
+        <Box
+          className="car-header"
+          sx={{ fontWeight: 'bold', mb: 1, fontSize: '14px', color: '#333' }}
+        >
           {carNum}号車
         </Box>
         <Lane role="代行" shifts={driverShifts} />
@@ -591,8 +624,34 @@ export function ShiftEditPage() {
 
   const Lane = ({ role, shifts }) => {
     return (
-      <Box className="lane" sx={{ position: 'relative', height: '40px', border: '1px solid #e0e0e0', borderRadius: 1, mb: 0.625, bgcolor: '#fafafa', overflow: 'hidden' }}>
-        <Box className="lane-label" sx={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#666', zIndex: 1, bgcolor: 'rgba(255,255,255,0.8)', px: 0.75, py: 0.25, borderRadius: 0.375 }}>
+      <Box
+        className="lane"
+        sx={{
+          position: 'relative',
+          height: '40px',
+          border: '1px solid #e0e0e0',
+          borderRadius: 1,
+          mb: 0.625,
+          bgcolor: '#fafafa',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          className="lane-label"
+          sx={{
+            position: 'absolute',
+            left: '5px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '12px',
+            color: '#666',
+            zIndex: 1,
+            bgcolor: 'rgba(255,255,255,0.8)',
+            px: 0.75,
+            py: 0.25,
+            borderRadius: 0.375,
+          }}
+        >
           {role}
         </Box>
         {shifts.map((shift, idx) => (
@@ -638,14 +697,26 @@ export function ShiftEditPage() {
           bgcolor: barBg,
           '&:hover': {
             opacity: 0.8,
-            zIndex: 10
-          }
+            zIndex: 10,
+          },
         }}
       >
-        <Typography component="span" className="bar-text" sx={{ whiteSpace: 'nowrap', textShadow: '0 0 3px rgba(255,255,255,0.8)', fontSize: '11px' }}>
+        <Typography
+          component="span"
+          className="bar-text"
+          sx={{
+            whiteSpace: 'nowrap',
+            textShadow: '0 0 3px rgba(255,255,255,0.8)',
+            fontSize: '11px',
+          }}
+        >
           {shift.staff}
         </Typography>
-        <Typography component="span" className="bar-time" sx={{ fontSize: '10px', ml: 0.5, opacity: 0.9 }}>
+        <Typography
+          component="span"
+          className="bar-time"
+          sx={{ fontSize: '10px', ml: 0.5, opacity: 0.9 }}
+        >
           {shift.start}-{shift.end}
         </Typography>
       </Box>
@@ -653,25 +724,36 @@ export function ShiftEditPage() {
   }
 
   return (
-    <Box sx={{ 
-      p: 3, 
-      maxWidth: '1400px', 
-      mx: 'auto',
-      bgcolor: '#f5f5f5',
-      minHeight: '100vh'
-    }}>
+    <Box
+      sx={{
+        p: 3,
+        maxWidth: '1400px',
+        mx: 'auto',
+        bgcolor: '#f5f5f5',
+        minHeight: '100vh',
+      }}
+    >
       {/* ヘッダー */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton 
-            onClick={() => navigate('/shift')} 
-            sx={{ 
+          <IconButton
+            onClick={() => navigate('/shift')}
+            sx={{
               mr: 1,
               color: '#666',
               '&:hover': {
                 bgcolor: 'rgba(0, 0, 0, 0.04)',
-                color: '#333'
-              }
+                color: '#333',
+              },
             }}
           >
             <ArrowBackIcon />
@@ -689,16 +771,20 @@ export function ShiftEditPage() {
                 color: '#666',
                 '&:hover': {
                   bgcolor: 'rgba(0, 0, 0, 0.04)',
-                  color: '#333'
+                  color: '#333',
                 },
                 '&.Mui-disabled': {
-                  color: '#bdbdbd'
-                }
+                  color: '#bdbdbd',
+                },
               }}
             >
               <ChevronLeftIcon />
             </IconButton>
-            <Typography variant="h4" component="h1" sx={{ minWidth: '200px', textAlign: 'center', color: '#333' }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{ minWidth: '200px', textAlign: 'center', color: '#333' }}
+            >
               {monthLabel}
             </Typography>
             <IconButton
@@ -713,11 +799,11 @@ export function ShiftEditPage() {
                 color: '#666',
                 '&:hover': {
                   bgcolor: 'rgba(0, 0, 0, 0.04)',
-                  color: '#333'
+                  color: '#333',
                 },
                 '&.Mui-disabled': {
-                  color: '#bdbdbd'
-                }
+                  color: '#bdbdbd',
+                },
               }}
             >
               <ChevronRightIcon />
@@ -737,19 +823,15 @@ export function ShiftEditPage() {
               一括保存
             </Button>
             {Object.keys(editingShifts).length > 0 && (
-              <Chip 
-                label={`${Object.keys(editingShifts).length}件編集中`} 
-                size="small" 
+              <Chip
+                label={`${Object.keys(editingShifts).length}件編集中`}
+                size="small"
                 color="primary"
                 variant="outlined"
               />
             )}
           </Box>
-          <Button
-            variant="outlined"
-            onClick={() => shiftsQuery.refetch()}
-            disabled={loading}
-          >
+          <Button variant="outlined" onClick={() => shiftsQuery.refetch()} disabled={loading}>
             再読み込み
           </Button>
           <Button
@@ -809,24 +891,31 @@ export function ShiftEditPage() {
             const isExpanded = expandedDates[date] !== false // デフォルトで展開
             const hasShifts = dateShifts.length > 0
             const toggleExpand = () => {
-              setExpandedDates(prev => ({ ...prev, [date]: !(prev[date] !== false) }))
+              setExpandedDates((prev) => ({ ...prev, [date]: !(prev[date] !== false) }))
             }
 
             return (
-              <Card 
-                key={date} 
-                sx={{ 
+              <Card
+                key={date}
+                sx={{
                   border: isWeekend ? '2px solid' : '1px solid',
                   borderColor: isWeekend ? '#1976d2' : '#e0e0e0',
                   bgcolor: isWeekend ? 'rgba(200, 220, 255, 0.2)' : '#ffffff',
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     boxShadow: 2,
-                  }
+                  },
                 }}
               >
                 <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isExpanded ? 2 : 0 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: isExpanded ? 2 : 0,
+                    }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
                       <Checkbox
                         size="small"
@@ -861,32 +950,38 @@ export function ShiftEditPage() {
                       <IconButton
                         size="small"
                         onClick={toggleExpand}
-                        sx={{ 
+                        sx={{
                           mr: 0.5,
                           color: '#666',
                           '&:hover': {
                             bgcolor: 'rgba(0, 0, 0, 0.04)',
-                            color: '#333'
-                          }
+                            color: '#333',
+                          },
                         }}
                       >
                         {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                       </IconButton>
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: '#333' }}>
+                      <Typography
+                        variant="h6"
+                        component="div"
+                        sx={{ fontWeight: 'bold', color: '#333' }}
+                      >
                         {day}日 ({dow})
                       </Typography>
                       {hasShifts && !status && (
-                        <Chip 
-                          label={`${dateShifts.length}件`} 
-                          size="small" 
-                          color="primary" 
+                        <Chip
+                          label={`${dateShifts.length}件`}
+                          size="small"
+                          color="primary"
                           variant="outlined"
                         />
                       )}
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                       <FormControl size="small" sx={{ minWidth: 140 }}>
-                        <InputLabel id={`status-label-${date}`} shrink sx={{ color: '#666' }}>ステータス</InputLabel>
+                        <InputLabel id={`status-label-${date}`} shrink sx={{ color: '#666' }}>
+                          ステータス
+                        </InputLabel>
                         <Select
                           labelId={`status-label-${date}`}
                           value={status || ''}
@@ -894,21 +989,21 @@ export function ShiftEditPage() {
                           disabled={loading}
                           displayEmpty
                           label="ステータス"
-                          sx={{ 
+                          sx={{
                             minWidth: 140,
                             color: '#333',
                             '& .MuiSelect-icon': {
-                              color: '#666'
+                              color: '#666',
                             },
                             '& .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#bdbdbd'
+                              borderColor: '#bdbdbd',
                             },
                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#666'
+                              borderColor: '#666',
                             },
                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#1976d2'
-                            }
+                              borderColor: '#1976d2',
+                            },
                           }}
                           MenuProps={{
                             PaperProps: {
@@ -917,16 +1012,18 @@ export function ShiftEditPage() {
                                 '& .MuiMenuItem-root': {
                                   color: '#333',
                                   '&:hover': {
-                                    bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                  }
-                                }
-                              }
-                            }
+                                    bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                  },
+                                },
+                              },
+                            },
                           }}
                         >
                           <MenuItem value="">なし</MenuItem>
-                          {STATUS_OPTIONS.map(s => (
-                            <MenuItem key={s} value={s}>{s}</MenuItem>
+                          {STATUS_OPTIONS.map((s) => (
+                            <MenuItem key={s} value={s}>
+                              {s}
+                            </MenuItem>
                           ))}
                         </Select>
                       </FormControl>
@@ -935,7 +1032,9 @@ export function ShiftEditPage() {
                           size="small"
                           variant="contained"
                           startIcon={isEditing ? <ExpandLessIcon /> : <AddIcon />}
-                          onClick={() => isEditing ? handleCancelEdit(date) : handleStartEdit(date)}
+                          onClick={() =>
+                            isEditing ? handleCancelEdit(date) : handleStartEdit(date)
+                          }
                           disabled={loading}
                         >
                           {isEditing ? 'キャンセル' : 'シフト追加'}
@@ -946,611 +1045,709 @@ export function ShiftEditPage() {
 
                   <Collapse in={isExpanded}>
                     <Box>
-                  {status ? (
-                    <Chip 
-                      label={status} 
-                      size="medium" 
-                      color={status === '休業' ? 'error' : 'warning'}
-                      sx={{ fontWeight: 'bold', color: '#fff' }}
-                    />
-                  ) : (
-                    <>
-                      {/* タイムライン表示 */}
-                      {dateShifts.length > 0 && (
-                        <Box sx={{ mb: 3, mt: 1 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}>
-                            シフト表
-                          </Typography>
-                          <Box className="timeline-container" sx={{ position: 'relative', mt: 1.25, width: `${TIMELINE_WIDTH}px`, overflowX: 'auto', bgcolor: '#ffffff', p: 1, borderRadius: 1 }}>
-                            <TimeAxis />
-                            {[...new Set(dateShifts.map(s => s.car))].sort().map(carNum => (
-                              <CarBlock
-                                key={carNum}
-                                carNum={carNum}
-                                shifts={dateShifts}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-
-                      {/* 新規シフト追加フォーム */}
-                      <Collapse in={isEditing}>
-                        <Box sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 1 }}>
-                          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#333' }}>
-                            新規シフト追加
-                          </Typography>
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6} md={3}>
-                              <FormControl fullWidth size="small">
-                                <InputLabel sx={{ color: '#666' }}>車両</InputLabel>
-                                <Select
-                                  value={newShift.car}
-                                  onChange={(e) => setNewShifts(prev => ({
-                                    ...prev,
-                                    [date]: { ...newShift, car: e.target.value }
-                                  }))}
-                                  label="車両"
-                                  sx={{ 
-                                    color: '#333',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#bdbdbd'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#666'
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#1976d2'
-                                    }
-                                  }}
-                                  MenuProps={{
-                                    PaperProps: {
-                                      sx: {
-                                        bgcolor: '#ffffff',
-                                        '& .MuiMenuItem-root': {
-                                          color: '#333',
-                                          '&:hover': {
-                                            bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }}
-                                >
-                                  {CAR_OPTIONS.map(car => (
-                                    <MenuItem key={car} value={car}>{car}号車</MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
-                              <FormControl fullWidth size="small">
-                                <InputLabel sx={{ color: '#666' }}>役割</InputLabel>
-                                <Select
-                                  value={newShift.role}
-                                  onChange={(e) => setNewShifts(prev => ({
-                                    ...prev,
-                                    [date]: { ...newShift, role: e.target.value }
-                                  }))}
-                                  label="役割"
-                                  sx={{ 
-                                    color: '#333',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#bdbdbd'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#666'
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#1976d2'
-                                    }
-                                  }}
-                                  MenuProps={{
-                                    PaperProps: {
-                                      sx: {
-                                        bgcolor: '#ffffff',
-                                        '& .MuiMenuItem-root': {
-                                          color: '#333',
-                                          '&:hover': {
-                                            bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }}
-                                >
-                                  {ROLE_OPTIONS.map(role => (
-                                    <MenuItem key={role} value={role}>{role}</MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-                            <Grid item xs={12} sm={6} md={3}>
-                              <FormControl fullWidth size="small">
-                                <InputLabel sx={{ color: '#666' }}>スタッフ</InputLabel>
-                                <Select
-                                  value={newShift.staff}
-                                  onChange={(e) => setNewShifts(prev => ({
-                                    ...prev,
-                                    [date]: { ...newShift, staff: e.target.value }
-                                  }))}
-                                  label="スタッフ"
-                                  sx={{ 
-                                    color: '#333',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#bdbdbd'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#666'
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                      borderColor: '#1976d2'
-                                    }
-                                  }}
-                                  MenuProps={{
-                                    PaperProps: {
-                                      sx: {
-                                        bgcolor: '#ffffff',
-                                        '& .MuiMenuItem-root': {
-                                          color: '#333',
-                                          '&:hover': {
-                                            bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }}
-                                >
-                                  {staffOptions.map((staff) => (
-                                    <MenuItem key={staff} value={staff}>{staff}</MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            </Grid>
-                            <Grid item xs={6} sm={3} md={1.5}>
-                              <TextField
-                                label="開始"
-                                type="time"
-                                value={newShift.start}
-                                onChange={(e) => setNewShifts(prev => ({
-                                  ...prev,
-                                  [date]: { ...newShift, start: e.target.value }
-                                }))}
-                                size="small"
-                                fullWidth
-                                InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                      {status ? (
+                        <Chip
+                          label={status}
+                          size="medium"
+                          color={status === '休業' ? 'error' : 'warning'}
+                          sx={{ fontWeight: 'bold', color: '#fff' }}
+                        />
+                      ) : (
+                        <>
+                          {/* タイムライン表示 */}
+                          {dateShifts.length > 0 && (
+                            <Box sx={{ mb: 3, mt: 1 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}
+                              >
+                                シフト表
+                              </Typography>
+                              <Box
+                                className="timeline-container"
                                 sx={{
-                                  '& .MuiInputBase-input': {
-                                    color: '#333'
-                                  },
-                                  '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#bdbdbd'
-                                  },
-                                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#666'
-                                  },
-                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#1976d2'
-                                  }
+                                  position: 'relative',
+                                  mt: 1.25,
+                                  width: `${TIMELINE_WIDTH}px`,
+                                  overflowX: 'auto',
+                                  bgcolor: '#ffffff',
+                                  p: 1,
+                                  borderRadius: 1,
                                 }}
-                              />
-                            </Grid>
-                            <Grid item xs={6} sm={3} md={1.5}>
-                              <TextField
-                                label="終了"
-                                type="time"
-                                value={newShift.end}
-                                onChange={(e) => setNewShifts(prev => ({
-                                  ...prev,
-                                  [date]: { ...newShift, end: e.target.value }
-                                }))}
-                                size="small"
-                                fullWidth
-                                InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
-                                sx={{
-                                  '& .MuiInputBase-input': {
-                                    color: '#333'
-                                  },
-                                  '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#bdbdbd'
-                                  },
-                                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#666'
-                                  },
-                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#1976d2'
-                                  }
-                                }}
-                              />
-                            </Grid>
-                            <Grid item xs={12} md={12}>
-                              <TextField
-                                label="備考"
-                                value={newShift.note}
-                                onChange={(e) => setNewShifts(prev => ({
-                                  ...prev,
-                                  [date]: { ...newShift, note: e.target.value }
-                                }))}
-                                size="small"
-                                fullWidth
-                                multiline
-                                rows={1}
-                                placeholder="例: 無人回避"
-                                InputLabelProps={{ sx: { color: '#666' } }}
-                                sx={{
-                                  '& .MuiInputBase-input': {
-                                    color: '#333'
-                                  },
-                                  '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#bdbdbd'
-                                  },
-                                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#666'
-                                  },
-                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#1976d2'
-                                  }
-                                }}
-                              />
-                            </Grid>
-                            <Grid item xs={12}>
-                              <Stack direction="row" spacing={1}>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={<ContentCopyIcon />}
-                                  onClick={() => {
-                                    setCopyTargetDate(date)
-                                    setCopyDialogOpen(true)
-                                  }}
-                                  disabled={loading}
-                                >
-                                  他の日からコピー
-                                </Button>
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  startIcon={<SaveIcon />}
-                                  onClick={() => handleAddShift(date)}
-                                  disabled={loading}
-                                >
-                                  追加
-                                </Button>
-                              </Stack>
-                            </Grid>
-                          </Grid>
-                        </Box>
-                      </Collapse>
+                              >
+                                <TimeAxis />
+                                {[...new Set(dateShifts.map((s) => s.car))].sort().map((carNum) => (
+                                  <CarBlock key={carNum} carNum={carNum} shifts={dateShifts} />
+                                ))}
+                              </Box>
+                            </Box>
+                          )}
 
-                      {/* 既存シフト一覧 */}
-                      {dateShifts.length > 0 && (
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}>
-                            設定済みシフト ({dateShifts.length}件)
-                          </Typography>
-                          <Stack spacing={1}>
-                            {dateShifts.map((shift) => {
-                              const isEditing = editingShiftIds[shift.id]
-                              const editingShift = editingShifts[shift.id] || shift
-
-                              return (
-                                <Box key={shift.id}>
-                                  {!isEditing ? (
-                                    <Box
+                          {/* 新規シフト追加フォーム */}
+                          <Collapse in={isEditing}>
+                            <Box sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 1 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ mb: 1.5, fontWeight: 'bold', color: '#333' }}
+                              >
+                                新規シフト追加
+                              </Typography>
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel sx={{ color: '#666' }}>車両</InputLabel>
+                                    <Select
+                                      value={newShift.car}
+                                      onChange={(e) =>
+                                        setNewShifts((prev) => ({
+                                          ...prev,
+                                          [date]: { ...newShift, car: e.target.value },
+                                        }))
+                                      }
+                                      label="車両"
                                       sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        p: 1.5,
-                                        border: '1px solid',
-                                        borderColor: '#e0e0e0',
-                                        borderRadius: 1,
-                                        bgcolor: '#fafafa',
+                                        color: '#333',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#bdbdbd',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#666',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#1976d2',
+                                        },
+                                      }}
+                                      MenuProps={{
+                                        PaperProps: {
+                                          sx: {
+                                            bgcolor: '#ffffff',
+                                            '& .MuiMenuItem-root': {
+                                              color: '#333',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                              },
+                                            },
+                                          },
+                                        },
                                       }}
                                     >
-                                      <Box sx={{ flex: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 'medium', color: '#333' }}>
-                                          <Chip 
-                                            label={shift.car} 
-                                            size="small" 
-                                            sx={{ 
-                                              mr: 1,
-                                              bgcolor: '#e3f2fd',
-                                              color: '#1976d2',
-                                              border: '1px solid #90caf9'
-                                            }} 
-                                          />
-                                          {shift.role} / {shift.staff} / {shift.start} - {shift.end}
-                                          {shift.note && (
-                                            <Chip 
-                                              label={shift.note} 
-                                              size="small" 
-                                              variant="outlined"
-                                              sx={{ 
-                                                ml: 1, 
-                                                borderColor: '#bdbdbd',
-                                                color: '#666'
-                                              }} 
-                                            />
-                                          )}
-                                        </Typography>
-                                      </Box>
-                                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => handleStartEditShift(shift)}
-                                          disabled={loading}
-                                          color="primary"
-                                        >
-                                          <EditIcon fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => handleDeleteShift(shift.id, date)}
-                                          disabled={loading}
-                                          color="error"
-                                        >
-                                          <DeleteIcon fontSize="small" />
-                                        </IconButton>
-                                      </Box>
-                                    </Box>
-                                  ) : (
-                                    <Box
+                                      {CAR_OPTIONS.map((car) => (
+                                        <MenuItem key={car} value={car}>
+                                          {car}号車
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel sx={{ color: '#666' }}>役割</InputLabel>
+                                    <Select
+                                      value={newShift.role}
+                                      onChange={(e) =>
+                                        setNewShifts((prev) => ({
+                                          ...prev,
+                                          [date]: { ...newShift, role: e.target.value },
+                                        }))
+                                      }
+                                      label="役割"
                                       sx={{
-                                        p: 2,
-                                        border: '1px solid',
+                                        color: '#333',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#bdbdbd',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#666',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#1976d2',
+                                        },
+                                      }}
+                                      MenuProps={{
+                                        PaperProps: {
+                                          sx: {
+                                            bgcolor: '#ffffff',
+                                            '& .MuiMenuItem-root': {
+                                              color: '#333',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                              },
+                                            },
+                                          },
+                                        },
+                                      }}
+                                    >
+                                      {ROLE_OPTIONS.map((role) => (
+                                        <MenuItem key={role} value={role}>
+                                          {role}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel sx={{ color: '#666' }}>スタッフ</InputLabel>
+                                    <Select
+                                      value={newShift.staff}
+                                      onChange={(e) =>
+                                        setNewShifts((prev) => ({
+                                          ...prev,
+                                          [date]: { ...newShift, staff: e.target.value },
+                                        }))
+                                      }
+                                      label="スタッフ"
+                                      sx={{
+                                        color: '#333',
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#bdbdbd',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#666',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                          borderColor: '#1976d2',
+                                        },
+                                      }}
+                                      MenuProps={{
+                                        PaperProps: {
+                                          sx: {
+                                            bgcolor: '#ffffff',
+                                            '& .MuiMenuItem-root': {
+                                              color: '#333',
+                                              '&:hover': {
+                                                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                              },
+                                            },
+                                          },
+                                        },
+                                      }}
+                                    >
+                                      {staffOptions.map((staff) => (
+                                        <MenuItem key={staff} value={staff}>
+                                          {staff}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                </Grid>
+                                <Grid item xs={6} sm={3} md={1.5}>
+                                  <TextField
+                                    label="開始"
+                                    type="time"
+                                    value={newShift.start}
+                                    onChange={(e) =>
+                                      setNewShifts((prev) => ({
+                                        ...prev,
+                                        [date]: { ...newShift, start: e.target.value },
+                                      }))
+                                    }
+                                    size="small"
+                                    fullWidth
+                                    InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                                    sx={{
+                                      '& .MuiInputBase-input': {
+                                        color: '#333',
+                                      },
+                                      '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#bdbdbd',
+                                      },
+                                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#666',
+                                      },
+                                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                                         borderColor: '#1976d2',
-                                        borderRadius: 1,
-                                        bgcolor: '#fafafa',
+                                      },
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={6} sm={3} md={1.5}>
+                                  <TextField
+                                    label="終了"
+                                    type="time"
+                                    value={newShift.end}
+                                    onChange={(e) =>
+                                      setNewShifts((prev) => ({
+                                        ...prev,
+                                        [date]: { ...newShift, end: e.target.value },
+                                      }))
+                                    }
+                                    size="small"
+                                    fullWidth
+                                    InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
+                                    sx={{
+                                      '& .MuiInputBase-input': {
+                                        color: '#333',
+                                      },
+                                      '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#bdbdbd',
+                                      },
+                                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#666',
+                                      },
+                                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#1976d2',
+                                      },
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} md={12}>
+                                  <TextField
+                                    label="備考"
+                                    value={newShift.note}
+                                    onChange={(e) =>
+                                      setNewShifts((prev) => ({
+                                        ...prev,
+                                        [date]: { ...newShift, note: e.target.value },
+                                      }))
+                                    }
+                                    size="small"
+                                    fullWidth
+                                    multiline
+                                    rows={1}
+                                    placeholder="例: 無人回避"
+                                    InputLabelProps={{ sx: { color: '#666' } }}
+                                    sx={{
+                                      '& .MuiInputBase-input': {
+                                        color: '#333',
+                                      },
+                                      '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#bdbdbd',
+                                      },
+                                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#666',
+                                      },
+                                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#1976d2',
+                                      },
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12}>
+                                  <Stack direction="row" spacing={1}>
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      startIcon={<ContentCopyIcon />}
+                                      onClick={() => {
+                                        setCopyTargetDate(date)
+                                        setCopyDialogOpen(true)
                                       }}
+                                      disabled={loading}
                                     >
-                                      <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 'bold', color: '#333' }}>
-                                        シフト編集
-                                      </Typography>
-                                      <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6} md={3}>
-                                          <FormControl fullWidth size="small">
-                                            <InputLabel sx={{ color: '#666' }}>車両</InputLabel>
-                                            <Select
-                                              value={editingShift.car}
-                                              onChange={(e) => setEditingShifts(prev => ({
-                                                ...prev,
-                                                [shift.id]: { ...editingShift, car: e.target.value }
-                                              }))}
-                                              label="車両"
-                                              sx={{ 
-                                                color: '#333',
-                                                '& .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#bdbdbd'
-                                                },
-                                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#666'
-                                                },
-                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#1976d2'
-                                                }
-                                              }}
-                                              MenuProps={{
-                                                PaperProps: {
-                                                  sx: {
-                                                    bgcolor: '#ffffff',
-                                                    '& .MuiMenuItem-root': {
-                                                      color: '#333',
-                                                      '&:hover': {
-                                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }}
-                                            >
-                                              {CAR_OPTIONS.map(car => (
-                                                <MenuItem key={car} value={car}>{car}号車</MenuItem>
-                                              ))}
-                                            </Select>
-                                          </FormControl>
-                                        </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
-                                          <FormControl fullWidth size="small">
-                                            <InputLabel sx={{ color: '#666' }}>役割</InputLabel>
-                                            <Select
-                                              value={editingShift.role}
-                                              onChange={(e) => setEditingShifts(prev => ({
-                                                ...prev,
-                                                [shift.id]: { ...editingShift, role: e.target.value }
-                                              }))}
-                                              label="役割"
-                                              sx={{ 
-                                                color: '#333',
-                                                '& .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#bdbdbd'
-                                                },
-                                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#666'
-                                                },
-                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#1976d2'
-                                                }
-                                              }}
-                                              MenuProps={{
-                                                PaperProps: {
-                                                  sx: {
-                                                    bgcolor: '#ffffff',
-                                                    '& .MuiMenuItem-root': {
-                                                      color: '#333',
-                                                      '&:hover': {
-                                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }}
-                                            >
-                                              {ROLE_OPTIONS.map(role => (
-                                                <MenuItem key={role} value={role}>{role}</MenuItem>
-                                              ))}
-                                            </Select>
-                                          </FormControl>
-                                        </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
-                                          <FormControl fullWidth size="small">
-                                            <InputLabel sx={{ color: '#666' }}>スタッフ</InputLabel>
-                                            <Select
-                                              value={editingShift.staff}
-                                              onChange={(e) => setEditingShifts(prev => ({
-                                                ...prev,
-                                                [shift.id]: { ...editingShift, staff: e.target.value }
-                                              }))}
-                                              label="スタッフ"
-                                              sx={{ 
-                                                color: '#333',
-                                                '& .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#bdbdbd'
-                                                },
-                                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#666'
-                                                },
-                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                  borderColor: '#1976d2'
-                                                }
-                                              }}
-                                              MenuProps={{
-                                                PaperProps: {
-                                                  sx: {
-                                                    bgcolor: '#ffffff',
-                                                    '& .MuiMenuItem-root': {
-                                                      color: '#333',
-                                                      '&:hover': {
-                                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                                      }
-                                                    }
-                                                  }
-                                                }
-                                              }}
-                                            >
-                                              {staffOptions.map((staff) => (
-                                                <MenuItem key={staff} value={staff}>{staff}</MenuItem>
-                                              ))}
-                                            </Select>
-                                          </FormControl>
-                                        </Grid>
-                                        <Grid item xs={6} sm={3} md={1.5}>
-                                          <TextField
-                                            label="開始"
-                                            type="time"
-                                            value={editingShift.start}
-                                            onChange={(e) => setEditingShifts(prev => ({
-                                              ...prev,
-                                              [shift.id]: { ...editingShift, start: e.target.value }
-                                            }))}
-                                            size="small"
-                                            fullWidth
-                                            InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
-                                            sx={{
-                                              '& .MuiInputBase-input': {
-                                                color: '#333'
-                                              },
-                                              '& .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#bdbdbd'
-                                              },
-                                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#666'
-                                              },
-                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#1976d2'
-                                              }
-                                            }}
-                                          />
-                                        </Grid>
-                                        <Grid item xs={6} sm={3} md={1.5}>
-                                          <TextField
-                                            label="終了"
-                                            type="time"
-                                            value={editingShift.end}
-                                            onChange={(e) => setEditingShifts(prev => ({
-                                              ...prev,
-                                              [shift.id]: { ...editingShift, end: e.target.value }
-                                            }))}
-                                            size="small"
-                                            fullWidth
-                                            InputLabelProps={{ shrink: true, sx: { color: '#666' } }}
-                                            sx={{
-                                              '& .MuiInputBase-input': {
-                                                color: '#333'
-                                              },
-                                              '& .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#bdbdbd'
-                                              },
-                                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#666'
-                                              },
-                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#1976d2'
-                                              }
-                                            }}
-                                          />
-                                        </Grid>
-                                        <Grid item xs={12} md={12}>
-                                          <TextField
-                                            label="備考"
-                                            value={editingShift.note || ''}
-                                            onChange={(e) => setEditingShifts(prev => ({
-                                              ...prev,
-                                              [shift.id]: { ...editingShift, note: e.target.value }
-                                            }))}
-                                            size="small"
-                                            fullWidth
-                                            multiline
-                                            rows={1}
-                                            placeholder="例: 無人回避"
-                                            InputLabelProps={{ sx: { color: '#666' } }}
-                                            sx={{
-                                              '& .MuiInputBase-input': {
-                                                color: '#333'
-                                              },
-                                              '& .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#bdbdbd'
-                                              },
-                                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#666'
-                                              },
-                                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#1976d2'
-                                              }
-                                            }}
-                                          />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                          <Stack direction="row" spacing={1}>
-                                            <Button
-                                              size="small"
-                                              onClick={() => handleCancelEditShift(shift.id)}
-                                              disabled={loading}
-                                            >
-                                              キャンセル
-                                            </Button>
-                                            <Typography variant="caption" sx={{ alignSelf: 'center', ml: 'auto', color: '#666' }}>
-                                              編集内容は「一括保存」ボタンで保存されます
-                                            </Typography>
-                                          </Stack>
-                                        </Grid>
-                                      </Grid>
-                                    </Box>
-                                  )}
-                                </Box>
-                              )
-                            })}
-                          </Stack>
-                        </Box>
-                      )}
+                                      他の日からコピー
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      variant="contained"
+                                      startIcon={<SaveIcon />}
+                                      onClick={() => handleAddShift(date)}
+                                      disabled={loading}
+                                    >
+                                      追加
+                                    </Button>
+                                  </Stack>
+                                </Grid>
+                              </Grid>
+                            </Box>
+                          </Collapse>
 
-                      {dateShifts.length === 0 && !isEditing && (
-                        <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
-                          シフトが設定されていません
-                        </Typography>
+                          {/* 既存シフト一覧 */}
+                          {dateShifts.length > 0 && (
+                            <Box>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ mb: 1, fontWeight: 'bold', color: '#333' }}
+                              >
+                                設定済みシフト ({dateShifts.length}件)
+                              </Typography>
+                              <Stack spacing={1}>
+                                {dateShifts.map((shift) => {
+                                  const isEditing = editingShiftIds[shift.id]
+                                  const editingShift = editingShifts[shift.id] || shift
+
+                                  return (
+                                    <Box key={shift.id}>
+                                      {!isEditing ? (
+                                        <Box
+                                          sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            p: 1.5,
+                                            border: '1px solid',
+                                            borderColor: '#e0e0e0',
+                                            borderRadius: 1,
+                                            bgcolor: '#fafafa',
+                                          }}
+                                        >
+                                          <Box sx={{ flex: 1 }}>
+                                            <Typography
+                                              variant="body2"
+                                              sx={{ fontWeight: 'medium', color: '#333' }}
+                                            >
+                                              <Chip
+                                                label={shift.car}
+                                                size="small"
+                                                sx={{
+                                                  mr: 1,
+                                                  bgcolor: '#e3f2fd',
+                                                  color: '#1976d2',
+                                                  border: '1px solid #90caf9',
+                                                }}
+                                              />
+                                              {shift.role} / {shift.staff} / {shift.start} -{' '}
+                                              {shift.end}
+                                              {shift.note && (
+                                                <Chip
+                                                  label={shift.note}
+                                                  size="small"
+                                                  variant="outlined"
+                                                  sx={{
+                                                    ml: 1,
+                                                    borderColor: '#bdbdbd',
+                                                    color: '#666',
+                                                  }}
+                                                />
+                                              )}
+                                            </Typography>
+                                          </Box>
+                                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => handleStartEditShift(shift)}
+                                              disabled={loading}
+                                              color="primary"
+                                            >
+                                              <EditIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => handleDeleteShift(shift.id, date)}
+                                              disabled={loading}
+                                              color="error"
+                                            >
+                                              <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                          </Box>
+                                        </Box>
+                                      ) : (
+                                        <Box
+                                          sx={{
+                                            p: 2,
+                                            border: '1px solid',
+                                            borderColor: '#1976d2',
+                                            borderRadius: 1,
+                                            bgcolor: '#fafafa',
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="subtitle2"
+                                            sx={{ mb: 1.5, fontWeight: 'bold', color: '#333' }}
+                                          >
+                                            シフト編集
+                                          </Typography>
+                                          <Grid container spacing={2}>
+                                            <Grid item xs={12} sm={6} md={3}>
+                                              <FormControl fullWidth size="small">
+                                                <InputLabel sx={{ color: '#666' }}>車両</InputLabel>
+                                                <Select
+                                                  value={editingShift.car}
+                                                  onChange={(e) =>
+                                                    setEditingShifts((prev) => ({
+                                                      ...prev,
+                                                      [shift.id]: {
+                                                        ...editingShift,
+                                                        car: e.target.value,
+                                                      },
+                                                    }))
+                                                  }
+                                                  label="車両"
+                                                  sx={{
+                                                    color: '#333',
+                                                    '& .MuiOutlinedInput-notchedOutline': {
+                                                      borderColor: '#bdbdbd',
+                                                    },
+                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                      borderColor: '#666',
+                                                    },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                      {
+                                                        borderColor: '#1976d2',
+                                                      },
+                                                  }}
+                                                  MenuProps={{
+                                                    PaperProps: {
+                                                      sx: {
+                                                        bgcolor: '#ffffff',
+                                                        '& .MuiMenuItem-root': {
+                                                          color: '#333',
+                                                          '&:hover': {
+                                                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                                          },
+                                                        },
+                                                      },
+                                                    },
+                                                  }}
+                                                >
+                                                  {CAR_OPTIONS.map((car) => (
+                                                    <MenuItem key={car} value={car}>
+                                                      {car}号車
+                                                    </MenuItem>
+                                                  ))}
+                                                </Select>
+                                              </FormControl>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6} md={3}>
+                                              <FormControl fullWidth size="small">
+                                                <InputLabel sx={{ color: '#666' }}>役割</InputLabel>
+                                                <Select
+                                                  value={editingShift.role}
+                                                  onChange={(e) =>
+                                                    setEditingShifts((prev) => ({
+                                                      ...prev,
+                                                      [shift.id]: {
+                                                        ...editingShift,
+                                                        role: e.target.value,
+                                                      },
+                                                    }))
+                                                  }
+                                                  label="役割"
+                                                  sx={{
+                                                    color: '#333',
+                                                    '& .MuiOutlinedInput-notchedOutline': {
+                                                      borderColor: '#bdbdbd',
+                                                    },
+                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                      borderColor: '#666',
+                                                    },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                      {
+                                                        borderColor: '#1976d2',
+                                                      },
+                                                  }}
+                                                  MenuProps={{
+                                                    PaperProps: {
+                                                      sx: {
+                                                        bgcolor: '#ffffff',
+                                                        '& .MuiMenuItem-root': {
+                                                          color: '#333',
+                                                          '&:hover': {
+                                                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                                          },
+                                                        },
+                                                      },
+                                                    },
+                                                  }}
+                                                >
+                                                  {ROLE_OPTIONS.map((role) => (
+                                                    <MenuItem key={role} value={role}>
+                                                      {role}
+                                                    </MenuItem>
+                                                  ))}
+                                                </Select>
+                                              </FormControl>
+                                            </Grid>
+                                            <Grid item xs={12} sm={6} md={3}>
+                                              <FormControl fullWidth size="small">
+                                                <InputLabel sx={{ color: '#666' }}>
+                                                  スタッフ
+                                                </InputLabel>
+                                                <Select
+                                                  value={editingShift.staff}
+                                                  onChange={(e) =>
+                                                    setEditingShifts((prev) => ({
+                                                      ...prev,
+                                                      [shift.id]: {
+                                                        ...editingShift,
+                                                        staff: e.target.value,
+                                                      },
+                                                    }))
+                                                  }
+                                                  label="スタッフ"
+                                                  sx={{
+                                                    color: '#333',
+                                                    '& .MuiOutlinedInput-notchedOutline': {
+                                                      borderColor: '#bdbdbd',
+                                                    },
+                                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                      borderColor: '#666',
+                                                    },
+                                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                      {
+                                                        borderColor: '#1976d2',
+                                                      },
+                                                  }}
+                                                  MenuProps={{
+                                                    PaperProps: {
+                                                      sx: {
+                                                        bgcolor: '#ffffff',
+                                                        '& .MuiMenuItem-root': {
+                                                          color: '#333',
+                                                          '&:hover': {
+                                                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                                                          },
+                                                        },
+                                                      },
+                                                    },
+                                                  }}
+                                                >
+                                                  {staffOptions.map((staff) => (
+                                                    <MenuItem key={staff} value={staff}>
+                                                      {staff}
+                                                    </MenuItem>
+                                                  ))}
+                                                </Select>
+                                              </FormControl>
+                                            </Grid>
+                                            <Grid item xs={6} sm={3} md={1.5}>
+                                              <TextField
+                                                label="開始"
+                                                type="time"
+                                                value={editingShift.start}
+                                                onChange={(e) =>
+                                                  setEditingShifts((prev) => ({
+                                                    ...prev,
+                                                    [shift.id]: {
+                                                      ...editingShift,
+                                                      start: e.target.value,
+                                                    },
+                                                  }))
+                                                }
+                                                size="small"
+                                                fullWidth
+                                                InputLabelProps={{
+                                                  shrink: true,
+                                                  sx: { color: '#666' },
+                                                }}
+                                                sx={{
+                                                  '& .MuiInputBase-input': {
+                                                    color: '#333',
+                                                  },
+                                                  '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#bdbdbd',
+                                                  },
+                                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#666',
+                                                  },
+                                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                    {
+                                                      borderColor: '#1976d2',
+                                                    },
+                                                }}
+                                              />
+                                            </Grid>
+                                            <Grid item xs={6} sm={3} md={1.5}>
+                                              <TextField
+                                                label="終了"
+                                                type="time"
+                                                value={editingShift.end}
+                                                onChange={(e) =>
+                                                  setEditingShifts((prev) => ({
+                                                    ...prev,
+                                                    [shift.id]: {
+                                                      ...editingShift,
+                                                      end: e.target.value,
+                                                    },
+                                                  }))
+                                                }
+                                                size="small"
+                                                fullWidth
+                                                InputLabelProps={{
+                                                  shrink: true,
+                                                  sx: { color: '#666' },
+                                                }}
+                                                sx={{
+                                                  '& .MuiInputBase-input': {
+                                                    color: '#333',
+                                                  },
+                                                  '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#bdbdbd',
+                                                  },
+                                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#666',
+                                                  },
+                                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                    {
+                                                      borderColor: '#1976d2',
+                                                    },
+                                                }}
+                                              />
+                                            </Grid>
+                                            <Grid item xs={12} md={12}>
+                                              <TextField
+                                                label="備考"
+                                                value={editingShift.note || ''}
+                                                onChange={(e) =>
+                                                  setEditingShifts((prev) => ({
+                                                    ...prev,
+                                                    [shift.id]: {
+                                                      ...editingShift,
+                                                      note: e.target.value,
+                                                    },
+                                                  }))
+                                                }
+                                                size="small"
+                                                fullWidth
+                                                multiline
+                                                rows={1}
+                                                placeholder="例: 無人回避"
+                                                InputLabelProps={{ sx: { color: '#666' } }}
+                                                sx={{
+                                                  '& .MuiInputBase-input': {
+                                                    color: '#333',
+                                                  },
+                                                  '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#bdbdbd',
+                                                  },
+                                                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#666',
+                                                  },
+                                                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
+                                                    {
+                                                      borderColor: '#1976d2',
+                                                    },
+                                                }}
+                                              />
+                                            </Grid>
+                                            <Grid item xs={12}>
+                                              <Stack direction="row" spacing={1}>
+                                                <Button
+                                                  size="small"
+                                                  onClick={() => handleCancelEditShift(shift.id)}
+                                                  disabled={loading}
+                                                >
+                                                  キャンセル
+                                                </Button>
+                                                <Typography
+                                                  variant="caption"
+                                                  sx={{
+                                                    alignSelf: 'center',
+                                                    ml: 'auto',
+                                                    color: '#666',
+                                                  }}
+                                                >
+                                                  編集内容は「一括保存」ボタンで保存されます
+                                                </Typography>
+                                              </Stack>
+                                            </Grid>
+                                          </Grid>
+                                        </Box>
+                                      )}
+                                    </Box>
+                                  )
+                                })}
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {dateShifts.length === 0 && !isEditing && (
+                            <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
+                              シフトが設定されていません
+                            </Typography>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
                     </Box>
                   </Collapse>
                 </CardContent>
@@ -1561,15 +1758,15 @@ export function ShiftEditPage() {
       )}
 
       {/* コピー用ダイアログ */}
-      <Dialog 
-        open={copyDialogOpen} 
-        onClose={() => setCopyDialogOpen(false)} 
-        maxWidth="sm" 
+      <Dialog
+        open={copyDialogOpen}
+        onClose={() => setCopyDialogOpen(false)}
+        maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: {
-            bgcolor: '#ffffff'
-          }
+            bgcolor: '#ffffff',
+          },
         }}
       >
         <DialogTitle sx={{ color: '#333' }}>他の日からシフトをコピー</DialogTitle>
@@ -1583,17 +1780,17 @@ export function ShiftEditPage() {
               value=""
               onChange={(e) => handleCopyFromDate(e.target.value)}
               label="日付を選択"
-              sx={{ 
+              sx={{
                 color: '#333',
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#bdbdbd'
+                  borderColor: '#bdbdbd',
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#666'
+                  borderColor: '#666',
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#1976d2'
-                }
+                  borderColor: '#1976d2',
+                },
               }}
               MenuProps={{
                 PaperProps: {
@@ -1603,10 +1800,10 @@ export function ShiftEditPage() {
                     '& .MuiMenuItem-root': {
                       color: '#333',
                       '&:hover': {
-                        bgcolor: 'rgba(0, 0, 0, 0.04)'
-                      }
-                    }
-                  }
+                        bgcolor: 'rgba(0, 0, 0, 0.04)',
+                      },
+                    },
+                  },
                 },
               }}
             >
@@ -1617,14 +1814,21 @@ export function ShiftEditPage() {
                   return (
                     <MenuItem key={date} value={date}>
                       <Box sx={{ width: '100%' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: dateShifts.length > 0 ? 0.5 : 0 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: dateShifts.length > 0 ? 0.5 : 0,
+                          }}
+                        >
                           <Typography variant="body1" sx={{ fontWeight: 'medium', color: '#333' }}>
                             {day}日 ({dow})
                           </Typography>
                           {dateShifts.length > 0 && (
-                            <Chip 
-                              label={`${dateShifts.length}件`} 
-                              size="small" 
+                            <Chip
+                              label={`${dateShifts.length}件`}
+                              size="small"
                               color="primary"
                               variant="outlined"
                             />
@@ -1633,9 +1837,9 @@ export function ShiftEditPage() {
                         {dateShifts.length > 0 ? (
                           <Box sx={{ mt: 0.5 }}>
                             {dateShifts.map((shift, index) => (
-                              <Typography 
-                                key={shift.id || index} 
-                                variant="caption" 
+                              <Typography
+                                key={shift.id || index}
+                                variant="caption"
                                 sx={{ display: 'block', fontSize: '0.75rem', color: '#666' }}
                               >
                                 {shift.staff} / {shift.start} - {shift.end}
@@ -1677,95 +1881,99 @@ export function ShiftEditPage() {
         <DialogTitle sx={{ color: '#333' }}>一括コピー</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
-            チェックした{selectedCopyDestCount}日に、コピー元のシフトで上書きします（各コピー先の当日のシフト・ステータスはいったんすべて削除されてから複製されます。コピー元の日は対象外です）。
+            チェックした{selectedCopyDestCount}
+            日に、コピー元のシフトで上書きします（各コピー先の当日のシフト・ステータスはいったんすべて削除されてから複製されます。コピー元の日は対象外です）。
           </Typography>
           {days.every(({ date }) => getShiftsForDate(date).length === 0) ? (
             <Typography variant="body2" sx={{ color: '#c62828' }}>
               この月にコピー元にできるシフトがありません。
             </Typography>
           ) : (
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel sx={{ color: '#666' }}>コピー元の日付</InputLabel>
-            <Select
-              value={bulkCopySourceDate}
-              onChange={(e) => setBulkCopySourceDate(e.target.value)}
-              label="コピー元の日付"
-              displayEmpty
-              renderValue={(selected) => {
-                if (!selected) return ''
-                const d = days.find((x) => x.date === selected)
-                return d ? `${d.day}日 (${d.dow})` : selected
-              }}
-              sx={{
-                color: '#333',
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#bdbdbd',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#666',
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#1976d2',
-                },
-              }}
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 400,
-                    bgcolor: '#ffffff',
-                    '& .MuiMenuItem-root': {
-                      color: '#333',
-                      '&:hover': {
-                        bgcolor: 'rgba(0, 0, 0, 0.04)',
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel sx={{ color: '#666' }}>コピー元の日付</InputLabel>
+              <Select
+                value={bulkCopySourceDate}
+                onChange={(e) => setBulkCopySourceDate(e.target.value)}
+                label="コピー元の日付"
+                displayEmpty
+                renderValue={(selected) => {
+                  if (!selected) return ''
+                  const d = days.find((x) => x.date === selected)
+                  return d ? `${d.day}日 (${d.dow})` : selected
+                }}
+                sx={{
+                  color: '#333',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#bdbdbd',
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#666',
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#1976d2',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 400,
+                      bgcolor: '#ffffff',
+                      '& .MuiMenuItem-root': {
+                        color: '#333',
+                        '&:hover': {
+                          bgcolor: 'rgba(0, 0, 0, 0.04)',
+                        },
                       },
                     },
                   },
-                },
-              }}
-            >
-              <MenuItem value="" sx={{ display: 'none' }} aria-hidden />
-              {days
-                .filter(({ date }) => getShiftsForDate(date).length > 0)
-                .map(({ date, day, dow }) => {
-                  const dateShifts = getShiftsForDate(date)
-                  return (
-                    <MenuItem key={date} value={date}>
-                      <Box sx={{ width: '100%' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: dateShifts.length > 0 ? 0.5 : 0,
-                          }}
-                        >
-                          <Typography variant="body1" sx={{ fontWeight: 'medium', color: '#333' }}>
-                            {day}日 ({dow})
-                          </Typography>
-                          <Chip
-                            label={`${dateShifts.length}件`}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        </Box>
-                        <Box sx={{ mt: 0.5 }}>
-                          {dateShifts.map((shift, index) => (
+                }}
+              >
+                <MenuItem value="" sx={{ display: 'none' }} aria-hidden />
+                {days
+                  .filter(({ date }) => getShiftsForDate(date).length > 0)
+                  .map(({ date, day, dow }) => {
+                    const dateShifts = getShiftsForDate(date)
+                    return (
+                      <MenuItem key={date} value={date}>
+                        <Box sx={{ width: '100%' }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              mb: dateShifts.length > 0 ? 0.5 : 0,
+                            }}
+                          >
                             <Typography
-                              key={shift.id || index}
-                              variant="caption"
-                              sx={{ display: 'block', fontSize: '0.75rem', color: '#666' }}
+                              variant="body1"
+                              sx={{ fontWeight: 'medium', color: '#333' }}
                             >
-                              {shift.staff} / {shift.start} - {shift.end}
+                              {day}日 ({dow})
                             </Typography>
-                          ))}
+                            <Chip
+                              label={`${dateShifts.length}件`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </Box>
+                          <Box sx={{ mt: 0.5 }}>
+                            {dateShifts.map((shift, index) => (
+                              <Typography
+                                key={shift.id || index}
+                                variant="caption"
+                                sx={{ display: 'block', fontSize: '0.75rem', color: '#666' }}
+                              >
+                                {shift.staff} / {shift.start} - {shift.end}
+                              </Typography>
+                            ))}
+                          </Box>
                         </Box>
-                      </Box>
-                    </MenuItem>
-                  )
-                })}
-            </Select>
-          </FormControl>
+                      </MenuItem>
+                    )
+                  })}
+              </Select>
+            </FormControl>
           )}
         </DialogContent>
         <DialogActions>
@@ -1794,4 +2002,3 @@ export function ShiftEditPage() {
     </Box>
   )
 }
-

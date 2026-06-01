@@ -17,17 +17,16 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const longPressTimer = useRef(null)
   const longPressStartTime = useRef(null)
-  
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `slot-${slot.id}`,
-      data: {
-        type: 'slot',
-        slot,
-        order,
-      },
-      disabled: slot.status === 'CONFIRMED', // 確定済みはドラッグ不可
-    })
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `slot-${slot.id}`,
+    data: {
+      type: 'slot',
+      slot,
+      order,
+    },
+    disabled: slot.status === 'CONFIRMED', // 確定済みはドラッグ不可
+  })
 
   const style = transform
     ? {
@@ -38,31 +37,31 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
   // 位置計算（行番号ベース）
   const startDate = new Date(slot.start_at)
   const endDate = new Date(slot.end_at)
-  
+
   // 依頼の所要時間（base_duration_min + buffer_min）を取得
   const orderDuration = (order.base_duration_min || 30) + (order.buffer_min || 0)
-  
+
   // 開始行番号を計算
   const startRowIndex = dateToRowIndex(startDate)
-  
+
   // 終了行番号を計算
   const endRowIndex = dateToRowIndex(endDate)
-  
+
   // 実際の行数
   const actualRows = Math.max(1, endRowIndex - startRowIndex)
-  
+
   // 依頼の所要時間から必要な行数を計算
   const requiredRows = minutesToRows(orderDuration)
-  
+
   // 実際の行数と必要な行数のどちらか大きい方を使用
   const rowsToUse = Math.max(actualRows, requiredRows)
-  
+
   // 開始位置を計算（行番号からピクセルに変換）
   const top = rowIndexToPixels(startRowIndex)
-  
+
   // 高さを計算（行数からピクセルに変換）
   const height = rowIndexToPixels(rowsToUse)
-  
+
   // 最小高さを確保（1行 = 20px）
   const minHeight = 20
   const finalHeight = Math.max(height, minHeight)
@@ -107,7 +106,7 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
   const handleLongPressStart = (e) => {
     // ドラッグ可能な場合は長押しを無効化（ドラッグと競合するため）
     if (isDraggable) return
-    
+
     longPressStartTime.current = Date.now()
     longPressTimer.current = setTimeout(() => {
       setShowInfoDialog(true)
@@ -199,7 +198,7 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
         {/* アイコンは非表示（長押しで情報を表示） */}
       </div>
       {isConflict && <div className="conflict-warning">⚠</div>}
-      
+
       {/* 情報ダイアログ */}
       <Dialog open={showInfoDialog} onClose={handleCloseInfoDialog} maxWidth="sm" fullWidth>
         <DialogTitle>依頼詳細情報</DialogTitle>
@@ -207,7 +206,11 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
           <Stack spacing={2}>
             {order.contact_phone && (
               <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                >
                   電話番号
                 </Typography>
                 <Typography
@@ -231,7 +234,11 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
             )}
             {order.parking_note && (
               <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                >
                   駐車メモ
                 </Typography>
                 <Typography variant="body2">📝 {order.parking_note}</Typography>
@@ -239,7 +246,11 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
             )}
             {order.buffer_manual && (
               <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                >
                   手動調整
                 </Typography>
                 <Typography variant="body2">✋ 所要時間が手動で調整されています</Typography>

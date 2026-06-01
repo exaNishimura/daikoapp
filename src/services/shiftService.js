@@ -47,11 +47,7 @@ export async function createShift(shiftData) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('shifts')
-      .insert(shiftData)
-      .select()
-      .single()
+    const { data, error } = await supabase.from('shifts').insert(shiftData).select().single()
 
     if (error) throw error
     return { data, error: null }
@@ -99,12 +95,7 @@ export async function deleteShift(id) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('shifts')
-      .delete()
-      .eq('id', id)
-      .select()
-      .single()
+    const { data, error } = await supabase.from('shifts').delete().eq('id', id).select().single()
 
     if (error) throw error
     return { data, error: null }
@@ -125,11 +116,7 @@ export async function deleteShiftsByDate(date) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('shifts')
-      .delete()
-      .eq('date', date)
-      .select()
+    const { data, error } = await supabase.from('shifts').delete().eq('date', date).select()
 
     if (error) throw error
     return { data: data || [], error: null }
@@ -150,10 +137,7 @@ export async function createShiftsBulk(shifts) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('shifts')
-      .insert(shifts)
-      .select()
+    const { data, error } = await supabase.from('shifts').insert(shifts).select()
 
     if (error) throw error
     return { data: data || [], error: null }
@@ -186,7 +170,7 @@ export async function getShiftsByDate(date) {
     // carをキーとしたオブジェクトに変換
     const result = {}
     if (data) {
-      data.forEach(shift => {
+      data.forEach((shift) => {
         const car = shift.car
         if (car) {
           if (!result[car]) {
@@ -203,4 +187,3 @@ export async function getShiftsByDate(date) {
     return { data: null, error }
   }
 }
-

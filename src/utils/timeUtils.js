@@ -48,41 +48,41 @@ export function dateToBusinessMinutes(date) {
 export function businessMinutesToDate(businessMinutes, baseDate) {
   // baseDateが指定されていない場合、現在の日付を使用
   const date = baseDate ? new Date(baseDate) : new Date()
-  
+
   // 営業日の開始時刻（18:00）に設定
   // 06:00未満の場合は前日の営業日として扱う
   const localHours = date.getHours()
   let businessDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  
+
   if (localHours < 6) {
     // 06:00未満の場合は前日の営業日として扱う
     businessDay.setDate(businessDay.getDate() - 1)
   }
-  
+
   // businessMinutesが360分（00:00）を超える場合、前日の18:00から数える
   if (businessMinutes > 360) {
     // 前日の18:00から数える
     businessDay.setDate(businessDay.getDate() - 1)
   }
-  
+
   // 営業日の18:00に設定
   businessDay.setHours(18, 0, 0, 0)
-  
+
   // businessMinutesを時間と分に変換
   // businessMinutesが360分を超える場合、前日の18:00から数えるので、そのまま使用
   const hours = Math.floor(businessMinutes / 60)
   const minutes = businessMinutes % 60
-  
+
   // 日付を設定
   const resultDate = new Date(businessDay)
   resultDate.setHours(18 + hours, minutes, 0, 0)
-  
+
   // 24時を超えた場合は翌日
   if (18 + hours >= 24) {
     resultDate.setDate(resultDate.getDate() + 1)
     resultDate.setHours((18 + hours) % 24, minutes, 0, 0)
   }
-  
+
   return resultDate
 }
 
@@ -125,12 +125,12 @@ export function exceedsBusinessHours(endAt) {
 export function formatBusinessDay(date) {
   const now = new Date(date)
   const hours = now.getHours()
-  
+
   // 06:00未満の場合は前日の日付として扱う
   if (hours < 6) {
     now.setDate(now.getDate() - 1)
   }
-  
+
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
@@ -146,19 +146,18 @@ export function getEarliestAvailableTime() {
   const now = new Date()
   const hours = now.getHours()
   const minutes = now.getMinutes()
-  
+
   // 営業時間内（18:00以降、翌06:00以前）
   if (hours >= 18 || hours < 6) {
     return '今すぐ'
   }
-  
+
   // 営業時間外の場合、次の18:00を表示
   const nextBusinessStart = new Date(now)
   nextBusinessStart.setHours(18, 0, 0, 0)
-  
+
   const hoursStr = String(nextBusinessStart.getHours()).padStart(2, '0')
   const minutesStr = String(nextBusinessStart.getMinutes()).padStart(2, '0')
-  
+
   return `${hoursStr}:${minutesStr}から`
 }
-

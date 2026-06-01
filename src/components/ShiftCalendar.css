@@ -1,12 +1,12 @@
 :root {
   /* スタッフ色分け（固定） */
-  --color-nishimura: #FFA500; /* 西村：オレンジ */
-  --color-suzuki: #FFD700;    /* 鈴木：黄 */
-  --color-choromon: #8A2BE2;  /* チョロモン：紫 */
-  --color-takashi: #00BFFF;   /* たかし：水色 */
-  --color-nami: #FF69B4;      /* なみ：ピンク */
-  --color-shuya: #32CD32;     /* しゅうや：緑 */
-  
+  --color-nishimura: #ffa500; /* 西村：オレンジ */
+  --color-suzuki: #ffd700; /* 鈴木：黄 */
+  --color-choromon: #8a2be2; /* チョロモン：紫 */
+  --color-takashi: #00bfff; /* たかし：水色 */
+  --color-nami: #ff69b4; /* なみ：ピンク */
+  --color-shuya: #32cd32; /* しゅうや：緑 */
+
   /* その他 */
   --bg-peak: rgba(255, 240, 200, 0.3); /* ピーク帯背景 */
   --bg-fri-sat: rgba(200, 220, 255, 0.2); /* 金土背景 */
@@ -15,7 +15,8 @@
 }
 
 .shift-calendar-page {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: #f5f5f5;
   color: var(--text-color);
   padding: 20px;
@@ -30,7 +31,7 @@
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -46,7 +47,7 @@
   .shift-header {
     padding: 20px;
   }
-  
+
   .shift-header h1 {
     font-size: 24px;
     margin-bottom: 20px;
@@ -74,7 +75,7 @@
   cursor: pointer;
 }
 
-.filter-group input[type="checkbox"] {
+.filter-group input[type='checkbox'] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -107,15 +108,27 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  border: 1px solid rgba(0,0,0,0.2);
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
-.legend-color.nishimura { background: var(--color-nishimura); }
-.legend-color.suzuki { background: var(--color-suzuki); }
-.legend-color.choromon { background: var(--color-choromon); }
-.legend-color.takashi { background: var(--color-takashi); }
-.legend-color.nami { background: var(--color-nami); }
-.legend-color.shuya { background: var(--color-shuya); }
+.legend-color.nishimura {
+  background: var(--color-nishimura);
+}
+.legend-color.suzuki {
+  background: var(--color-suzuki);
+}
+.legend-color.choromon {
+  background: var(--color-choromon);
+}
+.legend-color.takashi {
+  background: var(--color-takashi);
+}
+.legend-color.nami {
+  background: var(--color-nami);
+}
+.legend-color.shuya {
+  background: var(--color-shuya);
+}
 
 .shift-container {
   overflow-x: auto;
@@ -266,7 +279,7 @@
   font-size: 12px;
   color: #666;
   z-index: 1;
-  background: rgba(255,255,255,0.8);
+  background: rgba(255, 255, 255, 0.8);
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -284,8 +297,8 @@
   font-weight: bold;
   cursor: pointer;
   transition: opacity 0.2s;
-  border: 1px solid rgba(0,0,0,0.2);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .bar:hover {
@@ -299,7 +312,7 @@
 
 .bar-text {
   white-space: nowrap;
-  text-shadow: 0 0 3px rgba(255,255,255,0.8);
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
 }
 
 .bar-time {
@@ -309,12 +322,24 @@
 }
 
 /* スタッフ別の色 */
-.bar.nishimura { background: var(--color-nishimura); }
-.bar.suzuki { background: var(--color-suzuki); }
-.bar.choromon { background: var(--color-choromon); }
-.bar.takashi { background: var(--color-takashi); }
-.bar.nami { background: var(--color-nami); }
-.bar.shuya { background: var(--color-shuya); }
+.bar.nishimura {
+  background: var(--color-nishimura);
+}
+.bar.suzuki {
+  background: var(--color-suzuki);
+}
+.bar.choromon {
+  background: var(--color-choromon);
+}
+.bar.takashi {
+  background: var(--color-takashi);
+}
+.bar.nami {
+  background: var(--color-nami);
+}
+.bar.shuya {
+  background: var(--color-shuya);
+}
 
 /* 文字色の自動調整（視認性優先） */
 .bar.nishimura .bar-text,
@@ -352,4 +377,3 @@
     background: rgba(200, 220, 255, 0.1);
   }
 }
-

@@ -33,11 +33,7 @@ export function isWithinBusinessHours(dateLike) {
  *  - end: businessDay の翌日 06:00
  */
 export function getBusinessDayBoundaries(reference = new Date()) {
-  const localDate = new Date(
-    reference.getFullYear(),
-    reference.getMonth(),
-    reference.getDate()
-  )
+  const localDate = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate())
 
   const businessDay = new Date(localDate)
   if (reference.getHours() < BUSINESS_END_HOUR) {

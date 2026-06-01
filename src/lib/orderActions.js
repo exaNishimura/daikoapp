@@ -26,9 +26,7 @@ export async function saveOrderEdit({ order, formData, deps }) {
   const baseDurationMin = parseInt(formData.base_duration_min, 10)
   const bufferMin = parseInt(formData.buffer_min, 10)
 
-  const waypoints = (formData.waypoints || [])
-    .map((wp) => wp.trim())
-    .filter((wp) => wp.length > 0)
+  const waypoints = (formData.waypoints || []).map((wp) => wp.trim()).filter((wp) => wp.length > 0)
 
   const updates = {
     pickup_address: formData.pickup_address,
@@ -83,9 +81,7 @@ export async function recalculateOrderRoute({ order, formData, relatedVehicle, d
     throw new Error('目的地を入力してください')
   }
 
-  const waypoints = (formData.waypoints || [])
-    .map((wp) => wp.trim())
-    .filter((wp) => wp.length > 0)
+  const waypoints = (formData.waypoints || []).map((wp) => wp.trim()).filter((wp) => wp.length > 0)
 
   let waitingLocationAddress = relatedVehicle?.waiting_location_address || null
   if (!waitingLocationAddress) {
@@ -139,8 +135,7 @@ export async function recalculateOrderRoute({ order, formData, relatedVehicle, d
  * @returns {Promise<Object>} 更新後の order
  */
 export async function confirmOrder({ order, vehicles, slots, deps }) {
-  const { supabase, getOrderById, calculateBuffer, createSlot, confirmSlot, updateOrder } =
-    deps
+  const { supabase, getOrderById, calculateBuffer, createSlot, confirmSlot, updateOrder } = deps
 
   const { data: existingSlots, error: slotsError } = await supabase
     .from('dispatch_slots')
@@ -241,10 +236,7 @@ export async function revertOrderStatus({ order, deps }) {
 
     if (relatedSlots && relatedSlots.length > 0) {
       for (const slot of relatedSlots) {
-        await supabase
-          .from('dispatch_slots')
-          .update({ status: 'TENTATIVE' })
-          .eq('id', slot.id)
+        await supabase.from('dispatch_slots').update({ status: 'TENTATIVE' }).eq('id', slot.id)
       }
     }
   } else if (previousStatus === 'CONFIRMED') {
@@ -255,10 +247,7 @@ export async function revertOrderStatus({ order, deps }) {
 
     if (relatedSlots && relatedSlots.length > 0) {
       for (const slot of relatedSlots) {
-        await supabase
-          .from('dispatch_slots')
-          .update({ status: 'CONFIRMED' })
-          .eq('id', slot.id)
+        await supabase.from('dispatch_slots').update({ status: 'CONFIRMED' }).eq('id', slot.id)
       }
     }
   }

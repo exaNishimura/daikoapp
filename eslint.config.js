@@ -6,7 +6,17 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import prettier from 'eslint-config-prettier'
 
 export default [
-  { ignores: ['dist', 'node_modules', 'excel-imports', 'scripts', 'test-google-maps-api.js', '.kiro', '.agents'] },
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'excel-imports',
+      'scripts',
+      'test-google-maps-api.js',
+      '.kiro',
+      '.agents',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],

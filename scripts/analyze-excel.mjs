@@ -29,7 +29,7 @@ for (const filePath of args) {
     const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: null })
     console.log('rows:', aoa.length)
     aoa.forEach((row, i) => {
-      const trimmed = (row || []).map(v => (v === null || v === undefined ? '' : String(v)))
+      const trimmed = (row || []).map((v) => (v === null || v === undefined ? '' : String(v)))
       while (trimmed.length && trimmed[trimmed.length - 1] === '') trimmed.pop()
       console.log(`  [${i}]`, JSON.stringify(trimmed))
     })

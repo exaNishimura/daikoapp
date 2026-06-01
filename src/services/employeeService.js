@@ -60,11 +60,7 @@ export async function createEmployee(employeeData) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('employees')
-      .insert(employeeData)
-      .select()
-      .single()
+    const { data, error } = await supabase.from('employees').insert(employeeData).select().single()
 
     if (error) throw error
     return { data, error: null }
@@ -112,12 +108,7 @@ export async function deleteEmployee(id) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('employees')
-      .delete()
-      .eq('id', id)
-      .select()
-      .single()
+    const { data, error } = await supabase.from('employees').delete().eq('id', id).select().single()
 
     if (error) throw error
     return { data, error: null }

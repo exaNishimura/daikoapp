@@ -183,7 +183,6 @@
   }
 }
 
-
 .slot-icons {
   display: flex;
   gap: 0.25rem;
@@ -207,4 +206,3 @@
   z-index: 10; /* 他の要素の上に表示 */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* 視認性向上 */
 }
-

@@ -29,7 +29,7 @@ export function isVehicleOperational(vehicleId, targetTime, operationStatuses) {
 
   // 対象日の稼働状況設定をフィルタ
   const dateStr = businessDate.toISOString().split('T')[0]
-  const dayStatuses = operationStatuses.filter(status => {
+  const dayStatuses = operationStatuses.filter((status) => {
     const statusDate = new Date(status.date + 'T00:00:00')
     return statusDate.toISOString().split('T')[0] === dateStr
   })
@@ -108,13 +108,13 @@ export function isVehicleOperational(vehicleId, targetTime, operationStatuses) {
   }
 
   // DAY_OFFが設定されている場合、デフォルトで非稼働
-  const hasDayOff = dayStatuses.some(s => s.type === 'DAY_OFF')
+  const hasDayOff = dayStatuses.some((s) => s.type === 'DAY_OFF')
   if (hasDayOff) {
     // STOPが設定されているかチェック
-    const hasStop = dayStatuses.some(s => s.type === 'STOP' && s.time)
+    const hasStop = dayStatuses.some((s) => s.type === 'STOP' && s.time)
     if (hasStop) {
       // STOPの時刻より前の場合、DAY_OFFが適用される
-      const stopStatus = dayStatuses.find(s => s.type === 'STOP' && s.time)
+      const stopStatus = dayStatuses.find((s) => s.type === 'STOP' && s.time)
       if (stopStatus) {
         const [hours, minutes] = stopStatus.time.split(':').map(Number)
         const stopMinutes = hours * 60 + minutes
@@ -144,7 +144,7 @@ export function getOperationalVehicles(vehicles, targetTime, operationStatusesMa
     return []
   }
 
-  return vehicles.filter(vehicle => {
+  return vehicles.filter((vehicle) => {
     const statuses = operationStatusesMap[vehicle.id] || []
     return isVehicleOperational(vehicle.id, targetTime, statuses)
   })
@@ -163,29 +163,26 @@ export function mergeOperationStatuses(statuses) {
   // 優先順位: START > STOP > DAY_OFF > DEFAULT
   const priorityOrder = { START: 4, STOP: 3, DAY_OFF: 2, DEFAULT: 1 }
 
-  return statuses
-    .slice()
-    .sort((a, b) => {
-      const aPriority = priorityOrder[a.type] || 0
-      const bPriority = priorityOrder[b.type] || 0
+  return statuses.slice().sort((a, b) => {
+    const aPriority = priorityOrder[a.type] || 0
+    const bPriority = priorityOrder[b.type] || 0
 
-      if (aPriority !== bPriority) {
-        return bPriority - aPriority
-      }
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority
+    }
 
-      // 同じ優先度の場合、時刻で比較
-      if (a.time && b.time) {
-        const aTime = a.time.split(':').map(Number)
-        const bTime = b.time.split(':').map(Number)
-        const aMinutes = aTime[0] * 60 + aTime[1]
-        const bMinutes = bTime[0] * 60 + bTime[1]
-        return bMinutes - aMinutes
-      }
+    // 同じ優先度の場合、時刻で比較
+    if (a.time && b.time) {
+      const aTime = a.time.split(':').map(Number)
+      const bTime = b.time.split(':').map(Number)
+      const aMinutes = aTime[0] * 60 + aTime[1]
+      const bMinutes = bTime[0] * 60 + bTime[1]
+      return bMinutes - aMinutes
+    }
 
-      if (!a.time) return -1
-      if (!b.time) return 1
+    if (!a.time) return -1
+    if (!b.time) return 1
 
-      return 0
-    })
+    return 0
+  })
 }
-

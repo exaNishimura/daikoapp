@@ -76,7 +76,13 @@ function MapEmbed({ order }) {
           title="ルート地図"
         />
       </Box>
-      <Button variant="contained" color="primary" fullWidth onClick={openExternalNav} sx={{ mt: 1 }}>
+      <Button
+        variant="contained"
+        color="primary"
+        fullWidth
+        onClick={openExternalNav}
+        sx={{ mt: 1 }}
+      >
         Googleマップでナビゲーション開始
       </Button>
     </Box>
@@ -224,11 +230,7 @@ function RouteViewFields({
               所要時間を計算中...
             </Typography>
           ) : waitingLocationDuration !== null ? (
-            <Typography
-              variant="body2"
-              color="primary"
-              sx={{ mt: 0.5, fontWeight: 500 }}
-            >
+            <Typography variant="body2" color="primary" sx={{ mt: 0.5, fontWeight: 500 }}>
               目的地から待機場所まで: 約{waitingLocationDuration}分
             </Typography>
           ) : (
@@ -285,8 +287,7 @@ function DurationFields({ editing, order, formData, handleChange }) {
             <Typography variant="body2">分</Typography>
           </Box>
           <Typography variant="body2" color="text.secondary">
-            合計: {parseInt(formData.base_duration_min, 10) + parseInt(formData.buffer_min, 10)}
-            分
+            合計: {parseInt(formData.base_duration_min, 10) + parseInt(formData.buffer_min, 10)}分
           </Typography>
         </Box>
       ) : (

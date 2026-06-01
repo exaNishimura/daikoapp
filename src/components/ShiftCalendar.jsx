@@ -24,12 +24,11 @@ import Typography from '@mui/material/Typography'
 import Collapse from '@mui/material/Collapse'
 import './ShiftCalendar.css'
 
-
 // ============================================
 // 設定（時間軸の範囲）
 // ============================================
 const TIMELINE_START = 19 // 19:00から表示
-const TIMELINE_END = 6    // 06:00まで表示（翌日）
+const TIMELINE_END = 6 // 06:00まで表示（翌日）
 const TIMELINE_WIDTH = 960 // 時間軸の幅（px）
 const PIXELS_PER_HOUR = TIMELINE_WIDTH / 12 // 12時間 = 960px
 
@@ -57,13 +56,13 @@ function minutesToPixels(minutes) {
 // 日付をグループ化
 function groupByDate(data) {
   const grouped = {}
-  data.forEach(item => {
+  data.forEach((item) => {
     if (!grouped[item.date]) {
       grouped[item.date] = {
         date: item.date,
         dow: item.dow,
         status: item.status || '',
-        shifts: []
+        shifts: [],
       }
     }
     if (item.car) {
@@ -108,31 +107,30 @@ export function ShiftCalendar() {
   // 本日の日付まで自動スクロール
   useEffect(() => {
     if (loading || hasScrolledRef.current) return
-    
+
     const today = new Date()
     const currentYear = today.getFullYear()
     const currentMonth = today.getMonth() + 1
     const currentDate = today.getDate()
-    
+
     // 選択された年月が現在の年月の場合のみスクロール
     if (selectedYear === currentYear && selectedMonth === currentMonth) {
       const todayDateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`
-      
+
       // 少し遅延を入れてDOMの更新を待つ
       setTimeout(() => {
         const todayElement = document.querySelector(`[data-date="${todayDateStr}"]`)
         if (todayElement && calendarContainerRef.current) {
-          todayElement.scrollIntoView({ 
-            behavior: 'smooth', 
+          todayElement.scrollIntoView({
+            behavior: 'smooth',
             block: 'start',
-            inline: 'nearest'
+            inline: 'nearest',
           })
           hasScrolledRef.current = true
         }
       }, 100)
     }
   }, [loading, selectedYear, selectedMonth])
-
 
   // データを日付でグループ化
   const groupedData = useMemo(() => groupByDate(shifts), [shifts])
@@ -142,15 +140,15 @@ export function ShiftCalendar() {
     const dates = Object.keys(groupedData).sort()
     if (!searchText) return dates
 
-    return dates.filter(date => {
+    return dates.filter((date) => {
       const dayData = groupedData[date]
       const dateParts = date.split('-')
       const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
       const matchDate = date.includes(searchText) || dateFormatted.includes(searchText)
       const matchDow = dayData.dow.includes(searchText)
-      const matchStaff = dayData.shifts.some(s => s.staff.includes(searchText))
+      const matchStaff = dayData.shifts.some((s) => s.staff.includes(searchText))
       const matchStatus = dayData.status && dayData.status.includes(searchText)
-      
+
       return matchDate || matchDow || matchStaff || matchStatus
     })
   }, [groupedData, searchText])
@@ -190,21 +188,25 @@ export function ShiftCalendar() {
       <div className="shift-header">
         <Box sx={{ mb: 2 }}>
           <h1 style={{ marginBottom: '16px', fontSize: '20px' }}>運転代行シフト表</h1>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2, 
-            alignItems: { xs: 'stretch', sm: 'center' },
-            flexWrap: 'wrap'
-          }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              alignItems: { xs: 'stretch', sm: 'center' },
+              flexWrap: 'wrap',
+            }}
+          >
             {/* 月移動コントロール */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1,
-              justifyContent: { xs: 'center', sm: 'flex-start' },
-              width: { xs: '100%', sm: 'auto' }
-            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                justifyContent: { xs: 'center', sm: 'flex-start' },
+                width: { xs: '100%', sm: 'auto' },
+              }}
+            >
               <IconButton
                 onClick={handlePrevMonth}
                 disabled={loading}
@@ -225,14 +227,14 @@ export function ShiftCalendar() {
               >
                 <ChevronLeftIcon />
               </IconButton>
-              <Typography 
-                variant="h6" 
-                component="div" 
-                sx={{ 
-                  minWidth: { xs: '100px', sm: '120px' }, 
-                  textAlign: 'center', 
+              <Typography
+                variant="h6"
+                component="div"
+                sx={{
+                  minWidth: { xs: '100px', sm: '120px' },
+                  textAlign: 'center',
                   fontWeight: 'bold',
-                  fontSize: { xs: '16px', sm: '20px' }
+                  fontSize: { xs: '16px', sm: '20px' },
                 }}
               >
                 {selectedYear}年{selectedMonth}月
@@ -259,17 +261,19 @@ export function ShiftCalendar() {
               </IconButton>
             </Box>
             {/* 年月セレクトと編集ボタン */}
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1.5, 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              justifyContent: { xs: 'center', sm: 'flex-start' },
-              width: { xs: '100%', sm: 'auto' }
-            }}>
-              <FormControl 
-                size="small" 
-                sx={{ 
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1.5,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                justifyContent: { xs: 'center', sm: 'flex-start' },
+                width: { xs: '100%', sm: 'auto' },
+              }}
+            >
+              <FormControl
+                size="small"
+                sx={{
                   minWidth: { xs: '80px', sm: '100px' },
                   backgroundColor: 'white',
                   borderRadius: '4px',
@@ -304,14 +308,16 @@ export function ShiftCalendar() {
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
                   label="年"
                 >
-                  {[2024, 2025, 2026, 2027, 2028].map(year => (
-                    <MenuItem key={year} value={year}>{year}年</MenuItem>
+                  {[2024, 2025, 2026, 2027, 2028].map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}年
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
-              <FormControl 
-                size="small" 
-                sx={{ 
+              <FormControl
+                size="small"
+                sx={{
                   minWidth: { xs: '80px', sm: '100px' },
                   backgroundColor: 'white',
                   borderRadius: '4px',
@@ -346,8 +352,10 @@ export function ShiftCalendar() {
                   onChange={(e) => setSelectedMonth(Number(e.target.value))}
                   label="月"
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
-                    <MenuItem key={month} value={month}>{month}月</MenuItem>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
+                    <MenuItem key={month} value={month}>
+                      {month}月
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -356,9 +364,9 @@ export function ShiftCalendar() {
                 onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
                 startIcon={<EditIcon />}
                 size="small"
-                sx={{ 
+                sx={{
                   whiteSpace: 'nowrap',
-                  fontSize: { xs: '12px', sm: '14px' }
+                  fontSize: { xs: '12px', sm: '14px' },
                 }}
               >
                 シフト編集
@@ -422,7 +430,7 @@ export function ShiftCalendar() {
           <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>
         ) : (
           <div className="shift-calendar">
-            {filteredDates.map(date => (
+            {filteredDates.map((date) => (
               <DayBlock
                 key={date}
                 dayData={groupedData[date]}
@@ -434,7 +442,6 @@ export function ShiftCalendar() {
           </div>
         )}
       </div>
-
     </div>
   )
 }
@@ -452,14 +459,14 @@ function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
 
     // 従業員マップを作成（名前で検索）
     const employeeMap = {}
-    employees.forEach(emp => {
+    employees.forEach((emp) => {
       employeeMap[emp.name] = emp
     })
 
     let totalWage = 0
 
     // 各シフトの給料を計算
-    dayData.shifts.forEach(shift => {
+    dayData.shifts.forEach((shift) => {
       if (!shift.start || !shift.end || !shift.staff) return
 
       const employee = employeeMap[shift.staff]
@@ -503,7 +510,9 @@ function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {dayData.status && (
-            <div className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}>
+            <div
+              className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}
+            >
               {dayData.status}
             </div>
           )}
@@ -513,7 +522,7 @@ function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
       {!dayData.status && (
         <div className="timeline-container" style={{ width: TIMELINE_WIDTH + 'px' }}>
           <TimeAxis />
-          {[...new Set(dayData.shifts.map(s => s.car))].sort().map(carNum => (
+          {[...new Set(dayData.shifts.map((s) => s.car))].sort().map((carNum) => (
             <CarBlock
               key={carNum}
               carNum={carNum}
@@ -530,7 +539,7 @@ function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
 
 function TimeAxis() {
   const markers = []
-  
+
   // ピーク帯（23:00〜02:00）の背景
   const peakStart = minutesToPixels(timeToMinutes('23:00'))
   const peakEnd = minutesToPixels(timeToMinutes('02:00'))
@@ -540,14 +549,14 @@ function TimeAxis() {
     markers.push({
       type: 'major',
       left: minutesToPixels((hour - TIMELINE_START) * 60),
-      label: String(hour).padStart(2, '0') + ':00'
+      label: String(hour).padStart(2, '0') + ':00',
     })
   }
   for (let hour = 0; hour <= TIMELINE_END; hour++) {
     markers.push({
       type: 'major',
       left: minutesToPixels((24 - TIMELINE_START + hour) * 60),
-      label: String(hour).padStart(2, '0') + ':00'
+      label: String(hour).padStart(2, '0') + ':00',
     })
   }
 
@@ -556,14 +565,14 @@ function TimeAxis() {
     markers.push({
       type: 'minor',
       left: minutesToPixels((hour - TIMELINE_START) * 60 + 30),
-      label: ''
+      label: '',
     })
   }
   for (let hour = 0; hour <= TIMELINE_END; hour++) {
     markers.push({
       type: 'minor',
       left: minutesToPixels((24 - TIMELINE_START + hour) * 60 + 30),
-      label: ''
+      label: '',
     })
   }
 
@@ -573,7 +582,7 @@ function TimeAxis() {
         className="peak-zone"
         style={{
           left: peakStart + 'px',
-          width: (peakEnd - peakStart) + 'px'
+          width: peakEnd - peakStart + 'px',
         }}
       />
       {markers.map((marker, idx) => (
@@ -590,14 +599,24 @@ function TimeAxis() {
 }
 
 function CarBlock({ carNum, shifts, visibleStaff, colorByName }) {
-  const driverShifts = shifts.filter(s => s.car === carNum && s.role === '代行')
-  const companionShifts = shifts.filter(s => s.car === carNum && s.role === '随伴')
+  const driverShifts = shifts.filter((s) => s.car === carNum && s.role === '代行')
+  const companionShifts = shifts.filter((s) => s.car === carNum && s.role === '随伴')
 
   return (
     <div className="car-block">
       <div className="car-header">{carNum}号車</div>
-      <Lane role="代行" shifts={driverShifts} visibleStaff={visibleStaff} colorByName={colorByName} />
-      <Lane role="随伴" shifts={companionShifts} visibleStaff={visibleStaff} colorByName={colorByName} />
+      <Lane
+        role="代行"
+        shifts={driverShifts}
+        visibleStaff={visibleStaff}
+        colorByName={colorByName}
+      />
+      <Lane
+        role="随伴"
+        shifts={companionShifts}
+        visibleStaff={visibleStaff}
+        colorByName={colorByName}
+      />
     </div>
   )
 }
@@ -640,8 +659,9 @@ function Bar({ shift, visible, colorByName }) {
       title={title}
     >
       <span className="bar-text">{shift.staff}</span>
-      <span className="bar-time">{shift.start}-{shift.end}</span>
+      <span className="bar-time">
+        {shift.start}-{shift.end}
+      </span>
     </div>
   )
 }
-

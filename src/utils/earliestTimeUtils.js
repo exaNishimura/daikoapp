@@ -13,7 +13,12 @@ import { calculateBuffer } from '@/services/routeService'
  * @param {Object} operationStatusesMap - vehicleIdをキーとした稼働状況設定のマップ（オプション）
  * @returns {string} 直近依頼をとれる時間の文字列（例: "今すぐ" または "20:15"）
  */
-export function getEarliestAvailableTimeWithSlots(vehicles, slots, defaultDuration = 30, operationStatusesMap = {}) {
+export function getEarliestAvailableTimeWithSlots(
+  vehicles,
+  slots,
+  defaultDuration = 30,
+  operationStatusesMap = {}
+) {
   if (!vehicles || vehicles.length === 0) {
     return '車両がありません'
   }
@@ -69,4 +74,3 @@ export function getEarliestAvailableTimeWithSlots(vehicles, slots, defaultDurati
   const minutesStr = String(startMinutes).padStart(2, '0')
   return `${hoursStr}:${minutesStr}`
 }
-

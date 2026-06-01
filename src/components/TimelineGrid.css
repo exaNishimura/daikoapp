@@ -194,7 +194,8 @@
 }
 
 @keyframes drop-preview-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
   }
   50% {
@@ -232,4 +233,3 @@
     height: 0;
   }
 }
-

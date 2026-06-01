@@ -117,8 +117,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <CssBaseline />
         <App />
       </ThemeProvider>
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />}
+      {import.meta.env.DEV && (
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+      )}
     </QueryClientProvider>
-  </React.StrictMode>,
+  </React.StrictMode>
 )
-

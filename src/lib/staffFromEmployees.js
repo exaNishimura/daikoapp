@@ -2,14 +2,7 @@
  * 従業員マスタとシフト画面のスタッフ名・色の共通ロジック
  */
 
-export const FALLBACK_STAFF_NAMES = [
-  '西村',
-  '鈴木',
-  'チョロモン',
-  'たかし',
-  'なみ',
-  'しゅうや',
-]
+export const FALLBACK_STAFF_NAMES = ['西村', '鈴木', 'チョロモン', 'たかし', 'なみ', 'しゅうや']
 
 const FALLBACK_COLOR_BY_NAME = Object.freeze({
   西村: '#FFA500',

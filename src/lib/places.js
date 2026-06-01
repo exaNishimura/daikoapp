@@ -15,9 +15,9 @@ const MIE_BOUNDS_NE = { lat: 35.2, lng: 136.9 } // 桑名市周辺
 export function isGooglePlacesReady() {
   return Boolean(
     typeof window !== 'undefined' &&
-      window.google &&
-      window.google.maps &&
-      window.google.maps.places
+    window.google &&
+    window.google.maps &&
+    window.google.maps.places
   )
 }
 

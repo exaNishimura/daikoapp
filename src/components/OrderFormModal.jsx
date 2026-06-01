@@ -242,11 +242,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                 </Box>
               ))}
               {formData.waypoints.length === 0 && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ fontStyle: 'italic' }}
-                >
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                   経由地はありません
                 </Typography>
               )}

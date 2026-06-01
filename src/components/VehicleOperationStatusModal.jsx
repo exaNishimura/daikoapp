@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { getVehicleOperationStatus, setVehicleOperationStatus, deleteVehicleOperationStatus } from '@/services/vehicleOperationService'
+import {
+  getVehicleOperationStatus,
+  setVehicleOperationStatus,
+  deleteVehicleOperationStatus,
+} from '@/services/vehicleOperationService'
 import { getVehicles, updateVehicle } from '@/services/vehicleService'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -21,7 +25,13 @@ import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 
-export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleName, onStatusUpdated }) {
+export function VehicleOperationStatusModal({
+  open,
+  onClose,
+  vehicleId,
+  vehicleName,
+  onStatusUpdated,
+}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [statuses, setStatuses] = useState([])
@@ -80,7 +90,7 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
         return
       }
 
-      const foundVehicle = vehicles?.find(v => v.id === vehicleId)
+      const foundVehicle = vehicles?.find((v) => v.id === vehicleId)
       if (foundVehicle) {
         setVehicle(foundVehicle)
         setWaitingLocationAddress(foundVehicle.waiting_location_address || '')
@@ -214,9 +224,7 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        稼働状況設定 - {vehicleName || '車両'}
-      </DialogTitle>
+      <DialogTitle>稼働状況設定 - {vehicleName || '車両'}</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -227,10 +235,7 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
         <Box sx={{ mt: 2 }}>
           <FormControl component="fieldset" fullWidth>
             <FormLabel component="legend">稼働状況パターン</FormLabel>
-            <RadioGroup
-              value={formData.type}
-              onChange={handleTypeChange}
-            >
+            <RadioGroup value={formData.type} onChange={handleTypeChange}>
               <FormControlLabel value="DEFAULT" control={<Radio />} label="基本は稼働" />
               <FormControlLabel value="DAY_OFF" control={<Radio />} label="1日稼働しない" />
               <FormControlLabel value="STOP" control={<Radio />} label="途中で稼働停止" />
@@ -369,4 +374,3 @@ export function VehicleOperationStatusModal({ open, onClose, vehicleId, vehicleN
     </Dialog>
   )
 }
-

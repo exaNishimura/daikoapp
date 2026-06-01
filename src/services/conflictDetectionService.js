@@ -28,7 +28,11 @@ export function checkSlotConflict(slotA, slotB) {
  */
 export async function checkConflictInDatabase(vehicleId, startAt, endAt, excludeSlotId = null) {
   if (!supabase) {
-    return { hasConflict: false, conflictingSlot: null, error: new Error('Supabase client not initialized') }
+    return {
+      hasConflict: false,
+      conflictingSlot: null,
+      error: new Error('Supabase client not initialized'),
+    }
   }
 
   try {
@@ -97,4 +101,3 @@ export async function getConflictsForVehicle(vehicleId) {
     return { data: null, error }
   }
 }
-

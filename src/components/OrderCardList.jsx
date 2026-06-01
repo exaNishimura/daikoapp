@@ -116,4 +116,3 @@ export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpand
     </Box>
   )
 }
-

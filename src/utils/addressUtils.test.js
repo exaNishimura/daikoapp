@@ -25,9 +25,7 @@ describe('getAddressFromCity', () => {
   })
 
   it('strips combined "日本、〒... 東京都" prefix', () => {
-    expect(getAddressFromCity('日本、〒100-0005 東京都千代田区丸の内1-1')).toBe(
-      '千代田区丸の内1-1'
-    )
+    expect(getAddressFromCity('日本、〒100-0005 東京都千代田区丸の内1-1')).toBe('千代田区丸の内1-1')
   })
 
   it('strips Hokkaido without "県" suffix mismatch', () => {
