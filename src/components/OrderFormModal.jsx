@@ -1,13 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import { createOrder, updateOrder } from '@/services/orderService'
-import { estimateDuration, calculateBuffer } from '@/services/routeService'
-import { getVehicles } from '@/services/vehicleService'
-import {
-  getCurrentDateTimeLocal,
-  isWithinBusinessHours,
-  getMinBusinessDateTime,
-} from '@/utils/businessDayUtils'
+import { useEffect, useRef } from 'react'
+import { getMinBusinessDateTime } from '@/utils/businessDayUtils'
 import { setupPlacesAutocomplete } from '@/lib/places'
+import { useOrderForm } from '@/hooks/useOrderForm'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -26,42 +20,48 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import Stack from '@mui/material/Stack'
 
 export function OrderFormModal({ onClose, onOrderCreated, open }) {
-  const [formData, setFormData] = useState({
-    order_type: 'NOW',
-    scheduled_at: '',
-    pickup_location: '',
-    pickup_address: '',
-    dropoff_address: '',
-    waypoints: [],
-    contact_phone: '',
-    car_model: '',
-    car_plate: '',
-    car_color: '',
-    parking_note: '',
-  })
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
+  const {
+    formData,
+    errors,
+    loading,
+    updateField,
+    setErrors,
+    handleChange,
+    handleScheduledBlur,
+    addWaypoint,
+    updateWaypoint,
+    removeWaypoint,
+    handleSubmit,
+    reset,
+  } = useOrderForm({ onSuccess: onOrderCreated })
 
-  // Places Autocomplete用のref
   const pickupAddressAutocompleteRef = useRef(null)
   const dropoffAddressAutocompleteRef = useRef(null)
   const waypointAutocompleteRefs = useRef({})
 
-  // 出発地・目的地の Autocomplete を初期化
+  // モーダルが開かれたタイミングでフォームをリセット
+  useEffect(() => {
+    if (open) {
+      reset()
+      waypointAutocompleteRefs.current = {}
+    }
+  }, [open, reset])
+
+  // 出発地・目的地の Autocomplete
   useEffect(() => {
     if (!open) return
 
     const cleanupPickup = setupPlacesAutocomplete(
       () => pickupAddressAutocompleteRef.current,
       (formattedAddress) => {
-        setFormData((prev) => ({ ...prev, pickup_address: formattedAddress }))
+        updateField('pickup_address', formattedAddress)
         setErrors((prev) => ({ ...prev, pickup_address: null }))
       }
     )
     const cleanupDropoff = setupPlacesAutocomplete(
       () => dropoffAddressAutocompleteRef.current,
       (formattedAddress) => {
-        setFormData((prev) => ({ ...prev, dropoff_address: formattedAddress }))
+        updateField('dropoff_address', formattedAddress)
         setErrors((prev) => ({ ...prev, dropoff_address: null }))
       }
     )
@@ -70,9 +70,9 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
       cleanupPickup()
       cleanupDropoff()
     }
-  }, [open])
+  }, [open, updateField, setErrors])
 
-  // 経由地の Autocomplete を初期化（経由地数が変わるたびに再構築）
+  // 経由地の Autocomplete（経由地数が変わるたびに再構築）
   useEffect(() => {
     if (!open) return
 
@@ -80,233 +80,14 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
       const waypointIndex = parseInt(indexStr, 10)
       return setupPlacesAutocomplete(
         () => waypointAutocompleteRefs.current[indexStr],
-        (formattedAddress) => {
-          setFormData((prev) => {
-            const newWaypoints = [...prev.waypoints]
-            if (waypointIndex >= 0 && waypointIndex < newWaypoints.length) {
-              newWaypoints[waypointIndex] = formattedAddress
-            }
-            return { ...prev, waypoints: newWaypoints }
-          })
-        }
+        (formattedAddress) => updateWaypoint(waypointIndex, formattedAddress)
       )
     })
 
     return () => {
       cleanups.forEach((fn) => fn())
     }
-  }, [open, formData.waypoints.length])
-
-  // モーダルが開かれたときにフォームをリセット
-  useEffect(() => {
-    if (open) {
-      setFormData({
-        order_type: 'NOW',
-        scheduled_at: '',
-        pickup_location: '',
-        pickup_address: '',
-        dropoff_address: '',
-        waypoints: [],
-        contact_phone: '',
-        car_model: '',
-        car_plate: '',
-        car_color: '',
-        parking_note: '',
-      })
-      setErrors({})
-      // 経由地のAutocomplete refをクリア
-      waypointAutocompleteRefs.current = {}
-    }
-  }, [open])
-
-  // 日時を15分刻みにスナップ
-  const snapDateTimeTo15Minutes = (dateTimeString) => {
-    if (!dateTimeString) return dateTimeString
-    
-    const date = new Date(dateTimeString)
-    const minutes = date.getMinutes()
-    const snappedMinutes = Math.round(minutes / 15) * 15
-    
-    const snappedDate = new Date(date)
-    snappedDate.setMinutes(snappedMinutes, 0, 0)
-    
-    const year = snappedDate.getFullYear()
-    const month = String(snappedDate.getMonth() + 1).padStart(2, '0')
-    const day = String(snappedDate.getDate()).padStart(2, '0')
-    const hours = String(snappedDate.getHours()).padStart(2, '0')
-    const snappedMinutesStr = String(snappedDate.getMinutes()).padStart(2, '0')
-    
-    return `${year}-${month}-${day}T${hours}:${snappedMinutesStr}`
-  }
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => {
-      const newData = { ...prev, [name]: value }
-      // 予約種別が「日時指定」に変更された場合、現在時刻をデフォルト値として設定
-      if (name === 'order_type' && value === 'SCHEDULED' && !prev.scheduled_at) {
-        newData.scheduled_at = getCurrentDateTimeLocal()
-      }
-      // 日時指定の場合は15分刻みにスナップ
-      if (name === 'scheduled_at' && value) {
-        const snapped = snapDateTimeTo15Minutes(value)
-        newData.scheduled_at = snapped
-        // 営業時間チェック
-        if (!isWithinBusinessHours(snapped)) {
-          setErrors((prev) => ({
-            ...prev,
-            scheduled_at: '営業時間（18:00〜翌06:00）内で選択してください',
-          }))
-        } else {
-          // 営業時間内の場合はエラーをクリア
-          setErrors((prev) => ({ ...prev, scheduled_at: null }))
-        }
-      }
-      return newData
-    })
-    // エラーをクリア（scheduled_at以外）
-    if (errors[name] && name !== 'scheduled_at') {
-      setErrors((prev) => ({ ...prev, [name]: null }))
-    }
-  }
-
-  const validate = () => {
-    const newErrors = {}
-
-    if (!formData.pickup_address.trim()) {
-      newErrors.pickup_address = '出発地を入力してください'
-    }
-    if (!formData.dropoff_address.trim()) {
-      newErrors.dropoff_address = '目的地を入力してください'
-    }
-    if (formData.order_type === 'SCHEDULED' && !formData.scheduled_at) {
-      newErrors.scheduled_at = '予約日時を入力してください'
-    }
-    
-    // 営業時間チェック（18:00〜翌06:00）
-    if (formData.order_type === 'SCHEDULED' && formData.scheduled_at) {
-      if (!isWithinBusinessHours(formData.scheduled_at)) {
-        newErrors.scheduled_at = '営業時間（18:00〜翌06:00）内で選択してください'
-      }
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e) => {
-    if (e) {
-      e.preventDefault()
-    }
-
-    if (!validate()) {
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      // 依頼データの準備
-      const waypoints = formData.waypoints
-        .map((wp) => wp.trim())
-        .filter((wp) => wp.length > 0)
-
-      const orderData = {
-        order_type: formData.order_type,
-        pickup_location: formData.pickup_location.trim() || null,
-        pickup_address: formData.pickup_address.trim(),
-        dropoff_address: formData.dropoff_address.trim(),
-        waypoints: waypoints.length > 0 ? waypoints : null,
-        contact_phone: formData.contact_phone.trim() || null,
-        car_model: formData.car_model.trim() || null,
-        car_plate: formData.car_plate.trim() || null,
-        car_color: formData.car_color.trim() || null,
-        parking_note: formData.parking_note.trim() || null,
-        status: 'UNASSIGNED',
-      }
-
-      if (formData.order_type === 'SCHEDULED' && formData.scheduled_at) {
-        orderData.scheduled_at = new Date(formData.scheduled_at).toISOString()
-      }
-
-      // 依頼作成
-      const { data: order, error: createError } = await createOrder(orderData)
-
-      if (createError) {
-        throw createError
-      }
-
-      // ルート計算（バックグラウンド）
-      // ルート計算が完了するまで待機してから依頼を作成
-      
-      // 待機場所住所を取得（最初の車両の待機場所住所を使用）
-      let waitingLocationAddress = null
-      try {
-        const { data: vehicles } = await getVehicles()
-        if (vehicles && vehicles.length > 0) {
-          // 最初の車両の待機場所住所を使用
-          waitingLocationAddress = vehicles[0].waiting_location_address || null
-        }
-      } catch (vehicleError) {
-        if (import.meta.env.DEV) {
-          console.error('Error fetching vehicles for waiting location:', vehicleError)
-        }
-        // エラーでも続行（待機場所なしで計算）
-      }
-
-      const { duration, error } = await estimateDuration(
-        order.pickup_address,
-        order.dropoff_address,
-        waypoints.length > 0 ? waypoints : null,
-        waitingLocationAddress
-      )
-      
-      if (error) {
-        if (import.meta.env.DEV) {
-          console.error('Route calculation error:', error)
-        }
-        // エラーでも依頼は作成済みなので、デフォルト値で更新
-        // デフォルト値は30分（往復15分×2）に設定
-        const defaultDuration = 30
-        const defaultBuffer = calculateBuffer(defaultDuration)
-        await updateOrder(order.id, {
-          base_duration_min: defaultDuration,
-          buffer_min: defaultBuffer,
-          buffer_manual: false,
-        })
-      } else if (duration) {
-        const buffer = calculateBuffer(duration)
-        // 依頼を更新（base_durationとbufferを設定）
-        const { error: updateError } = await updateOrder(order.id, {
-          base_duration_min: duration,
-          buffer_min: buffer,
-          buffer_manual: false,
-        })
-
-        if (updateError) {
-          if (import.meta.env.DEV) {
-            console.error('Failed to update order with route data:', updateError)
-          }
-        }
-      } else {
-        // durationがnullの場合もデフォルト値で更新
-        const defaultDuration = 30
-        const defaultBuffer = calculateBuffer(defaultDuration)
-        await updateOrder(order.id, {
-          base_duration_min: defaultDuration,
-          buffer_min: defaultBuffer,
-          buffer_manual: false,
-        })
-      }
-
-      onOrderCreated(order)
-    } catch (error) {
-      console.error('Error creating order:', error)
-      setErrors({ submit: '依頼の作成に失敗しました。もう一度お試しください。' })
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [open, formData.waypoints.length, updateWaypoint])
 
   return (
     <Dialog
@@ -334,17 +115,16 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
           新しい依頼情報を入力してください
         </Typography>
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+        >
           <Box>
             <Typography variant="body2" sx={{ mb: 1 }}>
               予約種別 <span style={{ color: '#ff4444' }}>*</span>
             </Typography>
-            <RadioGroup
-              row
-              name="order_type"
-              value={formData.order_type}
-              onChange={handleChange}
-            >
+            <RadioGroup row name="order_type" value={formData.order_type} onChange={handleChange}>
               <FormControlLabel value="NOW" control={<Radio />} label="今すぐ" />
               <FormControlLabel value="SCHEDULED" control={<Radio />} label="日時指定" />
             </RadioGroup>
@@ -357,31 +137,16 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
               name="scheduled_at"
               value={formData.scheduled_at}
               onChange={handleChange}
-              onBlur={(e) => {
-                // フォーカスが外れたときにも15分刻みにスナップ
-                if (e.target.value) {
-                  const snapped = snapDateTimeTo15Minutes(e.target.value)
-                  if (snapped !== e.target.value) {
-                    setFormData((prev) => ({ ...prev, scheduled_at: snapped }))
-                  }
-                  // 営業時間チェック
-                  if (!isWithinBusinessHours(snapped)) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      scheduled_at: '営業時間（18:00〜翌06:00）内で選択してください',
-                    }))
-                  }
-                }
-              }}
+              onBlur={handleScheduledBlur}
               error={!!errors.scheduled_at}
-              helperText={errors.scheduled_at || '15分刻みで選択してください（営業時間: 18:00〜翌06:00）'}
+              helperText={
+                errors.scheduled_at || '15分刻みで選択してください（営業時間: 18:00〜翌06:00）'
+              }
               fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
+              InputLabelProps={{ shrink: true }}
               inputProps={{
-                step: 900, // 15分刻み（900秒 = 15分）
-                min: getMinBusinessDateTime(), // 当日の18:00以降
+                step: 900,
+                min: getMinBusinessDateTime(),
               }}
               required
             />
@@ -424,22 +189,19 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             required
           />
 
-          {/* 経由地 */}
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                mb: 1,
+              }}
+            >
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 経由地
               </Typography>
-              <Button
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    waypoints: [...prev.waypoints, ''],
-                  }))
-                }}
-              >
+              <Button size="small" startIcon={<AddIcon />} onClick={addWaypoint}>
                 追加
               </Button>
             </Box>
@@ -449,11 +211,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                   <TextField
                     label={`経由地 ${index + 1}`}
                     value={waypoint}
-                    onChange={(e) => {
-                      const newWaypoints = [...formData.waypoints]
-                      newWaypoints[index] = e.target.value
-                      setFormData((prev) => ({ ...prev, waypoints: newWaypoints }))
-                    }}
+                    onChange={(e) => updateWaypoint(index, e.target.value)}
                     inputRef={(ref) => {
                       if (ref) {
                         waypointAutocompleteRefs.current[index] = ref
@@ -467,17 +225,14 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                   />
                   <IconButton
                     onClick={() => {
-                      const newWaypoints = formData.waypoints.filter((_, i) => i !== index)
-                      setFormData((prev) => ({ ...prev, waypoints: newWaypoints }))
-                      // Autocomplete refをクリア
-                      if (waypointAutocompleteRefs.current[index]) {
-                        const ref = waypointAutocompleteRefs.current[index]
-                        if (ref._autocomplete) {
-                          window.google.maps.event.clearInstanceListeners(ref._autocomplete)
-                          delete ref._autocomplete
-                        }
-                        delete waypointAutocompleteRefs.current[index]
+                      // Autocomplete のリスナーを先に外しておく（メモリリーク防止）
+                      const ref = waypointAutocompleteRefs.current[index]
+                      if (ref?._autocomplete && window.google?.maps?.event) {
+                        window.google.maps.event.clearInstanceListeners(ref._autocomplete)
+                        delete ref._autocomplete
                       }
+                      delete waypointAutocompleteRefs.current[index]
+                      removeWaypoint(index)
                     }}
                     sx={{ mt: 0.5 }}
                     color="error"
@@ -487,7 +242,11 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                 </Box>
               ))}
               {formData.waypoints.length === 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontStyle: 'italic' }}
+                >
                   経由地はありません
                 </Typography>
               )}
@@ -560,15 +319,10 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
         <Button onClick={onClose} disabled={loading}>
           キャンセル
         </Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={loading}
-        >
+        <Button variant="contained" onClick={handleSubmit} disabled={loading}>
           {loading ? '保存中...' : '保存'}
         </Button>
       </DialogActions>
     </Dialog>
   )
 }
-

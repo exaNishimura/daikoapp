@@ -95,3 +95,24 @@ export function getMinBusinessDateTime(reference = new Date()) {
   const dd = String(reference.getDate()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}T${String(BUSINESS_START_HOUR).padStart(2, '0')}:00`
 }
+
+/**
+ * datetime-local 文字列を 15 分刻みにスナップ
+ * @param {string} dateTimeString - "YYYY-MM-DDTHH:MM" 形式（空文字や falsy はそのまま返す）
+ * @returns {string} スナップ後の "YYYY-MM-DDTHH:MM"
+ */
+export function snapDateTimeTo15Minutes(dateTimeString) {
+  if (!dateTimeString) return dateTimeString
+  const date = new Date(dateTimeString)
+  if (Number.isNaN(date.getTime())) return dateTimeString
+
+  const snapped = new Date(date)
+  snapped.setMinutes(Math.round(date.getMinutes() / 15) * 15, 0, 0)
+
+  const yyyy = snapped.getFullYear()
+  const mm = String(snapped.getMonth() + 1).padStart(2, '0')
+  const dd = String(snapped.getDate()).padStart(2, '0')
+  const hh = String(snapped.getHours()).padStart(2, '0')
+  const mi = String(snapped.getMinutes()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+}

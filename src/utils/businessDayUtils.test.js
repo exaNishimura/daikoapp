@@ -5,6 +5,7 @@ import {
   isWithinBusinessHours,
   getBusinessDayBoundaries,
   getMinBusinessDateTime,
+  snapDateTimeTo15Minutes,
 } from './businessDayUtils'
 
 describe('constants', () => {
@@ -83,5 +84,33 @@ describe('getMinBusinessDateTime', () => {
   it('returns "YYYY-MM-DDT18:00" for the reference date', () => {
     const ref = new Date(2025, 5, 1, 9, 30)
     expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T18:00')
+  })
+})
+
+describe('snapDateTimeTo15Minutes', () => {
+  it('rounds 19:07 down to 19:00', () => {
+    expect(snapDateTimeTo15Minutes('2025-06-01T19:07')).toBe('2025-06-01T19:00')
+  })
+
+  it('rounds 19:08 up to 19:15', () => {
+    expect(snapDateTimeTo15Minutes('2025-06-01T19:08')).toBe('2025-06-01T19:15')
+  })
+
+  it('keeps a value already on a 15-minute boundary', () => {
+    expect(snapDateTimeTo15Minutes('2025-06-01T20:30')).toBe('2025-06-01T20:30')
+  })
+
+  it('rolls forward to the next hour at 19:53', () => {
+    expect(snapDateTimeTo15Minutes('2025-06-01T19:53')).toBe('2025-06-01T20:00')
+  })
+
+  it('returns falsy values unchanged', () => {
+    expect(snapDateTimeTo15Minutes('')).toBe('')
+    expect(snapDateTimeTo15Minutes(null)).toBe(null)
+    expect(snapDateTimeTo15Minutes(undefined)).toBe(undefined)
+  })
+
+  it('returns garbage input unchanged', () => {
+    expect(snapDateTimeTo15Minutes('not-a-date')).toBe('not-a-date')
   })
 })
