@@ -1,11 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import {
-  TIMELINE_START,
-  TIMELINE_END,
-  timeToMinutes,
-  minutesToPixels,
-} from '@/lib/shiftEditUtils'
+import { TIMELINE_START, TIMELINE_END, timeToMinutes, minutesToPixels } from '@/lib/shiftEditUtils'
 
 /**
  * 19:00 -> 翌 06:00 を 12 時間 (960px) に展開する時間軸。
@@ -188,11 +183,7 @@ function Lane({ role, shifts, staffColorByName }) {
         {role}
       </Box>
       {shifts.map((shift, idx) => (
-        <ShiftBar
-          key={shift.id || idx}
-          shift={shift}
-          staffColorByName={staffColorByName}
-        />
+        <ShiftBar key={shift.id || idx} shift={shift} staffColorByName={staffColorByName} />
       ))}
     </Box>
   )
