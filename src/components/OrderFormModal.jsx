@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { createOrder, updateOrder } from '@/services/orderService'
 import { estimateDuration, calculateBuffer } from '@/services/routeService'
 import { getVehicles } from '@/services/vehicleService'
+import {
+  getCurrentDateTimeLocal,
+  isWithinBusinessHours,
+  getMinBusinessDateTime,
+} from '@/utils/businessDayUtils'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -18,48 +23,6 @@ import IconButton from '@mui/material/IconButton'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import Stack from '@mui/material/Stack'
-
-// 現在時刻をdatetime-local形式に変換（15分刻みにスナップ）
-const getCurrentDateTimeLocal = () => {
-  const now = new Date()
-  // 15分刻みにスナップ
-  const minutes = Math.round(now.getMinutes() / 15) * 15
-  const snappedDate = new Date(now)
-  snappedDate.setMinutes(minutes, 0, 0)
-  
-  const year = snappedDate.getFullYear()
-  const month = String(snappedDate.getMonth() + 1).padStart(2, '0')
-  const day = String(snappedDate.getDate()).padStart(2, '0')
-  const hours = String(snappedDate.getHours()).padStart(2, '0')
-  const snappedMinutes = String(snappedDate.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${snappedMinutes}`
-}
-
-// 営業時間内かチェック（18:00〜翌06:00）
-const isValidBusinessTime = (dateTimeString) => {
-  if (!dateTimeString) return false
-  
-  const date = new Date(dateTimeString)
-  const hours = date.getHours()
-  const minutes = date.getMinutes()
-  
-  // 18:00以降（当日）または翌06:00以前（翌日）が営業時間内
-  // 06:00より大きく18:00より小さい場合は営業時間外
-  if (hours >= 18 || hours < 6) {
-    return true
-  }
-  
-  return false
-}
-
-// 営業時間内の最小値を取得（当日の18:00）
-const getMinBusinessDateTime = () => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}T18:00`
-}
 
 export function OrderFormModal({ onClose, onOrderCreated, open }) {
   const [formData, setFormData] = useState({
@@ -403,7 +366,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
         const snapped = snapDateTimeTo15Minutes(value)
         newData.scheduled_at = snapped
         // 営業時間チェック
-        if (!isValidBusinessTime(snapped)) {
+        if (!isWithinBusinessHours(snapped)) {
           setErrors((prev) => ({
             ...prev,
             scheduled_at: '営業時間（18:00〜翌06:00）内で選択してください',
@@ -436,7 +399,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     
     // 営業時間チェック（18:00〜翌06:00）
     if (formData.order_type === 'SCHEDULED' && formData.scheduled_at) {
-      if (!isValidBusinessTime(formData.scheduled_at)) {
+      if (!isWithinBusinessHours(formData.scheduled_at)) {
         newErrors.scheduled_at = '営業時間（18:00〜翌06:00）内で選択してください'
       }
     }
@@ -616,7 +579,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                     setFormData((prev) => ({ ...prev, scheduled_at: snapped }))
                   }
                   // 営業時間チェック
-                  if (!isValidBusinessTime(snapped)) {
+                  if (!isWithinBusinessHours(snapped)) {
                     setErrors((prev) => ({
                       ...prev,
                       scheduled_at: '営業時間（18:00〜翌06:00）内で選択してください',

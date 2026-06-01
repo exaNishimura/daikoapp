@@ -15,6 +15,7 @@ import {
   exceedsBusinessHours,
   formatBusinessDay,
 } from '@/utils/timeUtils'
+import { getBusinessDayBoundaries } from '@/utils/businessDayUtils'
 import { getEarliestAvailableTimeWithSlots } from '@/utils/earliestTimeUtils'
 import {
   pixelsToRowIndex,
@@ -113,24 +114,9 @@ export function DispatchBoard() {
 
   // loadSlotsとloadDataを先に定義（useEffectで使用するため）
   const loadSlots = useCallback(async (vehiclesList, preserveNewSlots = false) => {
-    // ローカル時刻（JST）を使用
-    const now = new Date()
-    const localHours = now.getHours()
-    const localDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    
-    // 日またぎ営業に対応: 06:00未満の場合は前日の営業日として扱う
-    // 営業日は18:00から翌06:00まで
-    let businessDay = new Date(localDate)
-    if (localHours < 6) {
-      // 06:00未満の場合は前日の営業日として扱う
-      businessDay.setDate(businessDay.getDate() - 1)
-    }
-    
-    // 営業日の開始時刻（18:00 JST）- 営業日の日付の18:00
-    const start = new Date(businessDay.getFullYear(), businessDay.getMonth(), businessDay.getDate(), 18, 0, 0, 0)
-    
-    // 営業日の終了時刻（翌06:00 JST）- 営業日の翌日の06:00
-    const end = new Date(businessDay.getFullYear(), businessDay.getMonth(), businessDay.getDate() + 1, 6, 0, 0, 0)
+    // 営業日の開始（18:00）と終了（翌 06:00）を取得
+    // 06:00 未満は前日の営業日として扱われる
+    const { start, end } = getBusinessDayBoundaries(new Date())
 
     const allSlots = []
     for (const vehicle of vehiclesList) {

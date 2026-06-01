@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { dateToRowIndex, rowIndexToPixels, minutesToRows, rowsToMinutes } from '@/utils/rowUtils'
+import { shortenAddress } from '@/utils/addressUtils'
 import './SlotComponent.css'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -74,53 +75,6 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
     })
   }
 
-  // 都道府県と郵便番号を削除して市以降を取得
-  const getAddressFromCity = (address) => {
-    if (!address) return ''
-    
-    let result = address
-    
-    // 「日本、」を削除
-    if (result.startsWith('日本、')) {
-      result = result.substring(3) // 「日本、」は3文字
-    } else if (result.startsWith('日本')) {
-      result = result.substring(2) // 「日本」は2文字
-    }
-    
-    // 郵便番号を削除（〒123-4567 または 123-4567 の形式）
-    result = result.replace(/^〒?\d{3}-?\d{4}\s*/, '') // 郵便番号パターンを削除
-    
-    // 都道府県のリスト
-    const prefectures = [
-      '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
-      '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
-      '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
-      '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
-      '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
-      '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
-      '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
-    ]
-    
-    // 都道府県を削除
-    for (const prefecture of prefectures) {
-      if (result.startsWith(prefecture)) {
-        result = result.substring(prefecture.length)
-        break
-      }
-    }
-    
-    // 先頭の区切り文字（、やスペース）を削除
-    result = result.replace(/^[、\s]+/, '')
-    
-    return result.trim()
-  }
-
-  // 住所の超短縮表示（市以降、最大10文字）
-  const shortenAddress = (address) => {
-    const addressFromCity = getAddressFromCity(address)
-    if (addressFromCity.length <= 10) return addressFromCity
-    return addressFromCity.substring(0, 10) + '...'
-  }
 
   // ドラッグ中はクリックイベントを無視
   const handleClick = (e) => {
@@ -211,20 +165,20 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
       </div>
       <div className="slot-body">
         <div className="slot-route">
-          {shortenAddress(order.pickup_address)}
+          {shortenAddress(order.pickup_address, 10)}
           {order.waypoints && order.waypoints.length > 0 && (
             <>
               {' → '}
               {order.waypoints.map((wp, idx) => (
                 <span key={idx}>
-                  {shortenAddress(wp)}
+                  {shortenAddress(wp, 10)}
                   {idx < order.waypoints.length - 1 ? ' → ' : ''}
                 </span>
               ))}
               {' → '}
             </>
           )}
-          {shortenAddress(order.dropoff_address)}
+          {shortenAddress(order.dropoff_address, 10)}
         </div>
         {/* アイコンは非表示（長押しで情報を表示） */}
       </div>
