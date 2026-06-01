@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import Box from '@mui/material/Box'
 import TextField from '@mui/material/TextField'
@@ -10,33 +10,37 @@ import Paper from '@mui/material/Paper'
 import Container from '@mui/material/Container'
 
 export function LoginPage() {
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
   const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  const [info, setInfo] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const { sendMagicLink, isAuthenticated, loading } = useAuth()
   const location = useLocation()
 
-  // ログイン後にリダイレクトするパス（元のパスまたは従業員管理）
-  const from = location.state?.from?.pathname || '/employees'
+  if (loading) return null
+  if (isAuthenticated) {
+    const from = location.state?.from?.pathname || '/'
+    return <Navigate to={from} replace />
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
-    setLoading(true)
+    setInfo(null)
+    setSubmitting(true)
 
     try {
-      const result = login(password)
+      const result = await sendMagicLink(email.trim())
       if (result.success) {
-        navigate(from, { replace: true })
+        setInfo(`${email.trim()} 宛にログインリンクを送信しました。メールを確認してください。`)
+        setEmail('')
       } else {
         setError(result.error)
-        setPassword('')
       }
     } catch (err) {
-      setError('ログインに失敗しました')
+      setError(err.message || 'ログインに失敗しました')
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -52,16 +56,14 @@ export function LoginPage() {
           py: 4,
         }}
       >
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            width: '100%',
-            maxWidth: 400,
-          }}
-        >
+        <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 3 }}>
             ログイン
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
+            登録済みのメールアドレスを入力すると、
+            <br />
+            ログイン用のリンクをメールで送信します。
           </Typography>
 
           {error && (
@@ -69,27 +71,27 @@ export function LoginPage() {
               {error}
             </Alert>
           )}
+          {info && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setInfo(null)}>
+              {info}
+            </Alert>
+          )}
 
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
-              label="パスワード"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              label="メールアドレス"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               fullWidth
               required
               autoFocus
-              disabled={loading}
+              autoComplete="email"
+              disabled={submitting}
               sx={{ mb: 2 }}
             />
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={loading}
-              sx={{ mb: 2 }}
-            >
-              {loading ? 'ログイン中...' : 'ログイン'}
+            <Button type="submit" variant="contained" fullWidth disabled={submitting || !email}>
+              {submitting ? '送信中...' : 'ログインリンクを送信'}
             </Button>
           </Box>
         </Paper>

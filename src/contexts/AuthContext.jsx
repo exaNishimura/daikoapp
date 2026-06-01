@@ -1,41 +1,78 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // ローカルストレージから認証状態を復元
-    const authStatus = localStorage.getItem('isAuthenticated')
-    if (authStatus === 'true') {
-      setIsAuthenticated(true)
+    if (!supabase) {
+      setLoading(false)
+      return
     }
-    setLoading(false)
+
+    let mounted = true
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setSession(data.session ?? null)
+        setLoading(false)
+      }
+    })
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (mounted) {
+        setSession(newSession ?? null)
+      }
+    })
+
+    return () => {
+      mounted = false
+      subscription?.subscription?.unsubscribe()
+    }
   }, [])
 
-  const login = (password) => {
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123'
-    if (password === adminPassword) {
-      setIsAuthenticated(true)
-      localStorage.setItem('isAuthenticated', 'true')
-      return { success: true }
-    } else {
-      return { success: false, error: 'パスワードが正しくありません' }
+  const sendMagicLink = async (email) => {
+    if (!supabase) {
+      return { success: false, error: 'Supabaseクライアントが初期化されていません' }
     }
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: window.location.origin,
+      },
+    })
+
+    if (error) {
+      const message = error.message?.includes('Signups not allowed')
+        ? '登録されていないメールアドレスです'
+        : error.message || 'マジックリンクの送信に失敗しました'
+      return { success: false, error: message }
+    }
+
+    return { success: true }
   }
 
-  const logout = () => {
-    setIsAuthenticated(false)
-    localStorage.removeItem('isAuthenticated')
+  const logout = async () => {
+    if (!supabase) return
+    await supabase.auth.signOut()
+    setSession(null)
   }
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  )
+  const value = {
+    session,
+    user: session?.user ?? null,
+    isAuthenticated: !!session,
+    loading,
+    sendMagicLink,
+    logout,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

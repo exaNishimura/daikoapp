@@ -1,21 +1,21 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { DispatchBoard } from './components/DispatchBoard'
-import { ShiftCalendar } from './components/ShiftCalendar'
-import { ShiftEditPage } from './components/ShiftEditPage'
-import { EmployeeManagement } from './components/EmployeeManagement'
-import { LoginPage } from './components/LoginPage'
-import { ProtectedRoute } from './components/ProtectedRoute'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { DispatchBoard } from '@/components/DispatchBoard'
+import { ShiftCalendar } from '@/components/ShiftCalendar'
+import { ShiftEditPage } from '@/components/ShiftEditPage'
+import { EmployeeManagement } from '@/components/EmployeeManagement'
+import { LoginPage } from '@/components/LoginPage'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import Button from '@mui/material/Button'
 import './App.css'
 
 function NavBar() {
-  const { isAuthenticated, logout } = useAuth()
+  const { isAuthenticated, logout, user } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
   }
 
   const handleLogin = () => {
@@ -23,52 +23,69 @@ function NavBar() {
   }
 
   return (
-    <nav style={{ 
-      padding: '10px', 
-      background: '#2a2a2a', 
-      borderBottom: '1px solid #444',
-      flexShrink: 0,
-      zIndex: 1000,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    }}>
+    <nav
+      style={{
+        padding: '10px',
+        background: '#2a2a2a',
+        borderBottom: '1px solid #444',
+        flexShrink: 0,
+        zIndex: 1000,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}
+    >
       <div>
-        <Link to="/" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
-          配車画面
-        </Link>
-        <Link to="/shift" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
-          シフト表
-        </Link>
         {isAuthenticated && (
           <>
-            <Link to="/shift/edit" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
+            <Link to="/" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
+              配車画面
+            </Link>
+            <Link to="/shift" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
+              シフト表
+            </Link>
+            <Link
+              to="/shift/edit"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
               シフト編集
             </Link>
-            <Link to="/employees" style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}>
+            <Link
+              to="/employees"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
               従業員管理
             </Link>
           </>
         )}
       </div>
       {isAuthenticated ? (
-        <Button
-          onClick={handleLogout}
-          variant="outlined"
-          size="small"
-          sx={{ color: '#fff', borderColor: '#fff', '&:hover': { borderColor: '#fff', backgroundColor: 'rgba(255, 255, 255, 0.1)' } }}
-        >
-          ログアウト
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {user?.email && (
+            <span style={{ color: '#aaa', fontSize: 13 }}>{user.email}</span>
+          )}
+          <Button
+            onClick={handleLogout}
+            variant="outlined"
+            size="small"
+            sx={{
+              color: '#fff',
+              borderColor: '#fff',
+              '&:hover': {
+                borderColor: '#fff',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          >
+            ログアウト
+          </Button>
+        </div>
       ) : (
         <Button
           onClick={handleLogin}
           variant="contained"
           size="small"
-          sx={{ 
-            backgroundColor: '#646cff',
-            '&:hover': { backgroundColor: '#535bf2' }
-          }}
+          sx={{ backgroundColor: '#646cff', '&:hover': { backgroundColor: '#535bf2' } }}
         >
           ログイン
         </Button>
@@ -81,9 +98,23 @@ function AppRoutes() {
   return (
     <div style={{ flex: 1, overflow: 'auto' }}>
       <Routes>
-        <Route path="/" element={<DispatchBoard />} />
-        <Route path="/shift" element={<ShiftCalendar />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <DispatchBoard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/shift"
+          element={
+            <ProtectedRoute>
+              <ShiftCalendar />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/shift/edit"
           element={
@@ -119,4 +150,3 @@ function App() {
 }
 
 export default App
-
