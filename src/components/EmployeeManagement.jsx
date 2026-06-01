@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmployees, createEmployee, updateEmployee, deleteEmployee } from '@/services/employeeService'
+import {
+  useEmployees,
+  useCreateEmployee,
+  useUpdateEmployee,
+  useDeleteEmployee,
+} from '@/hooks/useEmployees'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Select from '@mui/material/Select'
@@ -48,10 +53,8 @@ const DEFAULT_COLORS = [
 
 export function EmployeeManagement() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [employees, setEmployees] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -63,31 +66,17 @@ export function EmployeeManagement() {
     sort_order: 0,
   })
 
-  useEffect(() => {
-    loadEmployees()
-  }, [])
+  const employeesQuery = useEmployees()
+  const createMutation = useCreateEmployee()
+  const updateMutation = useUpdateEmployee()
+  const deleteMutation = useDeleteEmployee()
 
-  const loadEmployees = async () => {
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const { data, error: fetchError } = await getEmployees()
-
-      if (fetchError) {
-        setError(`従業員データの取得に失敗: ${fetchError.message}`)
-        setEmployees([])
-      } else {
-        setEmployees(data || [])
-      }
-    } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-      setEmployees([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const employees = employeesQuery.data ?? []
+  const fetchError = employeesQuery.error
+  const isFetching = employeesQuery.isLoading
+  const isMutating =
+    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending
+  const loading = isFetching || isMutating
 
   const handleOpenDialog = (employee = null) => {
     if (employee) {
@@ -138,43 +127,29 @@ export function EmployeeManagement() {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
-    try {
-      const employeeData = {
-        name: formData.name.trim(),
-        license_type: formData.license_type,
-        color: formData.color,
-        hourly_wage: parseFloat(formData.hourly_wage) || 0,
-        is_active: formData.is_active,
-        sort_order: formData.sort_order || 0,
-      }
+    const employeeData = {
+      name: formData.name.trim(),
+      license_type: formData.license_type,
+      color: formData.color,
+      hourly_wage: parseFloat(formData.hourly_wage) || 0,
+      is_active: formData.is_active,
+      sort_order: formData.sort_order || 0,
+    }
 
+    try {
       if (editingId) {
-        const { error: updateError } = await updateEmployee(editingId, employeeData)
-        if (updateError) {
-          setError(`更新に失敗: ${updateError.message}`)
-        } else {
-          setSuccess('従業員を更新しました')
-          handleCloseDialog()
-          await loadEmployees()
-        }
+        await updateMutation.mutateAsync({ id: editingId, employeeData })
+        setSuccess('従業員を更新しました')
       } else {
-        const { error: createError } = await createEmployee(employeeData)
-        if (createError) {
-          setError(`作成に失敗: ${createError.message}`)
-        } else {
-          setSuccess('従業員を作成しました')
-          handleCloseDialog()
-          await loadEmployees()
-        }
+        await createMutation.mutateAsync(employeeData)
+        setSuccess('従業員を作成しました')
       }
+      handleCloseDialog()
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`${editingId ? '更新' : '作成'}に失敗: ${err.message}`)
     }
   }
 
@@ -183,23 +158,14 @@ export function EmployeeManagement() {
       return
     }
 
-    setLoading(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const { error: deleteError } = await deleteEmployee(id)
-
-      if (deleteError) {
-        setError(`削除に失敗: ${deleteError.message}`)
-      } else {
-        setSuccess('従業員を削除しました')
-        await loadEmployees()
-      }
+      await deleteMutation.mutateAsync(id)
+      setSuccess('従業員を削除しました')
     } catch (err) {
-      setError(`エラーが発生しました: ${err.message}`)
-    } finally {
-      setLoading(false)
+      setError(`削除に失敗: ${err.message}`)
     }
   }
 
@@ -226,6 +192,11 @@ export function EmployeeManagement() {
       </Box>
 
       {/* エラー・成功メッセージ */}
+      {fetchError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          従業員データの取得に失敗: {fetchError.message}
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
