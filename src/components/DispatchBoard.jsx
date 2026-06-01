@@ -4,6 +4,8 @@ import { TimelineGrid } from './TimelineGrid'
 import { OrderDetailPanel } from './OrderDetailPanel'
 import { OrderFormModal } from './OrderFormModal'
 import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
+import { DispatchHeader } from './DispatchBoard/DispatchHeader'
+import { VehicleSelectDialog } from './DispatchBoard/VehicleSelectDialog'
 import { getOrders, getOrderById } from '@/services/orderService'
 import { getVehicles } from '@/services/vehicleService'
 import { createSlot, updateSlot, getSlotsByVehicleAndDate } from '@/services/slotService'
@@ -24,28 +26,15 @@ import {
   dateToRowIndex,
   rowIndexToPixels,
 } from '@/utils/rowUtils'
-import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { isVehicleOperational } from '@/utils/operationStatusUtils'
-import AppBar from '@mui/material/AppBar'
-import Toolbar from '@mui/material/Toolbar'
+import { findAutoPlacementSlot } from '@/lib/orderPlacement'
+import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
 import Drawer from '@mui/material/Drawer'
 import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
-import AddIcon from '@mui/icons-material/Add'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import SettingsIcon from '@mui/icons-material/Settings'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemText from '@mui/material/ListItemText'
 
 export function DispatchBoard() {
   const [orders, setOrders] = useState([])
@@ -75,12 +64,6 @@ export function DispatchBoard() {
   // 営業日（今日の日付）
   const businessDate = new Date()
   const businessDayText = formatBusinessDay(businessDate)
-
-  // 直近依頼をとれる時間（vehiclesとslotsが変更されたときに再計算）
-  // slotsのID、start_at、end_atを含めて、スロットの位置や時間が変わったときも検知
-  const slotsKey = useMemo(() => {
-    return slots.map((s) => `${s.id}:${s.start_at}:${s.end_at}`).join('|')
-  }, [slots])
 
   const earliestAvailableTime = useMemo(() => {
     return getEarliestAvailableTimeWithSlots(vehicles, slots, 30, operationStatuses)
@@ -383,71 +366,12 @@ export function DispatchBoard() {
           return
         }
 
-        // 必要な時間を計算
-        const baseDuration = latestOrder?.base_duration_min || 30
-        const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
-        const totalDuration = baseDuration + buffer
-
-        // 希望開始時刻を決定（行番号ベース）
-        let orderStartTime
-        if (newOrder.order_type === 'NOW') {
-          // 「今すぐ予約」の場合、現在時刻以降の空き時間を探す
-          const now = new Date()
-          const hours = now.getHours()
-          const minutes = now.getMinutes()
-
-          if (hours >= 18 || hours < 6) {
-            // 営業時間内の場合、現在時刻を行番号に変換して次の行に切り上げ
-            const currentRowIndex = dateToRowIndex(now)
-            const nextRowIndex = Math.min(47, currentRowIndex + 1) // 次の行（最大47行）
-
-            // 営業日の基準日を計算
-            let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-            if (hours < 6) {
-              businessDay.setDate(businessDay.getDate() - 1)
-            }
-
-            // 行番号からDateオブジェクトに変換
-            orderStartTime = rowIndexToDate(nextRowIndex, businessDay)
-          } else {
-            // 営業時間外の場合、次の18:00
-            orderStartTime = new Date(now)
-            orderStartTime.setHours(18, 0, 0, 0)
-            orderStartTime.setMinutes(0, 0, 0)
-            // 今日が既に18:00を過ぎている場合は翌日の18:00
-            if (hours >= 18) {
-              orderStartTime.setDate(orderStartTime.getDate() + 1)
-            }
-          }
-        } else if (newOrder.scheduled_at) {
-          // 「日時指定」の場合、指定された時刻を使用
-          orderStartTime = new Date(newOrder.scheduled_at)
-        } else {
-          // フォールバック: 現在時刻または18:00
-          const now = new Date()
-          const hours = now.getHours()
-
-          if (hours >= 18 || hours < 6) {
-            // 営業時間内の場合、現在時刻を使用
-            orderStartTime = new Date(now)
-          } else {
-            // 営業時間外の場合、次の18:00
-            orderStartTime = new Date(now)
-            orderStartTime.setHours(18, 0, 0, 0)
-          }
-        }
-
-        // 最短の空き時間を見つける
-        // SCHEDULEDタイプの依頼の場合、指定された時刻を優先
-        const preferExactTime = newOrder.order_type === 'SCHEDULED' && newOrder.scheduled_at
-        const availableSlot = findEarliestAvailableSlotAcrossVehicles(
+        const { availableSlot, totalDuration } = findAutoPlacementSlot({
+          order: latestOrder ?? newOrder,
           vehicles,
           slots,
-          orderStartTime,
-          totalDuration,
-          preferExactTime,
-          operationStatuses
-        )
+          operationStatuses,
+        })
 
         if (availableSlot) {
           // スロットを作成
@@ -863,91 +787,21 @@ export function DispatchBoard() {
       onDragCancel={handleDragCancel}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-        {/* ヘッダー */}
-        <AppBar
-          position="fixed"
-          elevation={1}
-          sx={{
-            bgcolor: 'background.paper',
-            zIndex: (theme) => theme.zIndex.drawer + 1,
-            top: '45px',
+        <DispatchHeader
+          businessDayText={businessDayText}
+          earliestAvailableTime={earliestAvailableTime}
+          vehicles={vehicles}
+          onOpenSettings={() => {
+            if (vehicles.length === 0) return
+            if (vehicles.length === 1) {
+              setSelectedVehicleForStatus(vehicles[0])
+              setIsOperationStatusModalOpen(true)
+            } else {
+              setIsVehicleSelectDialogOpen(true)
+            }
           }}
-        >
-          <Toolbar
-            sx={{
-              justifyContent: 'space-between',
-              px: { xs: 2, sm: 3 },
-              py: 1.5,
-              width: '100%',
-              maxWidth: '100vw',
-            }}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography
-                variant="body2"
-                component="div"
-                sx={{
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1.2,
-                  fontSize: '0.875rem',
-                }}
-              >
-                {businessDayText}
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mt: 0.25 }}>
-                <Typography
-                  variant="caption"
-                  component="span"
-                  sx={{ color: 'text.secondary', fontSize: '0.75rem', fontWeight: 500 }}
-                >
-                  受付可能時間:
-                </Typography>
-                <Typography
-                  variant="h6"
-                  component="span"
-                  sx={{
-                    color: 'error.main',
-                    fontWeight: 700,
-                    fontSize: '1.25rem',
-                    whiteSpace: 'nowrap',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {earliestAvailableTime}
-                </Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, ml: 2, whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <Button
-                variant="outlined"
-                startIcon={<SettingsIcon />}
-                onClick={() => {
-                  // 車両選択ダイアログを表示
-                  if (vehicles.length === 0) return
-                  if (vehicles.length === 1) {
-                    // 車両が1台のみの場合は直接モーダルを開く
-                    setSelectedVehicleForStatus(vehicles[0])
-                    setIsOperationStatusModalOpen(true)
-                  } else {
-                    // 複数車両の場合は選択ダイアログを表示
-                    setIsVehicleSelectDialogOpen(true)
-                  }
-                }}
-                disabled={vehicles.length === 0}
-              >
-                設定
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setIsModalOpen(true)}
-              >
-                依頼
-              </Button>
-            </Box>
-          </Toolbar>
-        </AppBar>
+          onOpenOrderForm={() => setIsModalOpen(true)}
+        />
 
         {/* エラーメッセージ */}
         {error && (
@@ -1044,35 +898,16 @@ export function DispatchBoard() {
           onClose={() => setIsModalOpen(false)}
           onOrderCreated={handleOrderCreated}
         />
-        {/* 車両選択ダイアログ */}
-        <Dialog
+        <VehicleSelectDialog
           open={isVehicleSelectDialogOpen}
+          vehicles={vehicles}
           onClose={() => setIsVehicleSelectDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>車両を選択してください</DialogTitle>
-          <DialogContent>
-            <List>
-              {vehicles.map((vehicle) => (
-                <ListItem key={vehicle.id} disablePadding>
-                  <ListItemButton
-                    onClick={() => {
-                      setSelectedVehicleForStatus(vehicle)
-                      setIsVehicleSelectDialogOpen(false)
-                      setIsOperationStatusModalOpen(true)
-                    }}
-                  >
-                    <ListItemText primary={vehicle.name} />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setIsVehicleSelectDialogOpen(false)}>キャンセル</Button>
-          </DialogActions>
-        </Dialog>
+          onSelect={(vehicle) => {
+            setSelectedVehicleForStatus(vehicle)
+            setIsVehicleSelectDialogOpen(false)
+            setIsOperationStatusModalOpen(true)
+          }}
+        />
         <VehicleOperationStatusModal
           open={isOperationStatusModalOpen}
           onClose={() => {
