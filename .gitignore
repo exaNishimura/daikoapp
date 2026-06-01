@@ -22,6 +22,7 @@ excel-imports/**/*.xlsx
 excel-imports/**/*.xls
 excel-imports/**/*.xlsm
 excel-imports/**/*.csv
+excel-imports/_analysis-*.txt
 !excel-imports/**/*.sample.xlsx
 !excel-imports/**/*.sample.csv
 
