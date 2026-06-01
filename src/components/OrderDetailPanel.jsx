@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react'
-import { updateOrder, cancelOrder } from '@/services/orderService'
+import { useState, useEffect, useMemo } from 'react'
+import { updateOrder, cancelOrder, getOrderById } from '@/services/orderService'
 import { confirmSlot, createSlot } from '@/services/slotService'
 import { estimateDuration, calculateBuffer } from '@/services/routeService'
-import { getOrderById } from '@/services/orderService'
 import { getVehicles } from '@/services/vehicleService'
 import { supabase } from '@/lib/supabase'
-import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
 import {
   STATUS_LABELS,
@@ -15,6 +13,12 @@ import {
   getAdvanceStatus,
 } from '@/utils/orderStatusUtils'
 import { formatRouteCalculationError } from '@/lib/routeErrors'
+import {
+  saveOrderEdit,
+  recalculateOrderRoute,
+  confirmOrder,
+  revertOrderStatus,
+} from '@/lib/orderActions'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -55,6 +59,21 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
   const [calculatingWaitingDuration, setCalculatingWaitingDuration] = useState(false)
   const [loading, setLoading] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
+
+  // orderActions ヘルパーに渡す依存性をひとまとめに
+  const actionDeps = useMemo(
+    () => ({
+      supabase,
+      updateOrder,
+      getOrderById,
+      getVehicles,
+      estimateDuration,
+      calculateBuffer,
+      createSlot,
+      confirmSlot,
+    }),
+    []
+  )
 
   // 待機場所住所への所要時間を計算（車両の待機場所住所を使用）
   useEffect(() => {
@@ -102,55 +121,7 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
   const handleSave = async () => {
     setLoading(true)
     try {
-      const baseDurationMin = parseInt(formData.base_duration_min, 10)
-      const bufferMin = parseInt(formData.buffer_min, 10)
-      
-      const waypoints = formData.waypoints
-        .map((wp) => wp.trim())
-        .filter((wp) => wp.length > 0)
-
-        const updates = {
-          pickup_address: formData.pickup_address,
-          dropoff_address: formData.dropoff_address,
-          waypoints: waypoints.length > 0 ? waypoints : null,
-          contact_phone: formData.contact_phone || null,
-          car_model: formData.car_model || null,
-          car_plate: formData.car_plate || null,
-          car_color: formData.car_color || null,
-          parking_note: formData.parking_note || null,
-          base_duration_min: baseDurationMin,
-          buffer_min: bufferMin,
-          buffer_manual: true,
-        }
-      
-      // スロットが存在する場合は、関連するスロットのend_atを再計算
-      const { data: existingSlots } = await supabase
-        .from('dispatch_slots')
-        .select('*')
-        .eq('order_id', order.id)
-      
-      if (existingSlots && existingSlots.length > 0) {
-        const totalDuration = baseDurationMin + bufferMin
-        
-        for (const slot of existingSlots) {
-          // TENTATIVEのスロットのみ更新（CONFIRMEDのスロットは確定済みなので更新しない）
-          if (slot.status === 'TENTATIVE') {
-            const startAt = new Date(slot.start_at)
-            const endAt = new Date(startAt)
-            endAt.setMinutes(endAt.getMinutes() + totalDuration)
-            
-            await supabase
-              .from('dispatch_slots')
-              .update({ end_at: endAt.toISOString() })
-              .eq('id', slot.id)
-          }
-        }
-      }
-
-      const { data: updatedOrder, error } = await updateOrder(order.id, updates)
-
-      if (error) throw error
-
+      const updatedOrder = await saveOrderEdit({ order, formData, deps: actionDeps })
       onUpdate(updatedOrder)
       setEditing(false)
     } catch (error) {
@@ -164,213 +135,43 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
   const handleRecalculateRoute = async () => {
     setRecalculating(true)
     try {
-      // 出発地と目的地のバリデーション
-      if (!formData.pickup_address || !formData.pickup_address.trim()) {
-        alert('出発地を入力してください')
-        setRecalculating(false)
-        return
-      }
-
-      if (!formData.dropoff_address || !formData.dropoff_address.trim()) {
-        alert('目的地を入力してください')
-        setRecalculating(false)
-        return
-      }
-
-      const waypoints = formData.waypoints
-        .map((wp) => wp.trim())
-        .filter((wp) => wp.length > 0)
-
-      // 待機場所住所を取得（関連する車両の待機場所住所を使用、なければ最初の車両の待機場所住所）
-      let waitingLocationAddress = null
-      if (relatedVehicle?.waiting_location_address) {
-        waitingLocationAddress = relatedVehicle.waiting_location_address
-      } else {
-        try {
-          const { data: allVehicles } = await getVehicles()
-          if (allVehicles && allVehicles.length > 0) {
-            waitingLocationAddress = allVehicles[0].waiting_location_address || null
-          }
-        } catch (vehicleError) {
-          if (import.meta.env.DEV) {
-            console.error('Error fetching vehicles for waiting location:', vehicleError)
-          }
-        }
-      }
-
-      const { duration, error } = await estimateDuration(
-        formData.pickup_address.trim(),
-        formData.dropoff_address.trim(),
-        waypoints.length > 0 ? waypoints : null,
-        waitingLocationAddress
-      )
-
-      if (error) {
-        if (import.meta.env.DEV) {
-          console.error('Route calculation error:', error)
-        }
-        alert(formatRouteCalculationError(error))
-        setRecalculating(false)
-        return
-      }
-
-      if (!duration) {
-        alert('ルート計算の結果が取得できませんでした')
-        setRecalculating(false)
-        return
-      }
-
-      const buffer = calculateBuffer(duration)
-      const updates = {
-        base_duration_min: duration,
-        buffer_min: buffer,
-        buffer_manual: false,
-      }
-
-      const { data: updatedOrder, error: updateError } = await updateOrder(
-        order.id,
-        updates
-      )
-
-      if (updateError) {
-        if (import.meta.env.DEV) {
-          console.error('Failed to update order:', updateError)
-        }
-        throw updateError
-      }
-
-      setFormData((prev) => ({
-        ...prev,
-        buffer_min: buffer,
-      }))
-      onUpdate(updatedOrder)
-      
+      const result = await recalculateOrderRoute({
+        order,
+        formData,
+        relatedVehicle,
+        deps: actionDeps,
+      })
+      setFormData((prev) => ({ ...prev, buffer_min: result.buffer }))
+      onUpdate(result.order)
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Error recalculating route:', error)
       }
-      alert(`ルート再計算に失敗しました: ${error.message || error}`)
+      // estimateDuration 由来のエラーは Directions API のコードを含むので
+      // formatRouteCalculationError を通す。それ以外は素のメッセージで OK。
+      const cause = error.cause ?? error.message
+      const message =
+        typeof cause === 'string' && /API|REQUEST|RESULT|LIMIT|key/.test(cause)
+          ? formatRouteCalculationError(cause)
+          : `ルート再計算に失敗しました: ${error.message || error}`
+      alert(message)
     } finally {
       setRecalculating(false)
     }
   }
 
   const handleConfirm = async () => {
-    if (!confirm('この依頼を確定しますか？')) {
-      return
-    }
+    if (!confirm('この依頼を確定しますか？')) return
 
     setLoading(true)
     try {
-      // 依頼に関連するスロットを取得
-      const { data: existingSlots, error: slotsError } = await supabase
-        .from('dispatch_slots')
-        .select('*')
-        .eq('order_id', order.id)
-        .eq('status', 'TENTATIVE')
-
-      if (slotsError) {
-        throw slotsError
-      }
-
-      let slotsToConfirm = existingSlots || []
-
-      // スロットが存在しない場合（未割当の場合）、空き時間を見つけてスロットを作成
-      if (slotsToConfirm.length === 0) {
-        if (!vehicles || vehicles.length === 0) {
-          alert('車両が登録されていません')
-          setLoading(false)
-          return
-        }
-
-        // 最新の依頼データを取得
-        const { data: latestOrder, error: orderError } = await getOrderById(order.id)
-        if (orderError) {
-          throw orderError
-        }
-
-        // 所要時間を計算
-        const baseDuration = latestOrder?.base_duration_min || 30
-        const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
-        const totalDuration = baseDuration + buffer
-
-        // 開始時刻を決定（営業時間内なら現在時刻、営業時間外なら18:00）
-        const now = new Date()
-        const hours = now.getHours()
-        let orderStartTime
-
-        if (hours >= 18 || hours < 6) {
-          // 営業時間内の場合、現在時刻以降の空き時間を探す
-          orderStartTime = new Date(now)
-        } else {
-          // 営業時間外の場合、次の18:00
-          orderStartTime = new Date(now)
-          orderStartTime.setHours(18, 0, 0, 0)
-          orderStartTime.setMinutes(0, 0, 0)
-          if (hours >= 18) {
-            orderStartTime.setDate(orderStartTime.getDate() + 1)
-          }
-        }
-
-        // 最短の空き時間を見つける
-        const availableSlot = findEarliestAvailableSlotAcrossVehicles(
-          vehicles,
-          slots,
-          orderStartTime,
-          totalDuration
-        )
-
-        if (!availableSlot) {
-          alert('配置可能な時間が見つかりませんでした')
-          setLoading(false)
-          return
-        }
-
-        // スロットを作成
-        const endAt = new Date(availableSlot.startAt)
-        endAt.setMinutes(endAt.getMinutes() + totalDuration)
-
-        const { data: newSlot, error: createError } = await createSlot({
-          order_id: order.id,
-          vehicle_id: availableSlot.vehicleId,
-          start_at: availableSlot.startAt.toISOString(),
-          end_at: endAt.toISOString(),
-          status: 'TENTATIVE',
-        })
-
-        if (createError) {
-          throw createError
-        }
-
-        if (newSlot) {
-          slotsToConfirm = [newSlot]
-        } else {
-          alert('スロットの作成に失敗しました')
-          setLoading(false)
-          return
-        }
-      }
-
-      // すべてのスロットを確定
-      for (const slot of slotsToConfirm) {
-        const { error: confirmError } = await confirmSlot(slot.id)
-        if (confirmError) {
-          throw confirmError
-        }
-      }
-
-      // 依頼のステータスを更新
-      const { data: updatedOrder, error: updateError } = await updateOrder(order.id, {
-        status: 'CONFIRMED',
+      const updatedOrder = await confirmOrder({
+        order,
+        vehicles,
+        slots,
+        deps: actionDeps,
       })
-
-      if (updateError) {
-        throw updateError
-      }
-
-      // 親コンポーネントに更新を通知
       onUpdate(updatedOrder)
-      
       alert('確定しました')
     } catch (error) {
       console.error('Error confirming slot:', error)
@@ -388,51 +189,11 @@ export function OrderDetailPanel({ order, onUpdate, onDelete, onClose, vehicles 
       return
     }
 
-    if (!confirm(`${STATUS_LABELS[previousStatus]}に戻しますか？`)) {
-      return
-    }
+    if (!confirm(`${STATUS_LABELS[previousStatus]}に戻しますか？`)) return
 
     setLoading(true)
     try {
-      const { data: updatedOrder, error } = await updateOrder(order.id, {
-        status: previousStatus,
-      })
-
-      if (error) throw error
-
-      // スロットのステータスも更新（CONFIRMEDからTENTATIVEに戻す場合など）
-      if (order.status === 'CONFIRMED' && previousStatus === 'TENTATIVE') {
-        const { data: slots } = await supabase
-          .from('dispatch_slots')
-          .select('*')
-          .eq('order_id', order.id)
-          .eq('status', 'CONFIRMED')
-
-        if (slots && slots.length > 0) {
-          for (const slot of slots) {
-            await supabase
-              .from('dispatch_slots')
-              .update({ status: 'TENTATIVE' })
-              .eq('id', slot.id)
-          }
-        }
-      } else if (previousStatus === 'CONFIRMED') {
-        // 他のステータスからCONFIRMEDに戻す場合、スロットもCONFIRMEDに
-        const { data: slots } = await supabase
-          .from('dispatch_slots')
-          .select('*')
-          .eq('order_id', order.id)
-
-        if (slots && slots.length > 0) {
-          for (const slot of slots) {
-            await supabase
-              .from('dispatch_slots')
-              .update({ status: 'CONFIRMED' })
-              .eq('id', slot.id)
-          }
-        }
-      }
-
+      const updatedOrder = await revertOrderStatus({ order, deps: actionDeps })
       onUpdate(updatedOrder)
       alert('ステータスを戻しました')
     } catch (error) {
