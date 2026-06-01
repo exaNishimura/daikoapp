@@ -8,7 +8,9 @@ supabase/
 ├── migrations/               ← 公式 migration (Supabase CLI / MCP で適用)
 │   ├── 20260101000000_initial_schema.sql
 │   ├── 20260601125210_001_enable_rls.sql
-│   └── 20260601125210_001_enable_rls_rollback.sql
+│   ├── 20260601125210_001_enable_rls_rollback.sql
+│   ├── 20260602030000_add_receivable_billing_schema.sql
+│   └── 20260602030500_seed_receivable_billing.sql
 └── legacy/                   ← 旧 patch SQL (動作上の意味は initial_schema に統合済み)
     ├── schema.sql
     ├── add_*.sql
@@ -56,12 +58,61 @@ supabase/migrations/<UTC timestamp YYYYMMDDHHMMSS>_<snake_case_description>.sql
 
 ロールバックは同フォルダの `20260601125210_001_enable_rls_rollback.sql`。
 
+### `migrations/20260602030000_add_receivable_billing_schema.sql`
+
+`receivable-billing` 機能 (.kiro/specs/receivable-billing/) のスキーマ追加。
+8 テーブル + index + trigger + RLS:
+
+- `company_profile` (シングルトン)
+- `companies` (取引先マスタ)
+- `invoices` (請求書ヘッダ)
+- `accounts_receivable` (売掛明細)
+- `daily_sales` (日次売上集計、`total_sales` / `profit` は GENERATED 列)
+- `daily_staff_sales` (スタッフ別日次売上)
+- `staff_rates` (スタッフ単価マスタ)
+- `monthly_fixed_expenses` (月額固定経費)
+
+すべての RLS は `authenticated` のみ full access。`anon` は一切アクセス不可
+(売上・売掛は機密情報のため)。
+
+### `migrations/20260602030500_seed_receivable_billing.sql`
+
+上記スキーマの初期データ:
+
+- `company_profile`: 1 行 (運転代行 チョロ急 / 鈴鹿市平田 / インボイス T6810612966358 / 百五銀行)
+- `staff_rates`: 9 行 (チョロモン=歩合 0.300、井上 ¥1,150、伊藤 ¥1,300、西村 ¥1,300、たかし/しゅうや/山崎/臨時1 ¥1,100、臨時2 ¥1,000)
+- `companies`: 15 行 (2026/5 売掛シートから抽出した実取引先)
+
+全件 `ON CONFLICT DO NOTHING` で再実行安全。
+
+## Storage バケット (手動作成)
+
+`receivable-billing` 機能は発行済み請求書 .xlsx を Supabase Storage に保存する。
+MCP からはバケット作成 API が無いため、以下を Supabase Dashboard で手動実行する:
+
+1. Project → Storage → "New bucket"
+2. Name: `invoices`
+3. Public bucket: **OFF** (private)
+4. File size limit: 10 MB
+5. Allowed MIME types: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+
+ポリシーは Storage → Policies から:
+
+- `invoices` バケットに対し、`authenticated` ロールに `INSERT` / `SELECT` / `UPDATE` / `DELETE` を許可
+- `anon` は一切付与しない
+
+ファイルパスの命名規則: `invoices/YYYY/MM/{company_id}-{display_name}.xlsx`
+
 ## 新環境セットアップ手順 (例)
 
 1. 新しい Supabase プロジェクトを作る
-2. SQL Editor で `migrations/20260101000000_initial_schema.sql` を実行
-3. 続いて `migrations/20260601125210_001_enable_rls.sql` を実行
-4. Supabase Auth で管理者ユーザーを 1 人作る
+2. SQL Editor またはマイグレーション順に以下を実行
+   - `20260101000000_initial_schema.sql`
+   - `20260601125210_001_enable_rls.sql`
+   - `20260602030000_add_receivable_billing_schema.sql`
+   - `20260602030500_seed_receivable_billing.sql`
+3. Supabase Auth で管理者ユーザーを 1 人作る
+4. Storage で `invoices` バケットを上記手順で作成
 5. `vehicle_operation_status` / `shifts` / `employees` の初期データは
    アプリ UI 経由で投入
 
