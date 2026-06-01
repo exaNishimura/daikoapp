@@ -12,25 +12,29 @@
 
 ## 1. データベース基盤
 
-- [ ] 1.1 マイグレーション作成
-  - `supabase/migrations/20260602030000_add_receivable_billing.sql` を作成
-  - `company_profile` `companies` `accounts_receivable` `invoices` `daily_sales` `daily_staff_sales` `staff_rates` `monthly_fixed_expenses` の 8 テーブルを定義（design.md の Data Model に従う）
-  - `update_updated_at_column()` を全テーブルに適用
-  - RLS 有効化、`authenticated` ロールに full access のポリシー
-  - `accounts_receivable` の generated column / unique 制約 / 必要な index を作成
+- [x] 1.1 マイグレーション作成
+  - `supabase/migrations/20260602030000_add_receivable_billing_schema.sql` を作成（schema を seed と分離）
+  - 8 テーブル: `company_profile` `companies` `invoices` `accounts_receivable` `daily_sales` `daily_staff_sales` `staff_rates` `monthly_fixed_expenses`
+  - `daily_sales.total_sales` / `profit` は GENERATED ALWAYS AS ... STORED 列
+  - `accounts_receivable` は UNIQUE NULLS NOT DISTINCT で NULL 許容列込みの重複防止
+  - `billing_month` は CHECK で月初日のみ許容
+  - `update_updated_at_column()` トリガーを全テーブルに適用
+  - RLS 有効化、`authenticated` ロールに full access のポリシー（anon は一切不可）
+  - MCP `apply_migration` で本番に適用済み
   - _Requirements: 8.3, 8.4, NFR-1, NFR-2_
 
-- [ ] 1.2 (P) 初期データ seed
-  - `company_profile` に 1 行（source-prompt.md の自社固定情報）
-  - `staff_rates` に 9 行（design.md の表）
-  - `companies` に 15 行（source-prompt.md の取引先マスタ初期データ）
-  - すべて `INSERT ... ON CONFLICT DO NOTHING` で再実行安全
+- [x] 1.2 (P) 初期データ seed
+  - `supabase/migrations/20260602030500_seed_receivable_billing.sql`
+  - `company_profile` 1 行 / `staff_rates` 9 行 / `companies` 15 行
+  - すべて `ON CONFLICT DO NOTHING`
+  - MCP 適用後、SELECT count で 1 / 9 / 15 を確認
   - _Requirements: 1, 4.7, 7.4_
 
-- [ ] 1.3 Storage バケット作成
-  - Supabase コンソールで `invoices` バケット（private）を作成
-  - 該当ロールにアップロード/ダウンロード policy を設定
-  - 環境再現用に `supabase/README.md` に手順を追記
+- [x] 1.3 Storage バケット作成手順を文書化
+  - MCP に Storage 作成ツールが無いため、Supabase Dashboard 手動操作の手順を `supabase/README.md` に追記
+  - バケット名 `invoices`、private、10 MB 制限、xlsx mime、authenticated-only policy
+  - ファイルパス命名: `invoices/YYYY/MM/{company_id}-{display_name}.xlsx`
+  - **このタスクの実バケット作成はオーナー手動（請求書発行画面の実装直前で OK）**
   - _Requirements: 3.9_
 
 ---
