@@ -1,0 +1,10 @@
+dist
+node_modules
+package-lock.json
+excel-imports
+.kiro
+.agents
+.cursor
+.playwright-mcp
+*.md
+supabase
