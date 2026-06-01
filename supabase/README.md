@@ -10,7 +10,8 @@ supabase/
 │   ├── 20260601125210_001_enable_rls.sql
 │   ├── 20260601125210_001_enable_rls_rollback.sql
 │   ├── 20260602030000_add_receivable_billing_schema.sql
-│   └── 20260602030500_seed_receivable_billing.sql
+│   ├── 20260602030500_seed_receivable_billing.sql
+│   └── 20260602030500_add_invoice_rpc.sql
 └── legacy/                   ← 旧 patch SQL (動作上の意味は initial_schema に統合済み)
     ├── schema.sql
     ├── add_*.sql
@@ -85,6 +86,23 @@ supabase/migrations/<UTC timestamp YYYYMMDDHHMMSS>_<snake_case_description>.sql
 
 全件 `ON CONFLICT DO NOTHING` で再実行安全。
 
+### `migrations/20260602030500_add_invoice_rpc.sql`
+
+請求書発行・取消・入金記録の RPC 3 種:
+
+- `issue_invoice(company_id, billing_month, issue_date, total_amount, line_count, profile_snapshot, file_path)`
+  - 当月・当社の未請求売掛集計が引数と一致するかを検算 (`line_count` / `total_amount`)
+  - `invoices` insert + `accounts_receivable.invoice_id` を 1 トランザクションで一括更新
+  - 同月二重発行は `invoices.UNIQUE(company_id, billing_month)` で防止
+- `revoke_invoice(invoice_id)`
+  - 未入金 invoices を削除し、紐付いていた `accounts_receivable.invoice_id` を NULL に戻す
+  - 入金済の場合はエラー
+- `mark_invoice_paid(invoice_id, paid_at)`
+  - `invoices.paid_at` をセット (再入金は禁止)
+
+すべて `SECURITY INVOKER` (RLS は呼び出しユーザーに従う)、`authenticated` のみ
+EXECUTE 権限、`anon` / `PUBLIC` は REVOKE。
+
 ## Storage バケット (手動作成)
 
 `receivable-billing` 機能は発行済み請求書 .xlsx を Supabase Storage に保存する。
@@ -111,6 +129,7 @@ MCP からはバケット作成 API が無いため、以下を Supabase Dashboa
    - `20260601125210_001_enable_rls.sql`
    - `20260602030000_add_receivable_billing_schema.sql`
    - `20260602030500_seed_receivable_billing.sql`
+   - `20260602030500_add_invoice_rpc.sql`
 3. Supabase Auth で管理者ユーザーを 1 人作る
 4. Storage で `invoices` バケットを上記手順で作成
 5. `vehicle_operation_status` / `shifts` / `employees` の初期データは

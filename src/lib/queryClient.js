@@ -54,4 +54,49 @@ export const queryKeys = {
     all: ['vehicleOperations'],
     byDate: (date) => ['vehicleOperations', 'byDate', date],
   },
+
+  // ========================================
+  // Receivable / Billing 機能
+  // ========================================
+  companies: {
+    all: ['companies'],
+    list: (filters = {}) => ['companies', 'list', filters],
+    detail: (id) => ['companies', 'detail', id],
+  },
+  companyProfile: {
+    all: ['companyProfile'],
+    current: () => ['companyProfile', 'current'],
+  },
+  receivables: {
+    all: ['receivables'],
+    list: (filters = {}) => ['receivables', 'list', filters],
+    byMonth: (year, month) => ['receivables', 'byMonth', year, month],
+    unbilledByCompany: (year, month) =>
+      ['receivables', 'unbilledByCompany', year, month],
+  },
+  invoices: {
+    all: ['invoices'],
+    list: (filters = {}) => ['invoices', 'list', filters],
+    byMonth: (year, month) => ['invoices', 'byMonth', year, month],
+    unpaid: () => ['invoices', 'unpaid'],
+    detail: (id) => ['invoices', 'detail', id],
+  },
+  dailySales: {
+    all: ['dailySales'],
+    byMonth: (year, month) => ['dailySales', 'byMonth', year, month],
+    byDate: (date) => ['dailySales', 'byDate', date],
+  },
+  staffSales: {
+    all: ['staffSales'],
+    byMonth: (year, month) => ['staffSales', 'byMonth', year, month],
+    byDate: (date) => ['staffSales', 'byDate', date],
+  },
+  staffRates: {
+    all: ['staffRates'],
+    list: () => ['staffRates', 'list'],
+  },
+  fixedExpenses: {
+    all: ['fixedExpenses'],
+    byMonth: (year, month) => ['fixedExpenses', 'byMonth', year, month],
+  },
 }

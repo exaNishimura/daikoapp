@@ -108,38 +108,38 @@
 
 ## 3. データアクセス Hook 層
 
-- [ ] 3.1 queryKeys 拡張
+- [x] 3.1 queryKeys 拡張
   - `src/lib/queryClient.js` に `companies` `receivables` `invoices` `dailySales` `staffSales` `staffRates` `fixedExpenses` `companyProfile` のキー定義を追加
   - _Requirements: 既存方針_
 
-- [ ] 3.2 (P) `useCompanies`
+- [x] 3.2 (P) `useCompanies`
   - `src/hooks/billing/useCompanies.js`
   - `useCompanies()` `useCreateCompany()` `useUpdateCompany()` `useDeactivateCompany()` `useReorderCompanies()`
   - 各 mutation で関連クエリを invalidate
   - _Requirements: 1_
 
-- [ ] 3.3 (P) `useCompanyProfile`
+- [x] 3.3 (P) `useCompanyProfile`
   - `src/hooks/billing/useCompanyProfile.js`
   - `useCompanyProfile()` `useUpdateCompanyProfile()`
   - _Requirements: 7_
 
-- [ ] 3.4 (P) `useReceivables`
+- [x] 3.4 (P) `useReceivables`
   - `src/hooks/billing/useReceivables.js`
   - `useReceivables(filter)` `useCreateReceivable()` `useUpdateReceivable()` `useDeleteReceivable()`
   - filter は `{ month, companyId, invoiced, paid }`
   - _Requirements: 2_
 
-- [ ] 3.5 (P) `useDailySales` `useStaffSales` `useStaffRates`
+- [x] 3.5 (P) `useDailySales` `useStaffSales` `useStaffRates`
   - `src/hooks/billing/useDailySales.js` `useStaffSales.js` `useStaffRates.js`
   - upsert / fetch by yearMonth
   - _Requirements: 4_
 
-- [ ] 3.6 (P) `useFixedExpenses`
+- [x] 3.6 (P) `useFixedExpenses`
   - `src/hooks/billing/useFixedExpenses.js`
   - 月別 fetch、label 別 upsert
   - _Requirements: 4.7_
 
-- [ ] 3.7 `useInvoices` + 発行ロジック
+- [x] 3.7 `useInvoices` + 発行ロジック
   - `src/hooks/billing/useInvoices.js`
   - `useInvoices(filter)` `useUnpaidInvoices()` `useMarkInvoicePaid()`
   - `useIssueInvoices(monthlyParams)` は重い：
@@ -150,12 +150,13 @@
   - `useRevokeInvoice()` は逆操作
   - _Requirements: 3, 5_
 
-- [ ] 3.8 RPC: 請求書発行をサーバー側で原子化
+- [x] 3.8 RPC: 請求書発行をサーバー側で原子化
   - `supabase/migrations/20260602030500_add_invoice_rpc.sql` に
-    `issue_invoice(company_id, billing_month, total_amount, line_count, profile_snapshot)` RPC を追加
-    （内部で `invoices` insert → 当該 `accounts_receivable.invoice_id` 更新）
-  - クライアントは `supabase.rpc('issue_invoice', ...)` を呼ぶ
-  - 同月二重発行は unique 制約で防ぐ
+    `issue_invoice` `revoke_invoice` `mark_invoice_paid` の 3 RPC を追加
+    （`issue_invoice` は当月未請求の検算 → `invoices` insert → `accounts_receivable.invoice_id` 一括更新を 1 トランザクション）
+  - クライアントは `supabase.rpc('issue_invoice', ...)` を `invoicesService.issueInvoice` 経由で呼ぶ
+  - 同月二重発行は `invoices.UNIQUE(company_id, billing_month)` で防ぐ
+  - GRANT EXECUTE は authenticated のみ、anon と PUBLIC は REVOKE
   - _Requirements: 3.5, 3.6, NFR-1_
 
 ---
