@@ -47,7 +47,7 @@ describe('parseSalesWorkbook (real data: 202605)', () => {
       amount: 3000,
     })
 
-    // 5/18 白子→南旭が丘 ¥8,500 備考 "P1000円　一ノ宮経由"
+    // 5/18 白子→南旭が丘 ¥8,500 備考 "P1000円 一ノ宮経由"
     const may18 = suzutomo.find((x) => x.workDate.getDate() === 18)
     expect(may18).toMatchObject({
       departure: '白子',

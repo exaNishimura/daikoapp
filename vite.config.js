@@ -15,6 +15,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     css: false,
+    // *.integration.test.{js,jsx} は実 Excel ファイルや実 DB 依存のため
+    // 通常の `vitest run` (CI) では除外。手動実行は `npm run test:integration`。
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
+      '**/*.integration.test.{js,jsx}',
+    ],
   },
   server: {
     proxy: {
