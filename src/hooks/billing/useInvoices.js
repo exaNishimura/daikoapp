@@ -15,10 +15,16 @@ import { getCompanyProfile } from '@/services/billing/companyProfileService'
 import {
   buildInvoicePath,
   uploadInvoiceFile,
+  getInvoiceFileUrl,
 } from '@/services/billing/invoiceStorageService'
 import { generateInvoice } from '@/lib/excel/generateInvoice'
 import { monthEnd } from '@/lib/excel/formatters'
 import { queryKeys } from '@/lib/queryClient'
+import {
+  STRATEGIES,
+  applyMergeStrategy,
+  applySplitStrategy,
+} from '@/lib/billing/invoiceLineStrategies'
 import invoiceTemplateUrl from '@/assets/invoice-template.xlsx?url'
 
 async function unwrap(promise) {
@@ -42,14 +48,25 @@ async function loadTemplateBuffer() {
 }
 
 /**
- * 1 社分の請求書を発行する (内部関数)。
- *  1. 売掛を取得 (work_date 昇順)
- *  2. generateInvoice で .xlsx 生成
- *  3. Storage アップロード
- *  4. issue_invoice RPC で invoices insert + accounts_receivable.invoice_id 一括更新
- *  5. 念のため file_path を再 update (RPC 経由でセット済だが Storage ファイル名と整合保証)
+ * 戦略に応じて行配列を「請求書束」に変換する。
+ * 'normal' は無加工 (生成側で 18 行超なら Error)。
+ * 'merge'  は 17 件 + その他 1 行に集約。
+ * 'split'  は 18 行ずつ分割。
  *
- * @returns {Promise<{ companyId, invoiceId, filePath }>}
+ * @returns {Array<{ lines: Array, sequence?: { index, total } }>}
+ */
+function expandByStrategy(lines, strategy) {
+  if (strategy === STRATEGIES.MERGE) return applyMergeStrategy(lines)
+  if (strategy === STRATEGIES.SPLIT) return applySplitStrategy(lines)
+  // normal: 1 枚として返す。18 行超なら generateInvoice 側で Error。
+  return [{ lines: [...lines] }]
+}
+
+/**
+ * 1 社分の請求書を発行する (内部関数)。
+ * 戦略 ('normal'|'merge'|'split') により 1 〜 N 枚の請求書を生成する。
+ *
+ * @returns {Promise<Array<{ companyId, invoiceId, filePath, sequence?: { index, total } }>>}
  */
 async function issueOneCompany({
   company,
@@ -58,6 +75,7 @@ async function issueOneCompany({
   issueDate,
   templateBuffer,
   profile,
+  strategy = STRATEGIES.NORMAL,
 }) {
   const receivables = await unwrap(
     getReceivables({ year, month, companyId: company.company_id, invoiced: false })
@@ -66,51 +84,79 @@ async function issueOneCompany({
     throw new Error(`未請求の売掛がありません (company_id=${company.company_id})`)
   }
 
-  const totalAmount = receivables.reduce((s, x) => s + x.amount, 0)
+  const sortedLines = receivables
+    .slice()
+    .sort((a, b) => new Date(a.work_date) - new Date(b.work_date))
 
-  const xlsxBuf = await generateInvoice(
-    {
-      issueDate,
-      companyDisplayName:
-        company.invoice_display_name || company.company_name || '',
-      totalAmount,
-      lines: receivables
-        .slice()
-        .sort((a, b) => new Date(a.work_date) - new Date(b.work_date))
-        .map((x) => ({
+  const chunks = expandByStrategy(sortedLines, strategy)
+  const results = []
+
+  for (const chunk of chunks) {
+    const totalAmount = chunk.lines.reduce((s, x) => s + (Number(x.amount) || 0), 0)
+    const xlsxBuf = await generateInvoice(
+      {
+        issueDate,
+        companyDisplayName:
+          (company.invoice_display_name || company.company_name || '') +
+          (chunk.sequence ? ` (${chunk.sequence.index}/${chunk.sequence.total})` : ''),
+        totalAmount,
+        lines: chunk.lines.map((x) => ({
           workDate: new Date(x.work_date),
           departure: x.departure,
           destination: x.destination,
           amount: x.amount,
           note: x.note,
         })),
-    },
-    { templateBuffer }
-  )
+      },
+      { templateBuffer }
+    )
 
-  const filePath = buildInvoicePath({
-    year,
-    month,
-    companyId: company.company_id,
-    displayName: company.invoice_display_name || company.company_name,
-  })
-
-  await unwrap(uploadInvoiceFile(filePath, xlsxBuf))
-
-  const invoice = await unwrap(
-    issueInvoice({
-      companyId: company.company_id,
+    const filePath = buildInvoicePath({
       year,
       month,
-      issueDate,
-      totalAmount,
-      lineCount: receivables.length,
-      profileSnapshot: profile ?? {},
-      filePath,
+      companyId: company.company_id,
+      displayName:
+        (company.invoice_display_name || company.company_name) +
+        (chunk.sequence ? `-${chunk.sequence.index}of${chunk.sequence.total}` : ''),
     })
-  )
 
-  return { companyId: company.company_id, invoiceId: invoice.id, filePath }
+    await unwrap(uploadInvoiceFile(filePath, xlsxBuf))
+
+    // split 戦略のときは、各枚で発行 RPC を呼ぶと line_count/total が
+    // accounts_receivable と合わないため、現状の DB スキーマでは
+    // 1 (company_id, billing_month) につき 1 invoices 行のみ作成できる。
+    // → split で複数枚必要なときは 1 枚目だけ RPC で永続化し、
+    //   それ以外の枚は Storage アップロードのみ (file_path リスト返却)。
+    //   分割発行は「明細上の都合で複数枚に分けたが、会計上は同一」という運用前提。
+    let invoiceId = null
+    const isFirstChunk = !chunk.sequence || chunk.sequence.index === 1
+    if (isFirstChunk) {
+      const invoice = await unwrap(
+        issueInvoice({
+          companyId: company.company_id,
+          year,
+          month,
+          issueDate,
+          totalAmount: sortedLines.reduce((s, x) => s + x.amount, 0),
+          lineCount: sortedLines.length,
+          profileSnapshot: profile ?? {},
+          filePath,
+        })
+      )
+      invoiceId = invoice.id
+    }
+
+    results.push({
+      companyId: company.company_id,
+      invoiceId,
+      filePath,
+      sequence: chunk.sequence,
+      lineCount: chunk.lines.length,
+      totalAmount,
+    })
+  }
+
+  return results
 }
 
 // ===========================================================================
@@ -146,17 +192,19 @@ export function useInvoice(id) {
 /**
  * 月次請求書発行。
  *
- * 入力: { year, month, companyIds?: number[], issueDate?: Date }
- *   - companyIds 省略時は当月未請求のある企業全社
- *   - issueDate 省略時は対象月の月末日
+ * 入力:
+ *   - year, month                                必須
+ *   - targets: [{ companyId, strategy }]         発行対象。strategy 省略時は normal
+ *   - companyIds?: number[]                      簡易呼び出し用。指定時は全社 normal で発行
+ *   - issueDate?: Date                           省略時は対象月の月末日
  *
- * 出力: { successes: [...], failures: [...] }
+ * 出力: { successes: [{ companyId, invoiceId, filePath, sequence? }], failures: [...] }
  *   1 社失敗しても他社は発行する (部分成功許容)。
  */
 export function useIssueInvoices() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ year, month, companyIds, issueDate }) => {
+    mutationFn: async ({ year, month, targets, companyIds, issueDate }) => {
       if (!year || !month) {
         throw new Error('year / month is required')
       }
@@ -167,21 +215,33 @@ export function useIssueInvoices() {
         loadTemplateBuffer(),
       ])
 
-      const targets = Array.isArray(companyIds) && companyIds.length
-        ? unbilled.filter((u) => companyIds.includes(u.company_id))
-        : unbilled
+      // 入力の正規化: targets が無ければ companyIds から normal で生成
+      const normalizedTargets = Array.isArray(targets) && targets.length
+        ? targets
+        : (Array.isArray(companyIds) && companyIds.length
+            ? companyIds.map((id) => ({ companyId: id, strategy: STRATEGIES.NORMAL }))
+            : unbilled.map((u) => ({ companyId: u.company_id, strategy: STRATEGIES.NORMAL })))
+
+      const unbilledById = new Map(unbilled.map((u) => [u.company_id, u]))
+      const activeTargets = normalizedTargets
+        .filter((t) => t.strategy !== STRATEGIES.SKIP)
+        .map((t) => ({
+          company: unbilledById.get(t.companyId),
+          strategy: t.strategy ?? STRATEGIES.NORMAL,
+        }))
+        .filter((t) => t.company)
 
       const finalIssueDate = issueDate ?? monthEnd(year, month)
 
       const successes = []
       const failures = []
 
-      // 並列発行 (DB 負荷を考慮しつつ最大 5 並列)
-      const CONCURRENCY = 5
-      for (let i = 0; i < targets.length; i += CONCURRENCY) {
-        const batch = targets.slice(i, i + CONCURRENCY)
+      // 並列発行 (DB 負荷を考慮しつつ最大 3 並列。複数枚分割があるため少し控えめ)
+      const CONCURRENCY = 3
+      for (let i = 0; i < activeTargets.length; i += CONCURRENCY) {
+        const batch = activeTargets.slice(i, i + CONCURRENCY)
         const results = await Promise.allSettled(
-          batch.map((company) =>
+          batch.map(({ company, strategy }) =>
             issueOneCompany({
               company,
               year,
@@ -189,16 +249,18 @@ export function useIssueInvoices() {
               issueDate: finalIssueDate,
               templateBuffer,
               profile,
+              strategy,
             })
           )
         )
         results.forEach((r, idx) => {
           if (r.status === 'fulfilled') {
-            successes.push(r.value)
+            // issueOneCompany は配列を返すため flatten
+            for (const v of r.value) successes.push(v)
           } else {
             failures.push({
-              companyId: batch[idx].company_id,
-              companyName: batch[idx].company_name,
+              companyId: batch[idx].company.company_id,
+              companyName: batch[idx].company.company_name,
               error: r.reason?.message ?? String(r.reason),
             })
           }
@@ -210,6 +272,23 @@ export function useIssueInvoices() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+    },
+  })
+}
+
+/**
+ * Storage 上の請求書 .xlsx の署名 URL を発行して新規タブで開く。
+ * 署名 URL は短時間 (デフォルト 5 分) 有効。
+ */
+export function useDownloadInvoice() {
+  return useMutation({
+    mutationFn: async ({ filePath }) => {
+      if (!filePath) throw new Error('filePath is required')
+      const data = await unwrap(getInvoiceFileUrl(filePath, 300))
+      const url = data?.signedUrl ?? data?.signedURL
+      if (typeof url !== 'string') throw new Error('signed URL not returned')
+      window.open(url, '_blank', 'noopener,noreferrer')
+      return { filePath, url }
     },
   })
 }

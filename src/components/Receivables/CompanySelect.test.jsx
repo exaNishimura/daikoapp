@@ -1,0 +1,109 @@
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { CompanySelect } from './CompanySelect'
+
+const companies = [
+  {
+    id: 1,
+    name: '株式会社 鈴友',
+    invoice_display_name: '株式会社 鈴友',
+    aliases: ['鈴友', '(株)鈴友'],
+    is_active: true,
+  },
+  {
+    id: 2,
+    name: '田中商店',
+    invoice_display_name: null,
+    aliases: ['田中'],
+    is_active: true,
+  },
+  {
+    id: 3,
+    name: '休止クライアント',
+    invoice_display_name: null,
+    aliases: [],
+    is_active: false,
+  },
+]
+
+describe('CompanySelect', () => {
+  it('renders selected company by id', () => {
+    render(<CompanySelect companies={companies} value={1} onChange={() => {}} />)
+    expect(screen.getByDisplayValue('株式会社 鈴友')).toBeInTheDocument()
+  })
+
+  it('renders empty when value is null', () => {
+    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    expect(screen.getByRole('combobox')).toHaveValue('')
+  })
+
+  it('filters options by alias (鈴友 hits 株式会社 鈴友)', async () => {
+    const user = userEvent.setup()
+    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.type(input, '鈴友')
+
+    expect(screen.getByText('株式会社 鈴友')).toBeInTheDocument()
+    expect(screen.queryByText('田中商店')).not.toBeInTheDocument()
+  })
+
+  it('filters options by name fragment', async () => {
+    const user = userEvent.setup()
+    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.type(input, '田中')
+
+    expect(screen.getByText('田中商店')).toBeInTheDocument()
+    expect(screen.queryByText('株式会社 鈴友')).not.toBeInTheDocument()
+  })
+
+  it('hides inactive companies by default', async () => {
+    const user = userEvent.setup()
+    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+
+    expect(screen.queryByText('休止クライアント')).not.toBeInTheDocument()
+  })
+
+  it('shows inactive companies with (無効) badge when includeInactive', async () => {
+    const user = userEvent.setup()
+    render(
+      <CompanySelect
+        companies={companies}
+        value={null}
+        onChange={() => {}}
+        includeInactive
+      />
+    )
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+
+    expect(screen.getByText('休止クライアント')).toBeInTheDocument()
+    expect(screen.getByText('(無効)')).toBeInTheDocument()
+  })
+
+  it('calls onChange with selected company id', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<CompanySelect companies={companies} value={null} onChange={onChange} />)
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.click(screen.getByText('田中商店'))
+
+    expect(onChange).toHaveBeenCalledWith(2)
+  })
+
+  it('calls onChange with null when cleared', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<CompanySelect companies={companies} value={1} onChange={onChange} />)
+    const clearBtn = screen.getByLabelText('Clear')
+    await user.click(clearBtn)
+
+    expect(onChange).toHaveBeenCalledWith(null)
+  })
+})

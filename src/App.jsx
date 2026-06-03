@@ -6,6 +6,12 @@ import { ShiftEditPage } from '@/components/ShiftEditPage'
 import { EmployeeManagement } from '@/components/EmployeeManagement'
 import { LoginPage } from '@/components/LoginPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { CompaniesPage } from '@/pages/Receivables/CompaniesPage'
+import { CompanyProfilePage } from '@/pages/Receivables/CompanyProfilePage'
+import { ReceivablesListPage } from '@/pages/Receivables/ReceivablesListPage'
+import { DailySalesPage } from '@/pages/Receivables/DailySalesPage'
+import { InvoicesPage } from '@/pages/Receivables/InvoicesPage'
+import { ReceivablesImportPage } from '@/pages/Receivables/ReceivablesImportPage'
 import Button from '@mui/material/Button'
 import './App.css'
 
@@ -55,6 +61,36 @@ function NavBar() {
               style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
             >
               従業員管理
+            </Link>
+            <Link
+              to="/admin/sales"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
+              日次売上
+            </Link>
+            <Link
+              to="/admin/receivables"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
+              売掛
+            </Link>
+            <Link
+              to="/admin/invoices"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
+              請求書
+            </Link>
+            <Link
+              to="/admin/companies"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
+              取引先マスタ
+            </Link>
+            <Link
+              to="/admin/company-profile"
+              style={{ color: '#fff', marginRight: '20px', textDecoration: 'none' }}
+            >
+              自社情報
             </Link>
           </>
         )}
@@ -112,6 +148,54 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <EmployeeManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sales"
+          element={
+            <ProtectedRoute>
+              <DailySalesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/receivables"
+          element={
+            <ProtectedRoute>
+              <ReceivablesListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/invoices"
+          element={
+            <ProtectedRoute>
+              <InvoicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/receivables/import"
+          element={
+            <ProtectedRoute>
+              <ReceivablesImportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/companies"
+          element={
+            <ProtectedRoute>
+              <CompaniesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/company-profile"
+          element={
+            <ProtectedRoute>
+              <CompanyProfilePage />
             </ProtectedRoute>
           }
         />

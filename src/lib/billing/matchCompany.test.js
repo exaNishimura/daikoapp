@@ -1,110 +1,91 @@
 import { describe, expect, it } from 'vitest'
-import { matchCompany, normalize } from './matchCompany'
+import { matchCompany, findCandidateCompanies } from './matchCompany'
 
-const COMPANIES = [
-  { id: 1, name: '徳丸', aliases: [] },
-  { id: 2, name: '三重パーツ', aliases: [] },
-  {
-    id: 10,
-    name: '鈴友',
-    aliases: ['株式会社 鈴友', '(株)鈴友', '㈱鈴友'],
-    invoice_display_name: '株式会社 鈴友',
-  },
-  { id: 12, name: '（株）ＵＥＴＡＫＡ', aliases: ['ＵＥＴＡＫＡ', 'UETAKA', '(株)UETAKA'] },
-  { id: 14, name: 'Biss', aliases: [] },
-  { id: 15, name: 'ゾンテック（株）', aliases: ['ゾンテック', 'ゾンテック株式会社'] },
+const companies = [
+  { id: 1, name: '鈴友', invoice_display_name: '鈴友株式会社', aliases: ['鈴友', '鈴友(株)'], is_active: true },
+  { id: 2, name: '田中商事', invoice_display_name: null, aliases: ['田中'], is_active: true },
+  { id: 3, name: '山田運輸', invoice_display_name: null, aliases: [], is_active: false },
+  { id: 4, name: 'スズトモ商店', invoice_display_name: null, aliases: [], is_active: true },
 ]
 
 describe('matchCompany', () => {
-  it('exact name match', () => {
-    const r = matchCompany('徳丸', COMPANIES)
-    expect(r.companyId).toBe(1)
-    expect(r.confidence).toBe('exact')
-    expect(r.candidates).toHaveLength(1)
+  it('returns null for empty / null input', () => {
+    expect(matchCompany(null, companies)).toBeNull()
+    expect(matchCompany('', companies)).toBeNull()
+    expect(matchCompany('   ', companies)).toBeNull()
   })
 
-  it('alias match', () => {
-    const r = matchCompany('株式会社 鈴友', COMPANIES)
-    expect(r.companyId).toBe(10)
-    expect(r.confidence).toBe('alias')
+  it('returns exact name match (highest priority)', () => {
+    const m = matchCompany('鈴友', companies)
+    expect(m).toMatchObject({ matched: true, kind: 'name', company: { id: 1 } })
   })
 
-  it('normalized match: full-width parens / law-prefix variants', () => {
-    expect(matchCompany('(株)鈴友', COMPANIES).companyId).toBe(10)
-    expect(matchCompany('㈱鈴友', COMPANIES).companyId).toBe(10)
-    expect(matchCompany('株式会社鈴友', COMPANIES).companyId).toBe(10)
-    expect(matchCompany('株式会社  鈴友', COMPANIES).companyId).toBe(10)
+  it('returns alias match when name does not match exactly', () => {
+    const m = matchCompany('鈴友(株)', companies)
+    expect(m).toMatchObject({ matched: true, kind: 'alias', company: { id: 1 } })
   })
 
-  it('trims trailing whitespace', () => {
-    expect(matchCompany('鈴友 ', COMPANIES).companyId).toBe(10)
-    expect(matchCompany('  鈴友', COMPANIES).companyId).toBe(10)
+  it('returns invoice_display_name match', () => {
+    const m = matchCompany('鈴友株式会社', companies)
+    expect(m).toMatchObject({ matched: true, kind: 'invoice_display_name', company: { id: 1 } })
   })
 
-  it('handles full-width / half-width Latin letters', () => {
-    expect(matchCompany('UETAKA', COMPANIES).companyId).toBe(12)
-    expect(matchCompany('uetaka', COMPANIES).companyId).toBe(12)
-    expect(matchCompany('ＵＥＴＡＫＡ', COMPANIES).companyId).toBe(12)
-    expect(matchCompany('（株）UETAKA', COMPANIES).companyId).toBe(12)
+  it('trims input', () => {
+    const m = matchCompany('  田中商事  ', companies)
+    expect(m).toMatchObject({ matched: true, company: { id: 2 } })
   })
 
-  it('case-insensitive', () => {
-    expect(matchCompany('biss', COMPANIES).companyId).toBe(14)
-    expect(matchCompany('BISS', COMPANIES).companyId).toBe(14)
+  it('returns matched=false with candidates when partial match exists', () => {
+    const m = matchCompany('スズトモ', companies)
+    expect(m.matched).toBe(false)
+    expect(m.candidates.map((c) => c.id)).toContain(4)
   })
 
-  it('handles suffix variations of "ゾンテック（株）"', () => {
-    expect(matchCompany('ゾンテック', COMPANIES).companyId).toBe(15)
-    expect(matchCompany('ゾンテック株式会社', COMPANIES).companyId).toBe(15)
-    expect(matchCompany('ゾンテック(株)', COMPANIES).companyId).toBe(15)
+  it('returns matched=false with no candidates for truly unknown', () => {
+    const m = matchCompany('完全不明株式会社', companies)
+    expect(m.matched).toBe(false)
+    expect(m.candidates).toEqual([])
   })
 
-  it('returns null when no match', () => {
-    const r = matchCompany('未登録会社', COMPANIES)
-    expect(r.companyId).toBeNull()
-    expect(r.confidence).toBeNull()
-    expect(r.candidates).toEqual([])
+  it('skips inactive companies in candidate suggestions when activeOnly=true', () => {
+    const m = matchCompany('山田', companies, { activeOnly: true })
+    expect(m.matched).toBe(false)
+    expect(m.candidates.find((c) => c.id === 3)).toBeUndefined()
   })
 
-  it('returns null for empty input', () => {
-    expect(matchCompany('', COMPANIES).companyId).toBeNull()
-    expect(matchCompany(null, COMPANIES).companyId).toBeNull()
-    expect(matchCompany('   ', COMPANIES).companyId).toBeNull()
-  })
-
-  it('returns null companyId with multiple candidates when ambiguous', () => {
-    const ambig = [
-      { id: 1, name: 'テスト', aliases: ['テスト株式会社'] },
-      { id: 2, name: 'テスト株式会社', aliases: [] },
-    ]
-    // both normalize to "テスト"
-    const r = matchCompany('テスト', ambig)
-    // exact match に "テスト" がヒットするので companyId=1 のはず
-    expect(r.companyId).toBe(1)
-    expect(r.confidence).toBe('exact')
-
-    // exact が無い別の値で試す
-    const r2 = matchCompany('テスト(株)', ambig)
-    expect(r2.companyId).toBeNull()
-    expect(r2.candidates.length).toBeGreaterThanOrEqual(2)
+  it('includes inactive companies by default', () => {
+    const m = matchCompany('山田運輸', companies)
+    expect(m.matched).toBe(true)
+    expect(m.company.id).toBe(3)
   })
 })
 
-describe('normalize', () => {
-  it('drops legal prefixes and suffixes', () => {
-    expect(normalize('株式会社鈴友')).toBe('鈴友')
-    expect(normalize('鈴友株式会社')).toBe('鈴友')
-    expect(normalize('(株)鈴友')).toBe('鈴友')
-    expect(normalize('㈱鈴友')).toBe('鈴友')
+describe('findCandidateCompanies', () => {
+  it('returns substring matches sorted by length', () => {
+    const result = findCandidateCompanies('鈴', companies)
+    expect(result.map((c) => c.id)).toContain(1)
+    // 短い名前ほど前
+    expect(result[0].id).toBe(1)
   })
 
-  it('NFKC normalizes full-width letters', () => {
-    expect(normalize('ＵＥＴＡＫＡ')).toBe('uetaka')
-    expect(normalize('（株）ＵＥＴＡＫＡ')).toBe('uetaka')
+  it('returns empty for empty input', () => {
+    expect(findCandidateCompanies('', companies)).toEqual([])
+    expect(findCandidateCompanies(null, companies)).toEqual([])
   })
 
-  it('strips all whitespace including full-width', () => {
-    expect(normalize('株式会社  鈴友')).toBe('鈴友')
-    expect(normalize('株式会社\u3000鈴友')).toBe('鈴友')
+  it('matches alias prefixes too', () => {
+    const result = findCandidateCompanies('田', companies)
+    expect(result.find((c) => c.id === 2)).toBeDefined()
+  })
+
+  it('limits result count', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      id: i + 100,
+      name: `テスト${i}`,
+      aliases: [],
+      is_active: true,
+    }))
+    const result = findCandidateCompanies('テスト', many, { limit: 5 })
+    expect(result).toHaveLength(5)
   })
 })
