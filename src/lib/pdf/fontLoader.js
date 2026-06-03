@@ -20,10 +20,18 @@ function arrayBufferToBase64(buffer) {
 }
 
 async function fetchAsBase64(url) {
+  const t0 = performance.now()
   const res = await fetch(url)
   if (!res.ok) throw new Error(`fontLoader: failed to fetch ${url} (${res.status})`)
   const buf = await res.arrayBuffer()
-  return arrayBufferToBase64(buf)
+  const t1 = performance.now()
+  const b64 = arrayBufferToBase64(buf)
+  const t2 = performance.now()
+  console.log(
+    `[fontLoader] ${url} ${(buf.byteLength / 1024 / 1024).toFixed(2)}MB ` +
+      `fetch=${Math.round(t1 - t0)}ms b64=${Math.round(t2 - t1)}ms`
+  )
+  return b64
 }
 
 /**

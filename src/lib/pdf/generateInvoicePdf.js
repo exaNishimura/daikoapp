@@ -447,12 +447,13 @@ export async function generateInvoicePdf(data, options) {
     )
   }
 
+  const tAssets = performance.now()
   const [vfs, sealDataUri] = await Promise.all([
     loadJapaneseFontVfs(),
     loadSealDataUri(),
   ])
+  console.log(`[generateInvoicePdf] assets ready in ${Math.round(performance.now() - tAssets)}ms`)
 
-  // pdfmake の標準 API: fonts / vfs はグローバルに設定してから createPdf を呼ぶ
   pdfMake.vfs = vfs
   pdfMake.fonts = PDF_FONTS
 
@@ -462,22 +463,36 @@ export async function generateInvoicePdf(data, options) {
     sealDataUri,
   })
 
+  const tCreate = performance.now()
   const pdfDoc = pdfMake.createPdf(docDef)
   return new Promise((resolve, reject) => {
-    pdfDoc.getBuffer((buffer) => {
-      if (!buffer) {
-        reject(new Error('generateInvoicePdf: getBuffer returned empty'))
-        return
-      }
-      // pdfmake は Uint8Array 互換 Buffer を返すので ArrayBuffer に揃える
-      const ab =
-        buffer.buffer instanceof ArrayBuffer
-          ? buffer.buffer.slice(
-              buffer.byteOffset ?? 0,
-              (buffer.byteOffset ?? 0) + buffer.byteLength
-            )
-          : buffer
-      resolve(ab)
-    })
+    const timeout = setTimeout(() => {
+      reject(new Error('generateInvoicePdf: getBuffer timed out after 60s'))
+    }, 60000)
+    try {
+      pdfDoc.getBuffer((buffer) => {
+        clearTimeout(timeout)
+        console.log(
+          `[generateInvoicePdf] getBuffer done in ${Math.round(performance.now() - tCreate)}ms ` +
+            `(${buffer ? buffer.byteLength : 0} bytes)`
+        )
+        if (!buffer) {
+          reject(new Error('generateInvoicePdf: getBuffer returned empty'))
+          return
+        }
+        const ab =
+          buffer.buffer instanceof ArrayBuffer
+            ? buffer.buffer.slice(
+                buffer.byteOffset ?? 0,
+                (buffer.byteOffset ?? 0) + buffer.byteLength
+              )
+            : buffer
+        resolve(ab)
+      })
+    } catch (err) {
+      clearTimeout(timeout)
+      console.error('[generateInvoicePdf] createPdf/getBuffer threw:', err)
+      reject(err)
+    }
   })
 }
