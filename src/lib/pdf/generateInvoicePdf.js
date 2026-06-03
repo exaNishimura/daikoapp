@@ -129,7 +129,7 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
 
   return {
     pageSize: 'A4',
-    pageMargins: [32, 28, 32, 28],
+    pageMargins: [32, 22, 32, 22],
 
     content: [
       // -------- Header banner --------
@@ -143,15 +143,15 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
                 fillColor: COLOR.bannerBg,
                 color: '#FFFFFF',
                 bold: true,
-                fontSize: 22,
+                fontSize: 20,
                 alignment: 'center',
-                margin: [0, 8, 0, 8],
+                margin: [0, 6, 0, 6],
               },
               {
                 text: `請求日：${formatJpDate(data.issueDate)}`,
                 alignment: 'right',
                 fontSize: 10,
-                margin: [0, 18, 4, 0],
+                margin: [0, 14, 4, 0],
               },
             ],
           ],
@@ -161,18 +161,18 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
 
       // -------- Customer + Vendor info --------
       {
-        margin: [0, 12, 0, 0],
+        margin: [0, 6, 0, 0],
         columns: [
           {
             width: '*',
             stack: [
               {
                 text: [
-                  { text: data.companyDisplayName, fontSize: 16 },
-                  { text: '   御中', fontSize: 12 },
+                  { text: data.companyDisplayName, fontSize: 15 },
+                  { text: '   御中', fontSize: 11 },
                 ],
-                alignment: 'center',
-                margin: [0, 14, 0, 0],
+                alignment: 'left',
+                margin: [4, 8, 0, 0],
                 decoration: 'underline',
               },
             ],
@@ -180,13 +180,13 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
           {
             width: 220,
             stack: [
-              { text: profile?.name ?? '', bold: true, fontSize: 11 },
-              { text: `〒 ${profile?.postal_code ?? ''}`, fontSize: 9 },
-              { text: profile?.address ?? '', fontSize: 9 },
+              { text: profile?.name ?? '', bold: true, fontSize: 10 },
+              { text: `〒 ${profile?.postal_code ?? ''}`, fontSize: 8 },
+              { text: profile?.address ?? '', fontSize: 8 },
               {
                 text: `登録番号：${profile?.invoice_number ?? ''}`,
-                fontSize: 9,
-                margin: [0, 2, 0, 0],
+                fontSize: 8,
+                margin: [0, 1, 0, 0],
               },
             ],
           },
@@ -196,26 +196,28 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
       // -------- Seal image overlay --------
       {
         image: sealDataUri,
-        width: 52,
-        absolutePosition: { x: 470, y: 78 },
+        width: 30,
+        height: 30,
+        absolutePosition: { x: 492, y: 80 },
       },
 
       // -------- Greeting --------
       {
         text: '毎度ありがとうございます。',
         fontSize: 9,
-        margin: [0, 16, 0, 0],
+        margin: [0, 8, 0, 0],
       },
       {
         text: '下記の通りご請求申し上げます。',
         fontSize: 9,
-        margin: [0, 0, 0, 6],
+        margin: [0, 0, 0, 4],
       },
 
       // -------- Total amount box --------
+      // ラベル(青背景) + 金額 を 1 つの太枠で囲ってひとまとまりに見せる
       {
         table: {
-          widths: [140, '*'],
+          widths: [120, '*'],
           body: [
             [
               {
@@ -223,26 +225,31 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
                 fillColor: COLOR.totalBoxBg,
                 color: '#FFFFFF',
                 alignment: 'center',
-                fontSize: 13,
+                fontSize: 12,
                 bold: true,
-                margin: [0, 6, 0, 6],
+                margin: [0, 4, 0, 4],
               },
               {
                 text: `${formatYen(totalAmount)}-`,
-                fontSize: 18,
+                fontSize: 16,
                 bold: true,
                 alignment: 'center',
-                margin: [0, 4, 0, 0],
+                margin: [0, 3, 0, 0],
               },
             ],
           ],
         },
-        layout: 'noBorders',
+        layout: {
+          hLineWidth: (i, node) => (i === 0 || i === node.table.body.length ? 1.2 : 0),
+          vLineWidth: (i, node) => (i === 0 || i === node.table.widths.length ? 1.2 : 0),
+          hLineColor: () => COLOR.bannerBg,
+          vLineColor: () => COLOR.bannerBg,
+        },
       },
 
       // -------- Lines table --------
       {
-        margin: [0, 8, 0, 0],
+        margin: [0, 4, 0, 0],
         table: {
           headerRows: 1,
           widths: [22, 60, 50, 80, 80, 70, '*'],
@@ -313,14 +320,14 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
           vLineWidth: () => 0.4,
           hLineColor: () => '#9FB7D6',
           vLineColor: () => '#9FB7D6',
-          paddingTop: () => 5,
-          paddingBottom: () => 5,
+          paddingTop: () => 2.5,
+          paddingBottom: () => 2.5,
         },
       },
 
       // -------- Tax breakdown --------
       {
-        margin: [0, 6, 0, 0],
+        margin: [0, 4, 0, 0],
         columns: [
           { width: '*', text: '' },
           {
@@ -372,19 +379,19 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
               vLineWidth: () => 0.4,
               hLineColor: () => '#9FB7D6',
               vLineColor: () => '#9FB7D6',
-              paddingTop: () => 6,
-              paddingBottom: () => 6,
+              paddingTop: () => 3,
+              paddingBottom: () => 3,
             },
           },
         ],
       },
 
       // -------- Remarks --------
-      { text: '備考欄', fontSize: 8, margin: [0, 16, 0, 0] },
+      { text: '備考欄', fontSize: 8, margin: [0, 8, 0, 0] },
 
       // -------- Bank info --------
       {
-        margin: [0, 16, 0, 0],
+        margin: [0, 8, 0, 0],
         canvas: [
           {
             type: 'line',
@@ -399,12 +406,12 @@ function buildDocDefinition({ data, profile, sealDataUri }) {
       },
       {
         text: 'お支払いは現金、または下記の口座にお振込みください',
-        fontSize: 9,
-        margin: [0, 6, 0, 2],
+        fontSize: 8,
+        margin: [0, 4, 0, 1],
       },
       {
         text: `${profile?.bank ?? ''}　${profile?.bank_branch ?? ''}　${profile?.bank_account_type ?? ''} ${profile?.bank_account_number ?? ''}　口座名義：${profile?.bank_account_holder ?? ''}`,
-        fontSize: 9,
+        fontSize: 8,
       },
     ],
 
@@ -467,34 +474,19 @@ export async function generateInvoicePdf(data, options) {
 
   const tCreate = performance.now()
   const pdfDoc = pdfMake.createPdf(docDef)
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('generateInvoicePdf: getBuffer timed out after 60s'))
-    }, 60000)
-    try {
-      pdfDoc.getBuffer((buffer) => {
-        clearTimeout(timeout)
-        console.log(
-          `[generateInvoicePdf] getBuffer done in ${Math.round(performance.now() - tCreate)}ms ` +
-            `(${buffer ? buffer.byteLength : 0} bytes)`
-        )
-        if (!buffer) {
-          reject(new Error('generateInvoicePdf: getBuffer returned empty'))
-          return
-        }
-        const ab =
-          buffer.buffer instanceof ArrayBuffer
-            ? buffer.buffer.slice(
-                buffer.byteOffset ?? 0,
-                (buffer.byteOffset ?? 0) + buffer.byteLength
-              )
-            : buffer
-        resolve(ab)
-      })
-    } catch (err) {
-      clearTimeout(timeout)
-      console.error('[generateInvoicePdf] createPdf/getBuffer threw:', err)
-      reject(err)
-    }
-  })
+  // pdfmake 0.3.x の getBuffer() は Promise<Buffer> を返す (旧 0.2.x の callback API ではない)
+  const buffer = await pdfDoc.getBuffer()
+  console.log(
+    `[generateInvoicePdf] getBuffer done in ${Math.round(performance.now() - tCreate)}ms ` +
+      `(${buffer ? buffer.byteLength : 0} bytes)`
+  )
+  if (!buffer) {
+    throw new Error('generateInvoicePdf: getBuffer returned empty')
+  }
+  return buffer.buffer instanceof ArrayBuffer
+    ? buffer.buffer.slice(
+        buffer.byteOffset ?? 0,
+        (buffer.byteOffset ?? 0) + buffer.byteLength
+      )
+    : buffer
 }

@@ -34,16 +34,16 @@ async function unwrap(promise) {
 
 /**
  * 戦略に応じて行配列を「請求書束」に変換する。
- * 'normal' は無加工 (生成側で 18 行超なら Error)。
- * 'merge'  は 17 件 + その他 1 行に集約。
- * 'split'  は 18 行ずつ分割。
+ * 'normal' は無加工 (生成側で INVOICE_MAX_LINES 行超なら Error)。
+ * 'merge'  は (INVOICE_MAX_LINES-1) 件 + その他 1 行に集約。
+ * 'split'  は INVOICE_MAX_LINES 行ずつ分割。
  *
  * @returns {Array<{ lines: Array, sequence?: { index, total } }>}
  */
 function expandByStrategy(lines, strategy) {
   if (strategy === STRATEGIES.MERGE) return applyMergeStrategy(lines)
   if (strategy === STRATEGIES.SPLIT) return applySplitStrategy(lines)
-  // normal: 1 枚として返す。18 行超なら generateInvoice 側で Error。
+  // normal: 1 枚として返す。INVOICE_MAX_LINES 行超なら generateInvoice 側で Error。
   return [{ lines: [...lines] }]
 }
 
@@ -261,6 +261,72 @@ export function useIssueInvoices() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+    },
+  })
+}
+
+/**
+ * 1 社分の請求書をプレビュー用に生成する。
+ * Storage への upload も DB の issueInvoice RPC も呼ばず、PDF Blob だけ返す。
+ * split 戦略で複数枚出る場合は配列で全枚分返す。
+ */
+export function usePreviewInvoice() {
+  return useMutation({
+    mutationFn: async ({ year, month, companyId, strategy = STRATEGIES.NORMAL, issueDate }) => {
+      if (!year || !month || !companyId) {
+        throw new Error('year / month / companyId is required')
+      }
+      const [unbilled, profile] = await Promise.all([
+        unwrap(getUnbilledByCompany(year, month)),
+        unwrap(getCompanyProfile()),
+      ])
+      const company = unbilled.find((u) => u.company_id === companyId)
+      if (!company) throw new Error('未請求売掛にこの企業がありません')
+
+      const receivables = await unwrap(
+        getReceivables({ year, month, companyId, invoiced: false })
+      )
+      if (!receivables.length) throw new Error('未請求の売掛がありません')
+
+      const sortedLines = receivables
+        .slice()
+        .sort((a, b) => new Date(a.work_date) - new Date(b.work_date))
+      const chunks = expandByStrategy(sortedLines, strategy)
+      const finalIssueDate = issueDate ?? monthEnd(year, month)
+
+      const previews = []
+      for (const chunk of chunks) {
+        const totalAmount = chunk.lines.reduce((s, x) => s + (Number(x.amount) || 0), 0)
+        const pdfBuf = await generateInvoicePdf(
+          {
+            issueDate: finalIssueDate,
+            companyDisplayName:
+              (company.invoice_display_name || company.company_name || '') +
+              (chunk.sequence ? ` (${chunk.sequence.index}/${chunk.sequence.total})` : ''),
+            totalAmount,
+            lines: chunk.lines.map((x) => ({
+              workDate: new Date(x.work_date),
+              departure: x.departure,
+              destination: x.destination,
+              amount: x.amount,
+              note: x.note,
+            })),
+          },
+          { profile }
+        )
+        const blob = new Blob([pdfBuf], { type: 'application/pdf' })
+        previews.push({
+          url: URL.createObjectURL(blob),
+          sequence: chunk.sequence ?? null,
+          lineCount: chunk.lines.length,
+          totalAmount,
+        })
+      }
+      return {
+        companyId,
+        companyName: company.invoice_display_name || company.company_name,
+        previews,
+      }
     },
   })
 }

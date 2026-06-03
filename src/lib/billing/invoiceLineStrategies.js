@@ -1,12 +1,12 @@
 /**
  * 請求書明細の超過行対応戦略 (純関数)。
  *
- * 請求書テンプレは 1 枚あたり最大 18 明細。19 件以上の売掛がある企業については、
+ * 請求書テンプレは 1 枚あたり最大 25 明細。26 件以上の売掛がある企業については、
  * 以下の 3 戦略のいずれかを選択する:
  *
- *   - NORMAL: 18 件以下のときの通常発行 (そのまま渡す)
- *   - MERGE:  17 件 + "その他" 集約 1 行 = 18 行に圧縮 (1 枚)
- *   - SPLIT:  18 行ずつ複数枚に分割
+ *   - NORMAL: 25 件以下のときの通常発行 (そのまま渡す)
+ *   - MERGE:  24 件 + "その他" 集約 1 行 = 25 行に圧縮 (1 枚)
+ *   - SPLIT:  25 行ずつ複数枚に分割
  *   - SKIP:   発行対象から除外 (戦略未確定の保留用)
  *
  * applyMergeStrategy / applySplitStrategy はどちらも
@@ -14,7 +14,7 @@
  * を返し、呼び出し側はこれを 1 件ずつ generateInvoice に渡せる。
  */
 
-export const INVOICE_MAX_LINES = 18
+export const INVOICE_MAX_LINES = 25
 
 export const STRATEGIES = Object.freeze({
   NORMAL: 'normal',
@@ -33,9 +33,9 @@ export function recommendedStrategy(lineCount) {
 }
 
 /**
- * 行配列を 1 枚の請求書 (最大 18 行) に集約する。
- * 18 行以下: そのまま 1 枚として返す。
- * 19 行以上: 先頭 17 行 + 残りを「その他」1 行に合算して計 18 行。
+ * 行配列を 1 枚の請求書 (最大 INVOICE_MAX_LINES 行) に集約する。
+ * 上限以下: そのまま 1 枚として返す。
+ * 上限超: 先頭 (INVOICE_MAX_LINES-1) 行 + 残りを「その他」1 行に合算して計 INVOICE_MAX_LINES 行。
  *
  * @param {Array} lines
  * @returns {[{ lines: Array }]}  必ず 1 件
@@ -64,7 +64,7 @@ export function applyMergeStrategy(lines) {
 }
 
 /**
- * 行配列を 18 行ずつ複数請求書に分割する。
+ * 行配列を INVOICE_MAX_LINES 行ずつ複数請求書に分割する。
  * 1 枚で収まる場合は sequence なし、複数枚に分かれる場合は sequence={index,total} を付与。
  *
  * @param {Array} lines

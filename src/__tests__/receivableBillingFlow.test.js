@@ -135,9 +135,9 @@ describe('Receivable Billing スモーク結合', () => {
     expect(suzutomoReceivables.length).toBeLessThanOrEqual(INVOICE_MAX_LINES)
     expect(recommendedStrategy(suzutomoReceivables.length)).toBe('normal')
 
-    // 19 件超を仮定して合算/分割の整合性確認
-    const heavy = Array.from({ length: 25 }, (_, i) => ({
-      work_date: `2026-05-${String(i + 1).padStart(2, '0')}`,
+    // INVOICE_MAX_LINES 件超を仮定して合算/分割の整合性確認
+    const heavy = Array.from({ length: INVOICE_MAX_LINES + 5 }, (_, i) => ({
+      work_date: `2026-${String(((i % 12) + 1)).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
       departure: '出',
       destination: '着',
       amount: 1000 + i,

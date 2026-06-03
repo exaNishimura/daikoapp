@@ -9,8 +9,10 @@ import { describe, it, expect, vi } from 'vitest'
 // pdfmake は ESM 不整合で Node 上で import しただけでも壊れるためモック化
 vi.mock('pdfmake/build/pdfmake', () => ({
   default: {
+    addVirtualFileSystem: vi.fn(),
+    setFonts: vi.fn(),
     createPdf: vi.fn(() => ({
-      getBuffer: (cb) => cb(new Uint8Array([0x25, 0x50, 0x44, 0x46])), // "%PDF"
+      getBuffer: async () => new Uint8Array([0x25, 0x50, 0x44, 0x46]), // "%PDF"
     })),
   },
 }))
@@ -37,8 +39,9 @@ afterAll(() => {
 const { generateInvoicePdf } = await import('./generateInvoicePdf')
 
 describe('generateInvoicePdf', () => {
-  it('rejects more than 18 lines', async () => {
-    const lines = Array.from({ length: 19 }, () => ({
+  it('rejects more than INVOICE_MAX_LINES lines', async () => {
+    const { INVOICE_MAX_LINES: MAX } = await import('@/lib/billing/invoiceLineStrategies')
+    const lines = Array.from({ length: MAX + 1 }, () => ({
       workDate: new Date(2026, 4, 1),
       departure: 'a',
       destination: 'b',
@@ -50,12 +53,12 @@ describe('generateInvoicePdf', () => {
         {
           issueDate: new Date(2026, 4, 31),
           companyDisplayName: 'X',
-          totalAmount: 19000,
+          totalAmount: (MAX + 1) * 1000,
           lines,
         },
         { profile: {} }
       )
-    ).rejects.toThrow(/exceeds 18/)
+    ).rejects.toThrow(new RegExp(`exceeds ${MAX}`))
   })
 
   it('rejects total mismatch', async () => {

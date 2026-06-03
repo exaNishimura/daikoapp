@@ -15,16 +15,20 @@ import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import CircularProgress from '@mui/material/CircularProgress'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import SendIcon from '@mui/icons-material/Send'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import { useUnbilledByCompany } from '@/hooks/billing/useReceivables'
-import { useIssueInvoices } from '@/hooks/billing/useInvoices'
+import { useIssueInvoices, usePreviewInvoice } from '@/hooks/billing/useInvoices'
 import {
   STRATEGIES,
   INVOICE_MAX_LINES,
   recommendedStrategy,
 } from '@/lib/billing/invoiceLineStrategies'
 import { InvoiceIssueResultDialog } from './InvoiceIssueResultDialog'
+import { InvoicePreviewDialog } from './InvoicePreviewDialog'
 
 const STRATEGY_LABEL = {
   [STRATEGIES.NORMAL]: '通常発行',
@@ -39,6 +43,11 @@ const STRATEGY_LABEL = {
 export function InvoiceIssueTab({ year, month }) {
   const unbilledQuery = useUnbilledByCompany(year, month)
   const issueMutation = useIssueInvoices()
+  const previewMutation = usePreviewInvoice()
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewData, setPreviewData] = useState(null)
+  const [previewError, setPreviewError] = useState(null)
+  const [previewBusyId, setPreviewBusyId] = useState(null)
 
   const rows = useMemo(() => unbilledQuery.data ?? [], [unbilledQuery.data])
 
@@ -63,6 +72,26 @@ export function InvoiceIssueTab({ year, month }) {
 
   const [resultOpen, setResultOpen] = useState(false)
   const [result, setResult] = useState(null)
+
+  const handlePreview = async (row) => {
+    setPreviewError(null)
+    setPreviewBusyId(row.company_id)
+    try {
+      const d = decisionFor(row)
+      const data = await previewMutation.mutateAsync({
+        year,
+        month,
+        companyId: row.company_id,
+        strategy: d.strategy,
+      })
+      setPreviewData(data)
+      setPreviewOpen(true)
+    } catch (err) {
+      setPreviewError(`プレビュー生成に失敗: ${err.message}`)
+    } finally {
+      setPreviewBusyId(null)
+    }
+  }
 
   const handleIssue = async () => {
     const targets = rows
@@ -105,6 +134,11 @@ export function InvoiceIssueTab({ year, month }) {
 
   return (
     <Box>
+      {previewError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPreviewError(null)}>
+          {previewError}
+        </Alert>
+      )}
       {hasOverflow && (
         <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}>
           明細が {INVOICE_MAX_LINES} 件を超える企業があります。
@@ -140,6 +174,7 @@ export function InvoiceIssueTab({ year, month }) {
               <TableCell align="right">件数</TableCell>
               <TableCell align="right">合計</TableCell>
               <TableCell>戦略</TableCell>
+              <TableCell padding="checkbox" />
             </TableRow>
           </TableHead>
           <TableBody>
@@ -200,6 +235,23 @@ export function InvoiceIssueTab({ year, month }) {
                       </Typography>
                     )}
                   </TableCell>
+                  <TableCell padding="checkbox">
+                    <Tooltip title="プレビュー (発行はしません)">
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={previewBusyId === r.company_id}
+                          onClick={() => handlePreview(r)}
+                        >
+                          {previewBusyId === r.company_id ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            <VisibilityIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
               )
             })}
@@ -216,6 +268,13 @@ export function InvoiceIssueTab({ year, month }) {
           month={month}
         />
       )}
+
+      <InvoicePreviewDialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        companyName={previewData?.companyName}
+        previews={previewData?.previews}
+      />
     </Box>
   )
 }
