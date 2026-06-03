@@ -73,7 +73,11 @@ export function InvoiceIssuedTab({ year, month }) {
       return
     }
     try {
-      await dlInvoice.mutateAsync({ filePath: row.file_path })
+      await dlInvoice.mutateAsync({
+        filePath: row.file_path,
+        displayName:
+          row.companies?.invoice_display_name || row.companies?.name || null,
+      })
     } catch (err) {
       setError(`ダウンロードに失敗: ${err.message}`)
     }

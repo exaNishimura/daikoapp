@@ -11,7 +11,8 @@ supabase/
 │   ├── 20260601125210_001_enable_rls_rollback.sql
 │   ├── 20260602030000_add_receivable_billing_schema.sql
 │   ├── 20260602030500_seed_receivable_billing.sql
-│   └── 20260602030500_add_invoice_rpc.sql
+│   ├── 20260602030500_add_invoice_rpc.sql
+│   └── 20260603074500_add_invoices_bucket.sql
 └── legacy/                   ← 旧 patch SQL (動作上の意味は initial_schema に統合済み)
     ├── schema.sql
     ├── add_*.sql
@@ -103,21 +104,15 @@ supabase/migrations/<UTC timestamp YYYYMMDDHHMMSS>_<snake_case_description>.sql
 すべて `SECURITY INVOKER` (RLS は呼び出しユーザーに従う)、`authenticated` のみ
 EXECUTE 権限、`anon` / `PUBLIC` は REVOKE。
 
-## Storage バケット (手動作成)
+### `migrations/20260603074500_add_invoices_bucket.sql`
 
-`receivable-billing` 機能は発行済み請求書 .xlsx を Supabase Storage に保存する。
-MCP からはバケット作成 API が無いため、以下を Supabase Dashboard で手動実行する:
+`receivable-billing` 機能の発行済み請求書 .xlsx を保存する Storage バケット。
+`storage.buckets` への INSERT と `storage.objects` の RLS ポリシーを SQL で作る
+(以前は Dashboard 手動だったが MCP `apply_migration` から流せるようにした)。
 
-1. Project → Storage → "New bucket"
-2. Name: `invoices`
-3. Public bucket: **OFF** (private)
-4. File size limit: 10 MB
-5. Allowed MIME types: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
-
-ポリシーは Storage → Policies から:
-
-- `invoices` バケットに対し、`authenticated` ロールに `INSERT` / `SELECT` / `UPDATE` / `DELETE` を許可
-- `anon` は一切付与しない
+- bucket: `invoices` / private / 10MB / `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- ポリシー: `authenticated` のみ SELECT / INSERT / UPDATE / DELETE 全部 OK、`anon` は不可
+- 冪等 (`ON CONFLICT DO UPDATE` + `DROP POLICY IF EXISTS`)
 
 ファイルパスの命名規則: `invoices/YYYY/MM/{company_id}-{display_name}.xlsx`
 
@@ -130,9 +125,9 @@ MCP からはバケット作成 API が無いため、以下を Supabase Dashboa
    - `20260602030000_add_receivable_billing_schema.sql`
    - `20260602030500_seed_receivable_billing.sql`
    - `20260602030500_add_invoice_rpc.sql`
+   - `20260603074500_add_invoices_bucket.sql`
 3. Supabase Auth で管理者ユーザーを 1 人作る
-4. Storage で `invoices` バケットを上記手順で作成
-5. `vehicle_operation_status` / `shifts` / `employees` の初期データは
+4. `vehicle_operation_status` / `shifts` / `employees` の初期データは
    アプリ UI 経由で投入
 
 ## 旧 `legacy/`

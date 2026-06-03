@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 /**
  * Supabase Storage の `invoices` バケット操作。
  *
- * バケット作成は手動 (supabase/README.md 参照)。
+ * バケット定義は migration `20260603074500_add_invoices_bucket.sql` で管理。
  * - private bucket
  * - 10 MB 上限
  * - mime: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
@@ -20,19 +20,21 @@ const NOT_INITIALIZED = () => ({
 })
 
 /**
- * ファイル名に使えない文字を除去 (Windows / S3 の安全側で)。
- */
-function safeFileName(s) {
-  return String(s).replace(/[\\/:*?"<>|]/g, '_').trim()
-}
-
-/**
  * 標準的な保存パスを生成する。
+ *
+ * Supabase Storage のキー検証は ASCII (`\w / ! - . * ' ( ) & $ @ = ; : + , ?` と空白) に
+ * 限定されており、日本語(マルチバイト)は弾かれる。
+ * そのため path には company_id と sequence のみ使う。
+ * 表示用の日本語ファイル名はダウンロード時の Content-Disposition で付与する
+ * (`getInvoiceFileUrl` の `download` オプション)。
+ *
+ * @param {{ year: number, month: number, companyId: number,
+ *           sequence?: { index: number, total: number } }} args
  */
-export function buildInvoicePath({ year, month, companyId, displayName }) {
+export function buildInvoicePath({ year, month, companyId, sequence }) {
   const m = String(month).padStart(2, '0')
-  const safeName = safeFileName(displayName || `company-${companyId}`)
-  return `${year}/${m}/${companyId}-${safeName}.xlsx`
+  const seq = sequence ? `-${sequence.index}of${sequence.total}` : ''
+  return `${year}/${m}/${companyId}${seq}.xlsx`
 }
 
 /**
@@ -63,13 +65,19 @@ export async function uploadInvoiceFile(path, body) {
 
 /**
  * 署名付き URL を発行する (ダウンロード用、デフォルト 5 分)。
+ *
+ * @param {string} path
+ * @param {number} expiresInSeconds
+ * @param {{ download?: string | true }} [options]
+ *   download に文字列を渡すと Content-Disposition の filename になる
+ *   (日本語 OK / Storage 側で RFC 5987 エンコードされる)。
  */
-export async function getInvoiceFileUrl(path, expiresInSeconds = 300) {
+export async function getInvoiceFileUrl(path, expiresInSeconds = 300, options) {
   if (!supabase) return NOT_INITIALIZED()
   try {
     const { data, error } = await supabase.storage
       .from(BUCKET)
-      .createSignedUrl(path, expiresInSeconds)
+      .createSignedUrl(path, expiresInSeconds, options)
     if (error) throw error
     return { data, error: null }
   } catch (error) {

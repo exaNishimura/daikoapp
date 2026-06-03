@@ -30,7 +30,10 @@ export function InvoiceIssueResultDialog({ open, result, onClose, year, month })
     setZipBusy(true)
     try {
       await downloadInvoicesZip(
-        result.successes.map((s) => ({ filePath: s.filePath })),
+        result.successes.map((s) => ({
+          filePath: s.filePath,
+          displayName: s.displayName,
+        })),
         `invoices-${year}${String(month).padStart(2, '0')}`
       )
     } catch (err) {
@@ -77,7 +80,12 @@ export function InvoiceIssueResultDialog({ open, result, onClose, year, month })
                     s.filePath ? (
                       <IconButton
                         size="small"
-                        onClick={() => dlInvoice.mutate({ filePath: s.filePath })}
+                        onClick={() =>
+                          dlInvoice.mutate({
+                            filePath: s.filePath,
+                            displayName: s.displayName,
+                          })
+                        }
                         aria-label="ダウンロード"
                       >
                         <DownloadIcon fontSize="small" />
@@ -87,9 +95,10 @@ export function InvoiceIssueResultDialog({ open, result, onClose, year, month })
                 >
                   <ListItemText
                     primary={
-                      s.sequence
+                      s.displayName ||
+                      (s.sequence
                         ? `企業 #${s.companyId} (${s.sequence.index}/${s.sequence.total} 枚目)`
-                        : `企業 #${s.companyId}`
+                        : `企業 #${s.companyId}`)
                     }
                     secondary={
                       <>

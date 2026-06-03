@@ -115,10 +115,12 @@ async function issueOneCompany({
       year,
       month,
       companyId: company.company_id,
-      displayName:
-        (company.invoice_display_name || company.company_name) +
-        (chunk.sequence ? `-${chunk.sequence.index}of${chunk.sequence.total}` : ''),
+      sequence: chunk.sequence,
     })
+
+    const displayName =
+      (company.invoice_display_name || company.company_name || `company-${company.company_id}`) +
+      (chunk.sequence ? `-${chunk.sequence.index}of${chunk.sequence.total}` : '')
 
     await unwrap(uploadInvoiceFile(filePath, xlsxBuf))
 
@@ -150,6 +152,7 @@ async function issueOneCompany({
       companyId: company.company_id,
       invoiceId,
       filePath,
+      displayName,
       sequence: chunk.sequence,
       lineCount: chunk.lines.length,
       totalAmount,
@@ -279,12 +282,18 @@ export function useIssueInvoices() {
 /**
  * Storage 上の請求書 .xlsx の署名 URL を発行して新規タブで開く。
  * 署名 URL は短時間 (デフォルト 5 分) 有効。
+ *
+ * displayName を渡すと Content-Disposition の filename がそれになる
+ * (Storage 側のキーは ASCII 限定なので、表示名はここで上書きする)。
  */
 export function useDownloadInvoice() {
   return useMutation({
-    mutationFn: async ({ filePath }) => {
+    mutationFn: async ({ filePath, displayName }) => {
       if (!filePath) throw new Error('filePath is required')
-      const data = await unwrap(getInvoiceFileUrl(filePath, 300))
+      const downloadName = displayName
+        ? `${String(displayName).replace(/[\\/:*?"<>|]/g, '_').trim()}.xlsx`
+        : true
+      const data = await unwrap(getInvoiceFileUrl(filePath, 300, { download: downloadName }))
       const url = data?.signedUrl ?? data?.signedURL
       if (typeof url !== 'string') throw new Error('signed URL not returned')
       window.open(url, '_blank', 'noopener,noreferrer')
