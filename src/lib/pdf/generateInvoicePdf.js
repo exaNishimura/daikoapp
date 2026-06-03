@@ -452,13 +452,17 @@ export async function generateInvoicePdf(data, options) {
     loadSealDataUri(),
   ])
 
+  // pdfmake の標準 API: fonts / vfs はグローバルに設定してから createPdf を呼ぶ
+  pdfMake.vfs = vfs
+  pdfMake.fonts = PDF_FONTS
+
   const docDef = buildDocDefinition({
     data,
     profile: options?.profile ?? {},
     sealDataUri,
   })
 
-  const pdfDoc = pdfMake.createPdf(docDef, null, PDF_FONTS, vfs)
+  const pdfDoc = pdfMake.createPdf(docDef)
   return new Promise((resolve, reject) => {
     pdfDoc.getBuffer((buffer) => {
       if (!buffer) {
