@@ -454,8 +454,10 @@ export async function generateInvoicePdf(data, options) {
   ])
   console.log(`[generateInvoicePdf] assets ready in ${Math.round(performance.now() - tAssets)}ms`)
 
-  pdfMake.vfs = vfs
-  pdfMake.fonts = PDF_FONTS
+  // pdfmake 0.3.x API: vfs/fonts はメソッド経由で登録する
+  // (`pdfMake.vfs = ...` は内部の VirtualFileSystem インスタンスを差し替えないため効かない)
+  pdfMake.addVirtualFileSystem(vfs)
+  pdfMake.setFonts(PDF_FONTS)
 
   const docDef = buildDocDefinition({
     data,
