@@ -3,13 +3,17 @@ import { supabase } from '@/lib/supabase'
 /**
  * Supabase Storage の `invoices` バケット操作。
  *
- * バケット定義は migration `20260603074500_add_invoices_bucket.sql` で管理。
+ * バケット定義は migration で管理:
+ * - 20260603074500_add_invoices_bucket.sql      (バケット作成)
+ * - 20260603081500_invoices_bucket_pdf.sql      (mime を pdf に変更)
+ *
+ * 仕様:
  * - private bucket
  * - 10 MB 上限
- * - mime: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+ * - mime: application/pdf
  * - authenticated のみ アップロード/読み取り可
  *
- * パス命名: `YYYY/MM/{company_id}-{display_name}.xlsx`
+ * パス命名: `YYYY/MM/{company_id}[-{idx}of{total}].pdf`
  */
 
 const BUCKET = 'invoices'
@@ -34,11 +38,11 @@ const NOT_INITIALIZED = () => ({
 export function buildInvoicePath({ year, month, companyId, sequence }) {
   const m = String(month).padStart(2, '0')
   const seq = sequence ? `-${sequence.index}of${sequence.total}` : ''
-  return `${year}/${m}/${companyId}${seq}.xlsx`
+  return `${year}/${m}/${companyId}${seq}.pdf`
 }
 
 /**
- * .xlsx の ArrayBuffer をアップロードする (同パスは上書き)。
+ * .pdf の ArrayBuffer をアップロードする (同パスは上書き)。
  * @param {string} path
  * @param {ArrayBuffer | Uint8Array | Blob} body
  * @returns {Promise<{ data: { path: string } | null, error: Error | null }>}
@@ -51,8 +55,7 @@ export async function uploadInvoiceFile(path, body) {
       body,
       {
         upsert: true,
-        contentType:
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentType: 'application/pdf',
       }
     )
     if (error) throw error

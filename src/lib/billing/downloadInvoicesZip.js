@@ -11,7 +11,7 @@ function baseName(filePath) {
 }
 
 /**
- * 複数の請求書 .xlsx をまとめて zip に詰めてブラウザでダウンロードさせる。
+ * 複数の請求書 .pdf をまとめて zip に詰めてブラウザでダウンロードさせる。
  *
  * 各 file は { filePath, displayName? } の形式。
  * file_path が null のもの (発行はしたが Storage 失敗) は zip に含めず skipped で返す。
@@ -46,7 +46,7 @@ export async function downloadInvoicesZip(files, zipName = 'invoices') {
         continue
       }
       const buf = await res.arrayBuffer()
-      const name = f.displayName ? `${safeFileName(f.displayName)}.xlsx` : baseName(f.filePath)
+      const name = f.displayName ? `${safeFileName(f.displayName)}.pdf` : baseName(f.filePath)
       zip.file(name, buf)
       included += 1
     } catch {

@@ -17,7 +17,7 @@ import {
   uploadInvoiceFile,
   getInvoiceFileUrl,
 } from '@/services/billing/invoiceStorageService'
-import { generateInvoice } from '@/lib/excel/generateInvoice'
+import { generateInvoicePdf } from '@/lib/pdf/generateInvoicePdf'
 import { monthEnd } from '@/lib/excel/formatters'
 import { queryKeys } from '@/lib/queryClient'
 import {
@@ -25,26 +25,11 @@ import {
   applyMergeStrategy,
   applySplitStrategy,
 } from '@/lib/billing/invoiceLineStrategies'
-import invoiceTemplateUrl from '@/assets/invoice-template.xlsx?url'
 
 async function unwrap(promise) {
   const { data, error } = await promise
   if (error) throw error
   return data
-}
-
-/**
- * テンプレ .xlsx を fetch して ArrayBuffer で返す (発行ロジックで毎回使う)。
- * Vite の `?url` インポートでバンドル時に最終 URL に解決される。
- */
-async function loadTemplateBuffer() {
-  const res = await fetch(invoiceTemplateUrl)
-  if (!res.ok) {
-    throw new Error(
-      `Failed to load invoice template: ${res.status} ${res.statusText}`
-    )
-  }
-  return res.arrayBuffer()
 }
 
 /**
@@ -73,7 +58,6 @@ async function issueOneCompany({
   year,
   month,
   issueDate,
-  templateBuffer,
   profile,
   strategy = STRATEGIES.NORMAL,
 }) {
@@ -93,7 +77,7 @@ async function issueOneCompany({
 
   for (const chunk of chunks) {
     const totalAmount = chunk.lines.reduce((s, x) => s + (Number(x.amount) || 0), 0)
-    const xlsxBuf = await generateInvoice(
+    const pdfBuf = await generateInvoicePdf(
       {
         issueDate,
         companyDisplayName:
@@ -108,7 +92,7 @@ async function issueOneCompany({
           note: x.note,
         })),
       },
-      { templateBuffer }
+      { profile }
     )
 
     const filePath = buildInvoicePath({
@@ -118,11 +102,15 @@ async function issueOneCompany({
       sequence: chunk.sequence,
     })
 
+    // ファイル名: `${YYYY}${MM}_{会社名}様_請求書` (拡張子は DL 側で付与)
+    const ymPrefix = `${year}${String(month).padStart(2, '0')}`
+    const baseName =
+      company.invoice_display_name || company.company_name || `company-${company.company_id}`
     const displayName =
-      (company.invoice_display_name || company.company_name || `company-${company.company_id}`) +
-      (chunk.sequence ? `-${chunk.sequence.index}of${chunk.sequence.total}` : '')
+      `${ymPrefix}_${baseName}様_請求書` +
+      (chunk.sequence ? `_${chunk.sequence.index}of${chunk.sequence.total}` : '')
 
-    await unwrap(uploadInvoiceFile(filePath, xlsxBuf))
+    await unwrap(uploadInvoiceFile(filePath, pdfBuf))
 
     // split 戦略のときは、各枚で発行 RPC を呼ぶと line_count/total が
     // accounts_receivable と合わないため、現状の DB スキーマでは
@@ -212,10 +200,9 @@ export function useIssueInvoices() {
         throw new Error('year / month is required')
       }
 
-      const [unbilled, profile, templateBuffer] = await Promise.all([
+      const [unbilled, profile] = await Promise.all([
         unwrap(getUnbilledByCompany(year, month)),
         unwrap(getCompanyProfile()),
-        loadTemplateBuffer(),
       ])
 
       // 入力の正規化: targets が無ければ companyIds から normal で生成
@@ -250,7 +237,6 @@ export function useIssueInvoices() {
               year,
               month,
               issueDate: finalIssueDate,
-              templateBuffer,
               profile,
               strategy,
             })
@@ -280,10 +266,10 @@ export function useIssueInvoices() {
 }
 
 /**
- * Storage 上の請求書 .xlsx をダウンロードする。
+ * Storage 上の請求書 .pdf をダウンロードする。
  * 署名 URL を発行 → ファイルを fetch → Blob で <a download> 経由で保存。
  *
- * - displayName でブラウザ DL ダイアログのファイル名を指定
+ * - displayName でブラウザ DL ダイアログのファイル名を指定 (拡張子はここで .pdf 付与)
  * - window.open しないのでポップアップブロックされない
  * - 署名 URL は 5 分有効
  */
@@ -292,7 +278,7 @@ export function useDownloadInvoice() {
     mutationFn: async ({ filePath, displayName }) => {
       if (!filePath) throw new Error('filePath is required')
       const safeName = displayName
-        ? `${String(displayName).replace(/[\\/:*?"<>|]/g, '_').trim()}.xlsx`
+        ? `${String(displayName).replace(/[\\/:*?"<>|]/g, '_').trim()}.pdf`
         : filePath.slice(filePath.lastIndexOf('/') + 1)
 
       const data = await unwrap(getInvoiceFileUrl(filePath, 300))

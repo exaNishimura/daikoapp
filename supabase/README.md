@@ -12,7 +12,8 @@ supabase/
 │   ├── 20260602030000_add_receivable_billing_schema.sql
 │   ├── 20260602030500_seed_receivable_billing.sql
 │   ├── 20260602030500_add_invoice_rpc.sql
-│   └── 20260603074500_add_invoices_bucket.sql
+│   ├── 20260603074500_add_invoices_bucket.sql
+│   └── 20260603081500_invoices_bucket_pdf.sql
 └── legacy/                   ← 旧 patch SQL (動作上の意味は initial_schema に統合済み)
     ├── schema.sql
     ├── add_*.sql
@@ -106,15 +107,20 @@ EXECUTE 権限、`anon` / `PUBLIC` は REVOKE。
 
 ### `migrations/20260603074500_add_invoices_bucket.sql`
 
-`receivable-billing` 機能の発行済み請求書 .xlsx を保存する Storage バケット。
+`receivable-billing` 機能の発行済み請求書を保存する Storage バケット作成。
 `storage.buckets` への INSERT と `storage.objects` の RLS ポリシーを SQL で作る
 (以前は Dashboard 手動だったが MCP `apply_migration` から流せるようにした)。
 
-- bucket: `invoices` / private / 10MB / `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- bucket: `invoices` / private / 10MB
 - ポリシー: `authenticated` のみ SELECT / INSERT / UPDATE / DELETE 全部 OK、`anon` は不可
 - 冪等 (`ON CONFLICT DO UPDATE` + `DROP POLICY IF EXISTS`)
 
-ファイルパスの命名規則: `invoices/YYYY/MM/{company_id}-{display_name}.xlsx`
+### `migrations/20260603081500_invoices_bucket_pdf.sql`
+
+請求書フォーマットを xlsx → pdf に切り替えに伴い、`invoices` バケットの
+`allowed_mime_types` を `application/pdf` に更新。
+
+ファイルパスの命名規則: `invoices/YYYY/MM/{company_id}[-{idx}of{total}].pdf`
 
 ## 新環境セットアップ手順 (例)
 
@@ -126,6 +132,7 @@ EXECUTE 権限、`anon` / `PUBLIC` は REVOKE。
    - `20260602030500_seed_receivable_billing.sql`
    - `20260602030500_add_invoice_rpc.sql`
    - `20260603074500_add_invoices_bucket.sql`
+   - `20260603081500_invoices_bucket_pdf.sql`
 3. Supabase Auth で管理者ユーザーを 1 人作る
 4. `vehicle_operation_status` / `shifts` / `employees` の初期データは
    アプリ UI 経由で投入
