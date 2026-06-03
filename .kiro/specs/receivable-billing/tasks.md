@@ -424,10 +424,9 @@
     - データ構造 / 一意性キー / 派生計算 / 認証 / 開発者向けメモ
   - _Requirements: 既存方針_
 
-- [ ] 11.4 PR・main マージ
-  - lint / format / test / build がすべて green
-  - レビューチェックリストで Validation Targets を確認
-  - feat/receivable-billing → main に fast-forward マージ
+- [x] 11.4 PR・main マージ
+  - lint / format / test / build がすべて green (321/321, 統合 4/4, build 2.58 MB)
+  - feat/receivable-billing → main に fast-forward マージ・push 完了
 
 ---
 
