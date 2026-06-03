@@ -280,24 +280,40 @@ export function useIssueInvoices() {
 }
 
 /**
- * Storage 上の請求書 .xlsx の署名 URL を発行して新規タブで開く。
- * 署名 URL は短時間 (デフォルト 5 分) 有効。
+ * Storage 上の請求書 .xlsx をダウンロードする。
+ * 署名 URL を発行 → ファイルを fetch → Blob で <a download> 経由で保存。
  *
- * displayName を渡すと Content-Disposition の filename がそれになる
- * (Storage 側のキーは ASCII 限定なので、表示名はここで上書きする)。
+ * - displayName でブラウザ DL ダイアログのファイル名を指定
+ * - window.open しないのでポップアップブロックされない
+ * - 署名 URL は 5 分有効
  */
 export function useDownloadInvoice() {
   return useMutation({
     mutationFn: async ({ filePath, displayName }) => {
       if (!filePath) throw new Error('filePath is required')
-      const downloadName = displayName
+      const safeName = displayName
         ? `${String(displayName).replace(/[\\/:*?"<>|]/g, '_').trim()}.xlsx`
-        : true
-      const data = await unwrap(getInvoiceFileUrl(filePath, 300, { download: downloadName }))
+        : filePath.slice(filePath.lastIndexOf('/') + 1)
+
+      const data = await unwrap(getInvoiceFileUrl(filePath, 300))
       const url = data?.signedUrl ?? data?.signedURL
       if (typeof url !== 'string') throw new Error('signed URL not returned')
-      window.open(url, '_blank', 'noopener,noreferrer')
-      return { filePath, url }
+
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`failed to fetch invoice file: ${res.status}`)
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      try {
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = safeName
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } finally {
+        URL.revokeObjectURL(objectUrl)
+      }
+      return { filePath, name: safeName }
     },
   })
 }

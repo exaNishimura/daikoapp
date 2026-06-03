@@ -12,7 +12,7 @@
  *
  * 明細列:
  *   col 1 No.        "1 " 形式 (半角スペース付き)
- *   col 2 日付       "YYYY年MM月DD日"
+ *   col 2 日付       "M月D日" (年は付けない / 列幅で ######## 化するため)
  *   col 3 内容       "運転代行" 固定
  *   col 4 出発地
  *   col 5 到着地
@@ -103,11 +103,15 @@ export async function generateInvoice(data, options) {
   for (let i = 0; i < data.lines.length; i++) {
     const line = data.lines[i]
     const r = 13 + i
-    ws.getCell(r, 3).value = line.workDate              // Date / numFmt "yyyy年mm月dd日"
-    ws.getCell(r, 4).value = '運転代行'                 // 内容固定
+    const dateCell = ws.getCell(r, 3)
+    dateCell.value = line.workDate
+    // テンプレの numFmt は "yyyy年mm月dd日" だが列幅で ######## になるので
+    // 年なしに上書き。
+    dateCell.numFmt = 'm"月"d"日"'
+    ws.getCell(r, 4).value = '運転代行'
     ws.getCell(r, 5).value = line.departure ?? ''
     ws.getCell(r, 6).value = line.destination ?? ''
-    ws.getCell(r, 7).value = line.amount                // 数値 / numFmt "¥#,##0"
+    ws.getCell(r, 7).value = line.amount
     ws.getCell(r, 8).value = line.note ?? ''
   }
 
