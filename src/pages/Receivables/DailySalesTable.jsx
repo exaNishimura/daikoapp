@@ -23,15 +23,15 @@ function toDateString(year, month, day) {
 }
 
 const EDITABLE_FIELDS = [
-  { key: 'vehicle1_distance_km', label: '距離(1)', unit: 'km', type: 'number', step: 0.1 },
-  { key: 'vehicle2_distance_km', label: '距離(2)', unit: 'km', type: 'number', step: 0.1 },
-  { key: 'vehicle1_fuel_yen', label: '燃料(1)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle2_fuel_yen', label: '燃料(2)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle1_sales', label: '売上(1)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle2_sales', label: '売上(2)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle3_sales', label: '売上(3)', unit: '¥', type: 'number', step: 1 },
+  { key: 'vehicle1_distance_km', label: '距離(1号車)', unit: 'km', type: 'number', step: 0.1 },
+  { key: 'vehicle2_distance_km', label: '距離(2号車)', unit: 'km', type: 'number', step: 0.1 },
+  { key: 'vehicle1_fuel_yen', label: '燃料(1号車)', unit: '¥', type: 'number', step: 1 },
+  { key: 'vehicle2_fuel_yen', label: '燃料(2号車)', unit: '¥', type: 'number', step: 1 },
+  { key: 'vehicle1_sales', label: '売上(1号車)', unit: '¥', type: 'number', step: 1 },
+  { key: 'vehicle2_sales', label: '売上(2号車)', unit: '¥', type: 'number', step: 1 },
   { key: 'expense_note', label: '経費内容', type: 'text' },
   { key: 'expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1 },
+  { key: 'labor_cost', label: '人件費', unit: '¥', type: 'number', step: 1 },
   { key: 'cash', label: '現金', unit: '¥', type: 'number', step: 1 },
 ]
 
@@ -99,9 +99,9 @@ export function DailySalesTable({ year, month, rows, onUpsert }) {
       vehicle2_fuel_yen: parseInt0(merged.vehicle2_fuel_yen),
       vehicle1_sales: parseInt0(merged.vehicle1_sales) ?? 0,
       vehicle2_sales: parseInt0(merged.vehicle2_sales) ?? 0,
-      vehicle3_sales: parseInt0(merged.vehicle3_sales) ?? 0,
       expense_note: merged.expense_note ?? null,
       expense_amount: parseInt0(merged.expense_amount) ?? 0,
+      labor_cost: parseInt0(merged.labor_cost) ?? 0,
       cash: parseInt0(merged.cash) ?? 0,
     }
     pendingPayloads.current.set(workDate, payload)
@@ -143,10 +143,10 @@ export function DailySalesTable({ year, month, rows, onUpsert }) {
             const derived = calcDailyDerived({
               vehicle1_sales: parseInt0(merged.vehicle1_sales),
               vehicle2_sales: parseInt0(merged.vehicle2_sales),
-              vehicle3_sales: parseInt0(merged.vehicle3_sales),
               vehicle1_fuel_yen: parseInt0(merged.vehicle1_fuel_yen),
               vehicle2_fuel_yen: parseInt0(merged.vehicle2_fuel_yen),
               expense_amount: parseInt0(merged.expense_amount),
+              labor_cost: parseInt0(merged.labor_cost),
             })
             return (
               <TableRow

@@ -52,14 +52,14 @@ function DailyTable({ rows }) {
         <TableHead>
           <TableRow>
             <TableCell>日</TableCell>
-            <TableCell align="right">距離(1)</TableCell>
-            <TableCell align="right">距離(2)</TableCell>
-            <TableCell align="right">燃料(1)</TableCell>
-            <TableCell align="right">燃料(2)</TableCell>
-            <TableCell align="right">売上(1)</TableCell>
-            <TableCell align="right">売上(2)</TableCell>
-            <TableCell align="right">売上(3)</TableCell>
+            <TableCell align="right">距離(1号車)</TableCell>
+            <TableCell align="right">距離(2号車)</TableCell>
+            <TableCell align="right">燃料(1号車)</TableCell>
+            <TableCell align="right">燃料(2号車)</TableCell>
+            <TableCell align="right">売上(1号車)</TableCell>
+            <TableCell align="right">売上(2号車)</TableCell>
             <TableCell align="right">経費</TableCell>
+            <TableCell align="right">人件費</TableCell>
             <TableCell align="right">現金</TableCell>
           </TableRow>
         </TableHead>
@@ -73,8 +73,8 @@ function DailyTable({ rows }) {
               <TableCell align="right">{r.vehicle2FuelYen ?? '—'}</TableCell>
               <TableCell align="right">{r.vehicle1Sales}</TableCell>
               <TableCell align="right">{r.vehicle2Sales}</TableCell>
-              <TableCell align="right">{r.vehicle3Sales}</TableCell>
               <TableCell align="right">{r.expenseAmount}</TableCell>
+              <TableCell align="right">{r.laborCost ?? 0}</TableCell>
               <TableCell align="right">{r.cash}</TableCell>
             </TableRow>
           ))}

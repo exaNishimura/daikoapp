@@ -16,11 +16,6 @@ import {
   useUpsertDailySale,
 } from '@/hooks/billing/useDailySales'
 import {
-  useStaffSales,
-  useUpsertStaffSalesBulk,
-} from '@/hooks/billing/useStaffSales'
-import { useStaffRates } from '@/hooks/billing/useStaffRates'
-import {
   useFixedExpenses,
   useUpsertFixedExpense,
   useDeleteFixedExpense,
@@ -28,7 +23,6 @@ import {
 import { useReceivables } from '@/hooks/billing/useReceivables'
 import { calcMonthlySalesSummary } from '@/lib/billing/dailySalesCalc'
 import { DailySalesTable } from './DailySalesTable'
-import { StaffSalesTable } from './StaffSalesTable'
 import { MonthlyFixedExpensesPanel } from './MonthlyFixedExpensesPanel'
 import { MonthlySummary } from './MonthlySummary'
 
@@ -46,25 +40,14 @@ export function DailySalesPage() {
   const billingMonth = monthRange(monthValue)?.firstDay ?? null
 
   const dailyQuery = useDailySales(year, month)
-  const staffSalesQuery = useStaffSales(year, month)
-  const staffRatesQuery = useStaffRates()
   const fixedExpensesQuery = useFixedExpenses(year, month)
   const receivablesQuery = useReceivables({ year, month })
 
   const upsertDaily = useUpsertDailySale()
-  const upsertStaffBulk = useUpsertStaffSalesBulk()
   const upsertFixed = useUpsertFixedExpense()
   const deleteFixed = useDeleteFixedExpense()
 
   const dailyRows = useMemo(() => dailyQuery.data ?? [], [dailyQuery.data])
-  const staffSales = useMemo(
-    () => staffSalesQuery.data ?? [],
-    [staffSalesQuery.data]
-  )
-  const staffRates = useMemo(
-    () => (staffRatesQuery.data ?? []).filter((r) => r.is_active !== false),
-    [staffRatesQuery.data]
-  )
   const fixedExpenses = useMemo(
     () => fixedExpensesQuery.data ?? [],
     [fixedExpensesQuery.data]
@@ -89,14 +72,8 @@ export function DailySalesPage() {
   }, [dailyRows, receivableRows])
 
   const summary = useMemo(
-    () =>
-      calcMonthlySalesSummary(
-        dailyRowsWithReceivable,
-        staffSales,
-        staffRates,
-        fixedExpenses
-      ),
-    [dailyRowsWithReceivable, staffSales, staffRates, fixedExpenses]
+    () => calcMonthlySalesSummary(dailyRowsWithReceivable, fixedExpenses),
+    [dailyRowsWithReceivable, fixedExpenses]
   )
 
   const handleDailyUpsert = async (payload) => {
@@ -105,15 +82,6 @@ export function DailySalesPage() {
       await upsertDaily.mutateAsync(payload)
     } catch (err) {
       setError(`日次売上の保存に失敗: ${err.message}`)
-    }
-  }
-
-  const handleStaffBulkUpsert = async (rows) => {
-    setError(null)
-    try {
-      await upsertStaffBulk.mutateAsync(rows)
-    } catch (err) {
-      setError(`スタッフ売上の保存に失敗: ${err.message}`)
     }
   }
 
@@ -165,7 +133,6 @@ export function DailySalesPage() {
         <Paper>
           <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 2 }}>
             <Tab label="日次売上" />
-            <Tab label="スタッフ別売上" />
             <Tab label="月額固定経費" />
           </Tabs>
           <Box sx={{ p: 2 }}>
@@ -177,16 +144,7 @@ export function DailySalesPage() {
                 onUpsert={handleDailyUpsert}
               />
             )}
-            {tab === 1 && (
-              <StaffSalesTable
-                year={year}
-                month={month}
-                staffRates={staffRates}
-                rows={staffSales}
-                onBulkUpsert={handleStaffBulkUpsert}
-              />
-            )}
-            {tab === 2 && billingMonth && (
+            {tab === 1 && billingMonth && (
               <MonthlyFixedExpensesPanel
                 billingMonth={billingMonth}
                 rows={fixedExpenses}

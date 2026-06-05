@@ -27,11 +27,11 @@ const WRITABLE_COLUMNS = [
   'vehicle2_fuel_yen',
   'vehicle1_sales',
   'vehicle2_sales',
-  'vehicle3_sales',
   'total_hours',
   'receivable_total',
   'expense_note',
   'expense_amount',
+  'labor_cost',
   'cash',
   'source_file',
 ]
