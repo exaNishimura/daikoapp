@@ -107,7 +107,10 @@ export function ShiftEditPage() {
         maxWidth: '1400px',
         mx: 'auto',
         bgcolor: '#f5f5f5',
-        minHeight: '100vh',
+        flex: 1,
+        minHeight: 0,
+        width: '100%',
+        overflowY: 'auto',
       }}
     >
       {/* ヘッダー */}
