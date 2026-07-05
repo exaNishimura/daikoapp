@@ -83,6 +83,7 @@ export function ShiftCalendar() {
   const calendarContainerRef = useRef(null)
   const hasScrolledRef = useRef(false)
   const [searchExpanded, setSearchExpanded] = useState(false) // デフォルトは閉じた状態
+  const [headerCollapsed, setHeaderCollapsed] = useState(false)
 
   const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
   const employeesQuery = useEmployees()
@@ -131,6 +132,18 @@ export function ShiftCalendar() {
       }, 100)
     }
   }, [loading, selectedYear, selectedMonth])
+
+  useEffect(() => {
+    const container = calendarContainerRef.current
+    if (!container) return
+
+    const onScroll = () => {
+      setHeaderCollapsed(container.scrollTop > 32)
+    }
+
+    container.addEventListener('scroll', onScroll, { passive: true })
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [loading])
 
   // データを日付でグループ化
   const groupedData = useMemo(() => groupByDate(shifts), [shifts])
@@ -185,243 +198,236 @@ export function ShiftCalendar() {
 
   return (
     <div className="shift-calendar-page">
-      <div className="shift-header">
-        <Box sx={{ mb: 2 }}>
-          <h1 style={{ marginBottom: '16px', fontSize: '20px' }}>運転代行シフト表</h1>
+      <div className={`shift-header ${headerCollapsed ? 'shift-header--collapsed' : ''}`}>
+        <div className="shift-header-compact">
+          <h1>運転代行シフト表</h1>
+          <Box
+            className="shift-header-month-nav"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              justifyContent: { xs: 'center', sm: 'flex-start' },
+              width: { xs: '100%', sm: 'auto' },
+            }}
+          >
+            <IconButton
+              onClick={handlePrevMonth}
+              disabled={loading}
+              size="medium"
+              aria-label="前月"
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                },
+                '&:disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                },
+                color: '#1976d2',
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                minWidth: { xs: '100px', sm: '120px' },
+                textAlign: 'center',
+                fontWeight: 'bold',
+                fontSize: { xs: '16px', sm: '20px' },
+              }}
+            >
+              {selectedYear}年{selectedMonth}月
+            </Typography>
+            <IconButton
+              onClick={handleNextMonth}
+              disabled={loading}
+              size="medium"
+              aria-label="次月"
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                },
+                '&:disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                },
+                color: '#1976d2',
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+        </div>
+
+        <div className="shift-header-expandable">
           <Box
             sx={{
               display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2,
-              alignItems: { xs: 'stretch', sm: 'center' },
+              gap: 1.5,
+              alignItems: 'center',
               flexWrap: 'wrap',
+              justifyContent: { xs: 'center', sm: 'flex-start' },
+              width: { xs: '100%', sm: 'auto' },
+              mt: { xs: 1, sm: 0 },
             }}
           >
-            {/* 月移動コントロール */}
-            <Box
+            <FormControl
+              size="small"
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                justifyContent: { xs: 'center', sm: 'flex-start' },
-                width: { xs: '100%', sm: 'auto' },
+                minWidth: { xs: '80px', sm: '100px' },
+                backgroundColor: 'white',
+                borderRadius: '4px',
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  '& fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.87)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1976d2',
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  '&.Mui-focused': {
+                    color: '#1976d2',
+                  },
+                },
+                '& .MuiSelect-select': {
+                  color: 'rgba(0, 0, 0, 0.87)',
+                  fontWeight: 500,
+                },
               }}
             >
-              <IconButton
-                onClick={handlePrevMonth}
-                disabled={loading}
-                size="medium"
-                aria-label="前月"
-                sx={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                  },
-                  '&:disabled': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                  },
-                  color: '#1976d2',
-                }}
+              <InputLabel>年</InputLabel>
+              <Select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                label="年"
               >
-                <ChevronLeftIcon />
-              </IconButton>
-              <Typography
-                variant="h6"
-                component="div"
-                sx={{
-                  minWidth: { xs: '100px', sm: '120px' },
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  fontSize: { xs: '16px', sm: '20px' },
-                }}
-              >
-                {selectedYear}年{selectedMonth}月
-              </Typography>
-              <IconButton
-                onClick={handleNextMonth}
-                disabled={loading}
-                size="medium"
-                aria-label="次月"
-                sx={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                  },
-                  '&:disabled': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                  },
-                  color: '#1976d2',
-                }}
-              >
-                <ChevronRightIcon />
-              </IconButton>
-            </Box>
-            {/* 年月セレクトと編集ボタン */}
-            <Box
+                {[2024, 2025, 2026, 2027, 2028].map((year) => (
+                  <MenuItem key={year} value={year}>
+                    {year}年
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl
+              size="small"
               sx={{
-                display: 'flex',
-                gap: 1.5,
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                justifyContent: { xs: 'center', sm: 'flex-start' },
-                width: { xs: '100%', sm: 'auto' },
+                minWidth: { xs: '80px', sm: '100px' },
+                backgroundColor: 'white',
+                borderRadius: '4px',
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'white',
+                  '& fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(0, 0, 0, 0.87)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1976d2',
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  '&.Mui-focused': {
+                    color: '#1976d2',
+                  },
+                },
+                '& .MuiSelect-select': {
+                  color: 'rgba(0, 0, 0, 0.87)',
+                  fontWeight: 500,
+                },
               }}
             >
-              <FormControl
-                size="small"
-                sx={{
-                  minWidth: { xs: '80px', sm: '100px' },
-                  backgroundColor: 'white',
-                  borderRadius: '4px',
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'white',
-                    '& fieldset': {
-                      borderColor: 'rgba(0, 0, 0, 0.23)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'rgba(0, 0, 0, 0.87)',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
-                      borderWidth: '2px',
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: 'rgba(0, 0, 0, 0.6)',
-                    '&.Mui-focused': {
-                      color: '#1976d2',
-                    },
-                  },
-                  '& .MuiSelect-select': {
-                    color: 'rgba(0, 0, 0, 0.87)',
-                    fontWeight: 500,
-                  },
-                }}
+              <InputLabel>月</InputLabel>
+              <Select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                label="月"
               >
-                <InputLabel>年</InputLabel>
-                <Select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  label="年"
-                >
-                  {[2024, 2025, 2026, 2027, 2028].map((year) => (
-                    <MenuItem key={year} value={year}>
-                      {year}年
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl
-                size="small"
-                sx={{
-                  minWidth: { xs: '80px', sm: '100px' },
-                  backgroundColor: 'white',
-                  borderRadius: '4px',
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'white',
-                    '& fieldset': {
-                      borderColor: 'rgba(0, 0, 0, 0.23)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'rgba(0, 0, 0, 0.87)',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
-                      borderWidth: '2px',
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: 'rgba(0, 0, 0, 0.6)',
-                    '&.Mui-focused': {
-                      color: '#1976d2',
-                    },
-                  },
-                  '& .MuiSelect-select': {
-                    color: 'rgba(0, 0, 0, 0.87)',
-                    fontWeight: 500,
-                  },
-                }}
-              >
-                <InputLabel>月</InputLabel>
-                <Select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  label="月"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
-                    <MenuItem key={month} value={month}>
-                      {month}月
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
-                startIcon={<EditIcon />}
-                size="small"
-                sx={{
-                  whiteSpace: 'nowrap',
-                  fontSize: { xs: '12px', sm: '14px' },
-                }}
-              >
-                シフト編集
-              </Button>
-            </Box>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
+                  <MenuItem key={month} value={month}>
+                    {month}月
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              variant="contained"
+              onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
+              startIcon={<EditIcon />}
+              size="small"
+              sx={{
+                whiteSpace: 'nowrap',
+                fontSize: { xs: '12px', sm: '14px' },
+              }}
+            >
+              シフト編集
+            </Button>
           </Box>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<SearchIcon />}
-            endIcon={searchExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            onClick={() => setSearchExpanded(!searchExpanded)}
-            sx={{
-              mb: 1,
-              textTransform: 'none',
-            }}
-          >
-            検索・フィルター
-          </Button>
-        </Box>
-        <Collapse in={searchExpanded}>
-          <div className="shift-controls">
-            <div className="filter-group">
-              {staffFilterNames.map((staff) => (
-                <label key={staff}>
-                  <input
-                    type="checkbox"
-                    checked={visibleStaff.length === 0 || visibleStaff.includes(staff)}
-                    onChange={(e) => handleStaffFilterChange(staff, e.target.checked)}
-                  />
-                  {staff}
-                </label>
-              ))}
-            </div>
-            <input
-              type="text"
-              className="search-box"
-              placeholder="検索（日付・スタッフ名など）"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-          </div>
-        </Collapse>
-        <div className="legend">
-          {getActiveStaffNamesOrdered(employees).map((name) => (
-            <div key={name} className="legend-item">
-              <div
-                className="legend-color"
-                style={{ background: colorByName[name] || '#bdbdbd' }}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SearchIcon />}
+              endIcon={searchExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setSearchExpanded(!searchExpanded)}
+              sx={{
+                mb: 1,
+                textTransform: 'none',
+              }}
+            >
+              検索・フィルター
+            </Button>
+          </Box>
+          <Collapse in={searchExpanded}>
+            <div className="shift-controls">
+              <div className="filter-group">
+                {staffFilterNames.map((staff) => (
+                  <label key={staff}>
+                    <input
+                      type="checkbox"
+                      checked={visibleStaff.length === 0 || visibleStaff.includes(staff)}
+                      onChange={(e) => handleStaffFilterChange(staff, e.target.checked)}
+                    />
+                    {staff}
+                  </label>
+                ))}
+              </div>
+              <input
+                type="text"
+                className="search-box"
+                placeholder="検索（日付・スタッフ名など）"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
               />
-              <span>{name}</span>
             </div>
-          ))}
+          </Collapse>
+          <div className="legend">
+            {getActiveStaffNamesOrdered(employees).map((name) => (
+              <div key={name} className="legend-item">
+                <div
+                  className="legend-color"
+                  style={{ background: colorByName[name] || '#bdbdbd' }}
+                />
+                <span>{name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
