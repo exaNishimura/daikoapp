@@ -175,7 +175,8 @@ export function DispatchBoard() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          height: '100vh',
+          flex: 1,
+          minHeight: 0,
           gap: 2,
         }}
       >
@@ -195,7 +196,15 @@ export function DispatchBoard() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
         <DispatchHeader
           businessDayText={businessDayText}
           earliestAvailableTime={earliestAvailableTime}
@@ -221,14 +230,14 @@ export function DispatchBoard() {
                 再読み込み
               </Button>
             }
-            sx={{ borderRadius: 0, mt: '64px' }}
+            sx={{ borderRadius: 0 }}
           >
             {error}
           </Alert>
         )}
 
         {/* メインコンテンツ */}
-        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', mt: '70px' }}>
+        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
           {/* タイムライン */}
           <Box
             component="main"

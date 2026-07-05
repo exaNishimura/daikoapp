@@ -19,12 +19,11 @@ export function DispatchHeader({
 }) {
   return (
     <AppBar
-      position="fixed"
+      position="static"
       elevation={1}
       sx={{
         bgcolor: 'background.paper',
-        zIndex: (theme) => theme.zIndex.drawer + 1,
-        top: '45px',
+        flexShrink: 0,
       }}
     >
       <Toolbar
