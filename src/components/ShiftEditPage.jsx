@@ -7,6 +7,7 @@ import {
   TIMELINE_WIDTH,
   getDefaultShiftEditYearMonth,
 } from '@/lib/shiftEditUtils'
+import { getStaffDisplayName } from '@/lib/staffFromEmployees'
 import { TimeAxis, CarBlock } from './ShiftEditPage/Timeline'
 import { CopyShiftDialog } from './ShiftEditPage/CopyShiftDialog'
 import { BulkCopyShiftDialog } from './ShiftEditPage/BulkCopyShiftDialog'
@@ -57,7 +58,8 @@ export function ShiftEditPage() {
     days,
     statuses,
     staffColorByName,
-    staffOptions,
+    employeeSelectOptions,
+    employees,
     getShiftsForDate,
     refetchShifts,
     error,
@@ -257,7 +259,7 @@ export function ShiftEditPage() {
             const newShift = newShifts[date] || {
               car: '',
               role: '',
-              staff: '',
+              employee_id: '',
               start: '',
               end: '',
               note: '',
@@ -457,6 +459,7 @@ export function ShiftEditPage() {
                                     carNum={carNum}
                                     shifts={dateShifts}
                                     staffColorByName={staffColorByName}
+                                    employees={employees}
                                   />
                                 ))}
                               </Box>
@@ -569,11 +572,11 @@ export function ShiftEditPage() {
                                   <FormControl fullWidth size="small">
                                     <InputLabel sx={{ color: '#666' }}>スタッフ</InputLabel>
                                     <Select
-                                      value={newShift.staff}
+                                      value={newShift.employee_id}
                                       onChange={(e) =>
                                         setNewShifts((prev) => ({
                                           ...prev,
-                                          [date]: { ...newShift, staff: e.target.value },
+                                          [date]: { ...newShift, employee_id: e.target.value },
                                         }))
                                       }
                                       label="スタッフ"
@@ -603,9 +606,9 @@ export function ShiftEditPage() {
                                         },
                                       }}
                                     >
-                                      {staffOptions.map((staff) => (
-                                        <MenuItem key={staff} value={staff}>
-                                          {staff}
+                                      {employeeSelectOptions.map((emp) => (
+                                        <MenuItem key={emp.id} value={emp.id}>
+                                          {emp.name}
                                         </MenuItem>
                                       ))}
                                     </Select>
@@ -776,7 +779,8 @@ export function ShiftEditPage() {
                                                   border: '1px solid #90caf9',
                                                 }}
                                               />
-                                              {shift.role} / {shift.staff} / {shift.start} -{' '}
+                                              {shift.role} / {getStaffDisplayName(shift, employees)} /{' '}
+                                              {shift.start} -{' '}
                                               {shift.end}
                                               {shift.note && (
                                                 <Chip
@@ -934,13 +938,13 @@ export function ShiftEditPage() {
                                                   スタッフ
                                                 </InputLabel>
                                                 <Select
-                                                  value={editingShift.staff}
+                                                  value={editingShift.employee_id}
                                                   onChange={(e) =>
                                                     setEditingShifts((prev) => ({
                                                       ...prev,
                                                       [shift.id]: {
                                                         ...editingShift,
-                                                        staff: e.target.value,
+                                                        employee_id: e.target.value,
                                                       },
                                                     }))
                                                   }
@@ -972,9 +976,9 @@ export function ShiftEditPage() {
                                                     },
                                                   }}
                                                 >
-                                                  {staffOptions.map((staff) => (
-                                                    <MenuItem key={staff} value={staff}>
-                                                      {staff}
+                                                  {employeeSelectOptions.map((emp) => (
+                                                    <MenuItem key={emp.id} value={emp.id}>
+                                                      {emp.name}
                                                     </MenuItem>
                                                   ))}
                                                 </Select>

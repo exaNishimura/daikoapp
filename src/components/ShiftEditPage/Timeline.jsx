@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { TIMELINE_START, TIMELINE_END, timeToMinutes, minutesToPixels } from '@/lib/shiftEditUtils'
 import { getContrastTextColor } from '@/lib/colorContrast'
+import { getStaffColorForShift, getStaffDisplayName } from '@/lib/staffFromEmployees'
 
 /**
  * 19:00 -> 翌 06:00 を 12 時間 (960px) に展開する時間軸。
@@ -89,17 +90,18 @@ export function TimeAxis() {
   )
 }
 
-function ShiftBar({ shift, staffColorByName }) {
+function ShiftBar({ shift, staffColorByName, employees }) {
   const startMinutes = timeToMinutes(shift.start)
   const endMinutes = timeToMinutes(shift.end)
   const left = minutesToPixels(startMinutes)
   const width = minutesToPixels(endMinutes - startMinutes)
 
+  const staffName = getStaffDisplayName(shift, employees)
   const title = shift.note
-    ? `${shift.staff} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
-    : `${shift.staff} (${shift.role}) ${shift.start}-${shift.end}`
+    ? `${staffName} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
+    : `${staffName} (${shift.role}) ${shift.start}-${shift.end}`
 
-  const barBg = staffColorByName[shift.staff] || '#bdbdbd'
+  const barBg = getStaffColorForShift(shift, employees, staffColorByName)
   const textColor = getContrastTextColor(barBg)
 
   return (
@@ -140,7 +142,7 @@ function ShiftBar({ shift, staffColorByName }) {
           fontSize: '11px',
         }}
       >
-        {shift.staff}
+        {staffName}
       </Typography>
       <Typography
         component="span"
@@ -153,7 +155,7 @@ function ShiftBar({ shift, staffColorByName }) {
   )
 }
 
-function Lane({ role, shifts, staffColorByName }) {
+function Lane({ role, shifts, staffColorByName, employees }) {
   return (
     <Box
       className="lane"
@@ -186,7 +188,12 @@ function Lane({ role, shifts, staffColorByName }) {
         {role}
       </Box>
       {shifts.map((shift, idx) => (
-        <ShiftBar key={shift.id || idx} shift={shift} staffColorByName={staffColorByName} />
+        <ShiftBar
+          key={shift.id || idx}
+          shift={shift}
+          staffColorByName={staffColorByName}
+          employees={employees}
+        />
       ))}
     </Box>
   )
@@ -196,7 +203,7 @@ function Lane({ role, shifts, staffColorByName }) {
  * 1 号車 / 2 号車 など、車両単位のタイムライン。
  * 代行 / 随伴の 2 レーンを縦に並べる。
  */
-export function CarBlock({ carNum, shifts, staffColorByName }) {
+export function CarBlock({ carNum, shifts, staffColorByName, employees }) {
   const driverShifts = shifts.filter((s) => s.car === carNum && s.role === '代行')
   const companionShifts = shifts.filter((s) => s.car === carNum && s.role === '随伴')
 
@@ -208,8 +215,8 @@ export function CarBlock({ carNum, shifts, staffColorByName }) {
       >
         {carNum}号車
       </Box>
-      <Lane role="代行" shifts={driverShifts} staffColorByName={staffColorByName} />
-      <Lane role="随伴" shifts={companionShifts} staffColorByName={staffColorByName} />
+      <Lane role="代行" shifts={driverShifts} staffColorByName={staffColorByName} employees={employees} />
+      <Lane role="随伴" shifts={companionShifts} staffColorByName={staffColorByName} employees={employees} />
     </Box>
   )
 }

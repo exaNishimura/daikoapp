@@ -56,6 +56,8 @@ export function EmployeeManagement() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [editingId, setEditingId] = useState(null)
+  const [originalName, setOriginalName] = useState('')
+  const [legacyStaffName, setLegacyStaffName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -81,6 +83,8 @@ export function EmployeeManagement() {
   const handleOpenDialog = (employee = null) => {
     if (employee) {
       setEditingId(employee.id)
+      setOriginalName(employee.name)
+      setLegacyStaffName('')
       setFormData({
         name: employee.name,
         license_type: employee.license_type,
@@ -91,6 +95,8 @@ export function EmployeeManagement() {
       })
     } else {
       setEditingId(null)
+      setOriginalName('')
+      setLegacyStaffName('')
       setFormData({
         name: '',
         license_type: '一種',
@@ -106,6 +112,8 @@ export function EmployeeManagement() {
   const handleCloseDialog = () => {
     setDialogOpen(false)
     setEditingId(null)
+    setOriginalName('')
+    setLegacyStaffName('')
     setFormData({
       name: '',
       license_type: '一種',
@@ -141,8 +149,19 @@ export function EmployeeManagement() {
 
     try {
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, employeeData })
-        setSuccess('従業員を更新しました')
+        await updateMutation.mutateAsync({
+          id: editingId,
+          employeeData,
+          legacyStaffName: legacyStaffName.trim() || undefined,
+        })
+        const nameChanged =
+          originalName.trim() && employeeData.name.trim() !== originalName.trim()
+        const legacySync = Boolean(legacyStaffName.trim())
+        setSuccess(
+          nameChanged || legacySync
+            ? '従業員を更新し、売上データのスタッフ名も一括更新しました'
+            : '従業員を更新しました'
+        )
       } else {
         await createMutation.mutateAsync(employeeData)
         setSuccess('従業員を作成しました')
@@ -330,6 +349,17 @@ export function EmployeeManagement() {
               required
               disabled={loading}
             />
+            {editingId && (
+              <TextField
+                label="売上データに残っている旧スタッフ名（任意）"
+                value={legacyStaffName}
+                onChange={(e) => setLegacyStaffName(e.target.value)}
+                fullWidth
+                disabled={loading}
+                placeholder="例: 北島"
+                helperText="売上インポート等で古い表記のまま残っている場合に入力（シフトは従業員IDで連携）"
+              />
+            )}
             <FormControl fullWidth required>
               <InputLabel>免許種別</InputLabel>
               <Select

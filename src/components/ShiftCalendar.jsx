@@ -1,18 +1,20 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { useShiftsByMonth } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
 import {
-  getActiveStaffNamesOrdered,
-  mergeStaffNamesForSelect,
   buildStaffColorByName,
+  getEmployeeSelectOptions,
+  getStaffColor,
+  getStaffColorForShift,
+  getStaffDisplayName,
+  resolveShiftEmployee,
 } from '@/lib/staffFromEmployees'
 import { getContrastTextColor } from '@/lib/colorContrast'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import SearchIcon from '@mui/icons-material/Search'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -75,7 +77,8 @@ function groupByDate(data) {
 
 export function ShiftCalendar() {
   const navigate = useNavigate()
-  const [visibleStaff, setVisibleStaff] = useState([])
+  const { isAuthenticated } = useAuth()
+  const [visibleEmployeeIds, setVisibleEmployeeIds] = useState([])
   const [searchText, setSearchText] = useState('')
   // 現在の年月を初期値として設定
   const today = new Date()
@@ -100,11 +103,10 @@ export function ShiftCalendar() {
 
   const colorByName = useMemo(() => buildStaffColorByName(employees), [employees])
 
-  const staffFilterNames = useMemo(() => {
-    const activeOrdered = getActiveStaffNamesOrdered(employees)
-    const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
-    return mergeStaffNamesForSelect(activeOrdered, shiftNames)
-  }, [employees, shifts])
+  const filterEmployees = useMemo(
+    () => getEmployeeSelectOptions(employees, shifts),
+    [employees, shifts]
+  )
 
   // 本日の日付まで自動スクロール
   useEffect(() => {
@@ -160,26 +162,28 @@ export function ShiftCalendar() {
       const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
       const matchDate = date.includes(searchText) || dateFormatted.includes(searchText)
       const matchDow = dayData.dow.includes(searchText)
-      const matchStaff = dayData.shifts.some((s) => s.staff.includes(searchText))
+      const matchStaff = dayData.shifts.some((s) =>
+        getStaffDisplayName(s, employees).includes(searchText)
+      )
       const matchStatus = dayData.status && dayData.status.includes(searchText)
 
       return matchDate || matchDow || matchStaff || matchStatus
     })
   }, [groupedData, searchText])
 
-  const handleStaffFilterChange = (staff, checked) => {
-    setVisibleStaff((prev) => {
-      const allNames = staffFilterNames
+  const handleEmployeeFilterChange = (employeeId, checked) => {
+    setVisibleEmployeeIds((prev) => {
+      const allIds = filterEmployees.map((e) => e.id)
       if (checked) {
         if (prev.length === 0) return []
-        const next = [...new Set([...prev, staff])]
-        if (allNames.length > 0 && next.length >= allNames.length) return []
+        const next = [...new Set([...prev, employeeId])]
+        if (allIds.length > 0 && next.length >= allIds.length) return []
         return next
       }
       if (prev.length === 0) {
-        return allNames.filter((s) => s !== staff)
+        return allIds.filter((id) => id !== employeeId)
       }
-      return prev.filter((s) => s !== staff)
+      return prev.filter((id) => id !== employeeId)
     })
   }
 
@@ -201,211 +205,246 @@ export function ShiftCalendar() {
     <div className="shift-calendar-page">
       <div className={`shift-header ${headerCollapsed ? 'shift-header--collapsed' : ''}`}>
         <div className="shift-header-compact">
-          <h1>運転代行シフト表</h1>
+          <div className="shift-header-title-row">
+            <h1>運転代行シフト表</h1>
+            {isAuthenticated && (
+              <Button
+                variant="contained"
+                onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
+                startIcon={<EditIcon />}
+                size="small"
+                sx={{
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  fontSize: { xs: '12px', sm: '14px' },
+                }}
+              >
+                シフト編集
+              </Button>
+            )}
+          </div>
           <Box
             className="shift-header-month-nav"
             sx={{
-              display: 'flex',
+              display: 'grid',
+              gridTemplateColumns: '1fr auto 1fr',
               alignItems: 'center',
-              gap: 1,
-              justifyContent: { xs: 'center', sm: 'flex-start' },
-              width: { xs: '100%', sm: 'auto' },
+              width: '100%',
             }}
           >
-            <IconButton
-              onClick={handlePrevMonth}
-              disabled={loading}
-              size="medium"
-              aria-label="前月"
+            <Box />
+            <Box
               sx={{
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                border: '1px solid rgba(0, 0, 0, 0.12)',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                },
-                '&:disabled': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                  border: '1px solid rgba(0, 0, 0, 0.06)',
-                },
-                color: '#1976d2',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                justifyContent: 'center',
               }}
             >
-              <ChevronLeftIcon />
-            </IconButton>
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{
-                minWidth: { xs: '100px', sm: '120px' },
-                textAlign: 'center',
-                fontWeight: 'bold',
-                fontSize: { xs: '16px', sm: '20px' },
-              }}
-            >
-              {selectedYear}年{selectedMonth}月
-            </Typography>
-            <IconButton
-              onClick={handleNextMonth}
-              disabled={loading}
-              size="medium"
-              aria-label="次月"
-              sx={{
-                backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                border: '1px solid rgba(0, 0, 0, 0.12)',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                },
-                '&:disabled': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                  border: '1px solid rgba(0, 0, 0, 0.06)',
-                },
-                color: '#1976d2',
-              }}
-            >
-              <ChevronRightIcon />
-            </IconButton>
+              <IconButton
+                onClick={handlePrevMonth}
+                disabled={loading}
+                size="medium"
+                aria-label="前月"
+                sx={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                  },
+                  '&:disabled': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    border: '1px solid rgba(0, 0, 0, 0.06)',
+                  },
+                  color: '#1976d2',
+                }}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+              <Typography
+                variant="h6"
+                component="div"
+                sx={{
+                  minWidth: { xs: '100px', sm: '120px' },
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  fontSize: { xs: '16px', sm: '20px' },
+                }}
+              >
+                {selectedYear}年{selectedMonth}月
+              </Typography>
+              <IconButton
+                onClick={handleNextMonth}
+                disabled={loading}
+                size="medium"
+                aria-label="次月"
+                sx={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                  },
+                  '&:disabled': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    border: '1px solid rgba(0, 0, 0, 0.06)',
+                  },
+                  color: '#1976d2',
+                }}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton
+                aria-label="検索・フィルター"
+                aria-expanded={searchExpanded}
+                onClick={() => setSearchExpanded(!searchExpanded)}
+                size="small"
+                sx={{
+                  backgroundColor: searchExpanded
+                    ? 'rgba(25, 118, 210, 0.12)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  color: '#1976d2',
+                  '&:hover': {
+                    backgroundColor: searchExpanded
+                      ? 'rgba(25, 118, 210, 0.2)'
+                      : 'rgba(0, 0, 0, 0.08)',
+                  },
+                  '& .MuiSvgIcon-root': {
+                    fontSize: 18,
+                  },
+                }}
+              >
+                <SearchIcon />
+              </IconButton>
+            </Box>
           </Box>
         </div>
 
         <div className="shift-header-expandable">
-          <Box
+          <Collapse
+            in={searchExpanded}
             sx={{
-              display: 'flex',
-              gap: 1.5,
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              justifyContent: { xs: 'center', sm: 'flex-start' },
-              width: { xs: '100%', sm: 'auto' },
-              mt: { xs: 1, sm: 0 },
+              overflow: 'visible',
+              '& .MuiCollapse-wrapper': { overflow: 'visible' },
+              '& .MuiCollapse-wrapperInner': { overflow: 'visible' },
             }}
           >
-            <FormControl
-              size="small"
-              sx={{
-                minWidth: { xs: '80px', sm: '100px' },
-                backgroundColor: 'white',
-                borderRadius: '4px',
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'white',
-                  '& fieldset': {
-                    borderColor: 'rgba(0, 0, 0, 0.23)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(0, 0, 0, 0.87)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#1976d2',
-                    borderWidth: '2px',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: 'rgba(0, 0, 0, 0.6)',
-                  '&.Mui-focused': {
-                    color: '#1976d2',
-                  },
-                },
-                '& .MuiSelect-select': {
-                  color: 'rgba(0, 0, 0, 0.87)',
-                  fontWeight: 500,
-                },
-              }}
-            >
-              <InputLabel>年</InputLabel>
-              <Select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                label="年"
-              >
-                {[2024, 2025, 2026, 2027, 2028].map((year) => (
-                  <MenuItem key={year} value={year}>
-                    {year}年
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl
-              size="small"
-              sx={{
-                minWidth: { xs: '80px', sm: '100px' },
-                backgroundColor: 'white',
-                borderRadius: '4px',
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'white',
-                  '& fieldset': {
-                    borderColor: 'rgba(0, 0, 0, 0.23)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(0, 0, 0, 0.87)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#1976d2',
-                    borderWidth: '2px',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: 'rgba(0, 0, 0, 0.6)',
-                  '&.Mui-focused': {
-                    color: '#1976d2',
-                  },
-                },
-                '& .MuiSelect-select': {
-                  color: 'rgba(0, 0, 0, 0.87)',
-                  fontWeight: 500,
-                },
-              }}
-            >
-              <InputLabel>月</InputLabel>
-              <Select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                label="月"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
-                  <MenuItem key={month} value={month}>
-                    {month}月
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
-              startIcon={<EditIcon />}
-              size="small"
-              sx={{
-                whiteSpace: 'nowrap',
-                fontSize: { xs: '12px', sm: '14px' },
-              }}
-            >
-              シフト編集
-            </Button>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<SearchIcon />}
-              endIcon={searchExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-              onClick={() => setSearchExpanded(!searchExpanded)}
-              sx={{
-                mb: 1,
-                textTransform: 'none',
-              }}
-            >
-              検索・フィルター
-            </Button>
-          </Box>
-          <Collapse in={searchExpanded}>
             <div className="shift-controls">
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1.5,
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  justifyContent: { xs: 'center', sm: 'flex-start' },
+                  width: '100%',
+                  overflow: 'visible',
+                }}
+              >
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: { xs: '110px', sm: '120px' },
+                    backgroundColor: 'white',
+                    borderRadius: '4px',
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white',
+                      '& fieldset': {
+                        borderColor: 'rgba(0, 0, 0, 0.23)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(0, 0, 0, 0.87)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#1976d2',
+                        borderWidth: '2px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'rgba(0, 0, 0, 0.6)',
+                      '&.Mui-focused': {
+                        color: '#1976d2',
+                      },
+                    },
+                    '& .MuiSelect-select': {
+                      color: 'rgba(0, 0, 0, 0.87)',
+                      fontWeight: 500,
+                    },
+                  }}
+                >
+                  <InputLabel id="shift-year-label">年</InputLabel>
+                  <Select
+                    labelId="shift-year-label"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    label="年"
+                  >
+                    {[2024, 2025, 2026, 2027, 2028].map((year) => (
+                      <MenuItem key={year} value={year}>
+                        {year}年
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: { xs: '90px', sm: '100px' },
+                    backgroundColor: 'white',
+                    borderRadius: '4px',
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'white',
+                      '& fieldset': {
+                        borderColor: 'rgba(0, 0, 0, 0.23)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(0, 0, 0, 0.87)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#1976d2',
+                        borderWidth: '2px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'rgba(0, 0, 0, 0.6)',
+                      '&.Mui-focused': {
+                        color: '#1976d2',
+                      },
+                    },
+                    '& .MuiSelect-select': {
+                      color: 'rgba(0, 0, 0, 0.87)',
+                      fontWeight: 500,
+                    },
+                  }}
+                >
+                  <InputLabel id="shift-month-label">月</InputLabel>
+                  <Select
+                    labelId="shift-month-label"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    label="月"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
+                      <MenuItem key={month} value={month}>
+                        {month}月
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
               <div className="filter-group">
-                {staffFilterNames.map((staff) => (
-                  <label key={staff}>
+                {filterEmployees.map((emp) => (
+                  <label key={emp.id}>
                     <input
                       type="checkbox"
-                      checked={visibleStaff.length === 0 || visibleStaff.includes(staff)}
-                      onChange={(e) => handleStaffFilterChange(staff, e.target.checked)}
+                      checked={
+                        visibleEmployeeIds.length === 0 || visibleEmployeeIds.includes(emp.id)
+                      }
+                      onChange={(e) => handleEmployeeFilterChange(emp.id, e.target.checked)}
                     />
-                    {staff}
+                    {emp.name}
                   </label>
                 ))}
               </div>
@@ -419,13 +458,15 @@ export function ShiftCalendar() {
             </div>
           </Collapse>
           <div className="legend">
-            {getActiveStaffNamesOrdered(employees).map((name) => (
-              <div key={name} className="legend-item">
+            {getEmployeeSelectOptions(employees, shifts).map((emp) => (
+              <div key={emp.id} className="legend-item">
                 <div
                   className="legend-color"
-                  style={{ background: colorByName[name] || '#bdbdbd' }}
+                  style={{
+                    background: getStaffColor(colorByName, emp.name, employees),
+                  }}
                 />
-                <span>{name}</span>
+                <span>{emp.name}</span>
               </div>
             ))}
           </div>
@@ -441,7 +482,7 @@ export function ShiftCalendar() {
               <DayBlock
                 key={date}
                 dayData={groupedData[date]}
-                visibleStaff={visibleStaff}
+                visibleEmployeeIds={visibleEmployeeIds}
                 employees={employees}
                 colorByName={colorByName}
               />
@@ -453,7 +494,7 @@ export function ShiftCalendar() {
   )
 }
 
-function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
+function DayBlock({ dayData, visibleEmployeeIds, employees, colorByName }) {
   const isFriSat = dayData.dow === '金' || dayData.dow === '土'
   const dateParts = dayData.date.split('-')
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
@@ -467,16 +508,18 @@ function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
     // 従業員マップを作成（名前で検索）
     const employeeMap = {}
     employees.forEach((emp) => {
-      employeeMap[emp.name] = emp
+      if (emp?.id) employeeMap[emp.id] = emp
     })
 
     let totalWage = 0
 
     // 各シフトの給料を計算
     dayData.shifts.forEach((shift) => {
-      if (!shift.start || !shift.end || !shift.staff) return
+      if (!shift.start || !shift.end) return
 
-      const employee = employeeMap[shift.staff]
+      const employee =
+        (shift.employee_id && employeeMap[shift.employee_id]) ||
+        resolveShiftEmployee(shift, employees)
       if (!employee || !employee.hourly_wage) return
 
       // 勤務時間を計算（時間単位）
@@ -534,8 +577,9 @@ function DayBlock({ dayData, visibleStaff, employees, colorByName }) {
               key={carNum}
               carNum={carNum}
               shifts={dayData.shifts}
-              visibleStaff={visibleStaff}
+              visibleEmployeeIds={visibleEmployeeIds}
               colorByName={colorByName}
+              employees={employees}
             />
           ))}
         </div>
@@ -605,7 +649,7 @@ function TimeAxis() {
   )
 }
 
-function CarBlock({ carNum, shifts, visibleStaff, colorByName }) {
+function CarBlock({ carNum, shifts, visibleEmployeeIds, colorByName, employees }) {
   const driverShifts = shifts.filter((s) => s.car === carNum && s.role === '代行')
   const companionShifts = shifts.filter((s) => s.car === carNum && s.role === '随伴')
 
@@ -615,46 +659,57 @@ function CarBlock({ carNum, shifts, visibleStaff, colorByName }) {
       <Lane
         role="代行"
         shifts={driverShifts}
-        visibleStaff={visibleStaff}
+        visibleEmployeeIds={visibleEmployeeIds}
         colorByName={colorByName}
+        employees={employees}
       />
       <Lane
         role="随伴"
         shifts={companionShifts}
-        visibleStaff={visibleStaff}
+        visibleEmployeeIds={visibleEmployeeIds}
         colorByName={colorByName}
+        employees={employees}
       />
     </div>
   )
 }
 
-function Lane({ role, shifts, visibleStaff, colorByName }) {
+function Lane({ role, shifts, visibleEmployeeIds, colorByName, employees }) {
   return (
     <div className="lane">
       <div className="lane-label">{role}</div>
-      {shifts.map((shift, idx) => (
-        <Bar
-          key={idx}
-          shift={shift}
-          visible={visibleStaff.length === 0 || visibleStaff.includes(shift.staff)}
-          colorByName={colorByName}
-        />
-      ))}
+      {shifts.map((shift, idx) => {
+        const shiftEmployee = resolveShiftEmployee(shift, employees)
+        const employeeId = shiftEmployee?.id
+        return (
+          <Bar
+            key={idx}
+            shift={shift}
+            visible={
+              visibleEmployeeIds.length === 0 ||
+              (employeeId && visibleEmployeeIds.includes(employeeId))
+            }
+            colorByName={colorByName}
+            employees={employees}
+          />
+        )
+      })}
     </div>
   )
 }
 
-function Bar({ shift, visible, colorByName }) {
+function Bar({ shift, visible, colorByName, employees }) {
   const startMinutes = timeToMinutes(shift.start)
   const endMinutes = timeToMinutes(shift.end)
   const left = minutesToPixels(startMinutes)
   const width = minutesToPixels(endMinutes - startMinutes)
-  const bg = (colorByName && colorByName[shift.staff]) || '#bdbdbd'
+  const bg = getStaffColorForShift(shift, employees, colorByName)
   const textColor = getContrastTextColor(bg)
+  const staffName = getStaffDisplayName(shift, employees)
 
   const title = shift.note
-    ? `${shift.staff} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
-    : `${shift.staff} (${shift.role}) ${shift.start}-${shift.end}`
+    ? `${staffName} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
+    : `${staffName} (${shift.role}) ${shift.start}-${shift.end}`
 
   return (
     <div
@@ -668,7 +723,7 @@ function Bar({ shift, visible, colorByName }) {
       }}
       title={title}
     >
-      <span className="bar-text">{shift.staff}</span>
+      <span className="bar-text">{staffName}</span>
       <span className="bar-time">
         {shift.start}-{shift.end}
       </span>

@@ -9,15 +9,16 @@ import {
 import { useEmployees } from '@/hooks/useEmployees'
 import {
   buildStaffColorByName,
-  getActiveStaffNamesOrdered,
-  mergeStaffNamesForSelect,
+  getEmployeeSelectOptions,
+  resolveShiftEmployee,
+  toShiftStaffFields,
 } from '@/lib/staffFromEmployees'
 import { DOW_MAP, getDaysInMonth } from '@/lib/shiftEditUtils'
 
 const EMPTY_NEW_SHIFT = {
   car: '',
   role: '',
-  staff: '',
+  employee_id: '',
   start: '',
   end: '',
   note: '',
@@ -97,12 +98,17 @@ export function useShiftEditPage({ year, month }) {
     return map
   }, [shifts])
 
-  const staffColorByName = useMemo(() => buildStaffColorByName(employees), [employees])
-  const staffOptions = useMemo(() => {
-    const activeOrdered = getActiveStaffNamesOrdered(employees)
-    const shiftNames = shifts.filter((s) => !s.status && s.staff).map((s) => s.staff)
-    return mergeStaffNamesForSelect(activeOrdered, shiftNames)
+  const staffColorByName = useMemo(() => {
+    const shiftNames = shifts
+      .filter((s) => !s.status)
+      .map((s) => s.staff)
+      .filter(Boolean)
+    return buildStaffColorByName(employees, shiftNames)
   }, [employees, shifts])
+  const employeeSelectOptions = useMemo(
+    () => getEmployeeSelectOptions(employees, shifts),
+    [employees, shifts]
+  )
 
   const getShiftsForDate = (date) => shifts.filter((s) => s.date === date && !s.status)
 
@@ -131,7 +137,7 @@ export function useShiftEditPage({ year, month }) {
       !shiftData ||
       !shiftData.car ||
       !shiftData.role ||
-      !shiftData.staff ||
+      !shiftData.employee_id ||
       !shiftData.start ||
       !shiftData.end
     ) {
@@ -149,7 +155,7 @@ export function useShiftEditPage({ year, month }) {
         dow,
         car: shiftData.car,
         role: shiftData.role,
-        staff: shiftData.staff,
+        ...toShiftStaffFields(shiftData.employee_id, employees),
         start: shiftData.start,
         end: shiftData.end,
         note: shiftData.note || null,
@@ -169,7 +175,7 @@ export function useShiftEditPage({ year, month }) {
       [shift.id]: {
         car: shift.car,
         role: shift.role,
-        staff: shift.staff,
+        employee_id: shift.employee_id || resolveShiftEmployee(shift, employees)?.id || '',
         start: shift.start,
         end: shift.end,
         note: shift.note || '',
@@ -200,7 +206,7 @@ export function useShiftEditPage({ year, month }) {
       !shiftData ||
       !shiftData.car ||
       !shiftData.role ||
-      !shiftData.staff ||
+      !shiftData.employee_id ||
       !shiftData.start ||
       !shiftData.end
     ) {
@@ -216,7 +222,7 @@ export function useShiftEditPage({ year, month }) {
 
     const invalidShifts = Object.keys(editingShifts).filter((shiftId) => {
       const s = editingShifts[shiftId]
-      return !s || !s.car || !s.role || !s.staff || !s.start || !s.end
+      return !s || !s.car || !s.role || !s.employee_id || !s.start || !s.end
     })
 
     if (invalidShifts.length > 0) {
@@ -248,7 +254,7 @@ export function useShiftEditPage({ year, month }) {
             shiftData: {
               car: shiftData.car,
               role: shiftData.role,
-              staff: shiftData.staff,
+              ...toShiftStaffFields(shiftData.employee_id, employees),
               start: shiftData.start,
               end: shiftData.end,
               note: shiftData.note || null,
@@ -290,7 +296,7 @@ export function useShiftEditPage({ year, month }) {
             dow,
             car: shift.car,
             role: shift.role,
-            staff: shift.staff,
+            ...toShiftStaffFields(shift.employee_id, employees),
             start: shift.start,
             end: shift.end,
             note: shift.note || null,
@@ -338,7 +344,7 @@ export function useShiftEditPage({ year, month }) {
               dow,
               car: shift.car,
               role: shift.role,
-              staff: shift.staff,
+              ...toShiftStaffFields(shift.employee_id, employees),
               start: shift.start,
               end: shift.end,
               note: shift.note || null,
@@ -400,7 +406,7 @@ export function useShiftEditPage({ year, month }) {
     days,
     statuses,
     staffColorByName,
-    staffOptions,
+    employeeSelectOptions,
     getShiftsForDate,
     refetchShifts: shiftsQuery.refetch,
 

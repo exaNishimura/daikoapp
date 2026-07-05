@@ -58,9 +58,11 @@ export function useCreateEmployee() {
 export function useUpdateEmployee() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, employeeData }) => unwrap(updateEmployee(id, employeeData)),
+    mutationFn: ({ id, employeeData, legacyStaffName }) =>
+      unwrap(updateEmployee(id, employeeData, { legacyStaffName })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.employees.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.shifts.all })
     },
   })
 }
