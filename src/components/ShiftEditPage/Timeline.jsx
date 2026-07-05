@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { TIMELINE_START, TIMELINE_END, timeToMinutes, minutesToPixels } from '@/lib/shiftEditUtils'
+import { getContrastTextColor } from '@/lib/colorContrast'
 
 /**
  * 19:00 -> 翌 06:00 を 12 時間 (960px) に展開する時間軸。
@@ -99,6 +100,7 @@ function ShiftBar({ shift, staffColorByName }) {
     : `${shift.staff} (${shift.role}) ${shift.start}-${shift.end}`
 
   const barBg = staffColorByName[shift.staff] || '#bdbdbd'
+  const textColor = getContrastTextColor(barBg)
 
   return (
     <Box
@@ -122,6 +124,7 @@ function ShiftBar({ shift, staffColorByName }) {
         border: '1px solid rgba(0,0,0,0.2)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
         bgcolor: barBg,
+        color: textColor,
         '&:hover': {
           opacity: 0.8,
           zIndex: 10,
@@ -133,7 +136,7 @@ function ShiftBar({ shift, staffColorByName }) {
         className="bar-text"
         sx={{
           whiteSpace: 'nowrap',
-          textShadow: '0 0 3px rgba(255,255,255,0.8)',
+          textShadow: textColor === '#fff' ? '0 1px 2px rgba(0,0,0,0.35)' : 'none',
           fontSize: '11px',
         }}
       >

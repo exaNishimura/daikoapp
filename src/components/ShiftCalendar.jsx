@@ -7,6 +7,7 @@ import {
   mergeStaffNamesForSelect,
   buildStaffColorByName,
 } from '@/lib/staffFromEmployees'
+import { getContrastTextColor } from '@/lib/colorContrast'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -649,6 +650,7 @@ function Bar({ shift, visible, colorByName }) {
   const left = minutesToPixels(startMinutes)
   const width = minutesToPixels(endMinutes - startMinutes)
   const bg = (colorByName && colorByName[shift.staff]) || '#bdbdbd'
+  const textColor = getContrastTextColor(bg)
 
   const title = shift.note
     ? `${shift.staff} (${shift.role}) ${shift.start}-${shift.end} - ${shift.note}`
@@ -661,6 +663,8 @@ function Bar({ shift, visible, colorByName }) {
         left: left + 'px',
         width: width + 'px',
         backgroundColor: bg,
+        color: textColor,
+        textShadow: textColor === '#fff' ? '0 1px 2px rgba(0, 0, 0, 0.35)' : 'none',
       }}
       title={title}
     >
