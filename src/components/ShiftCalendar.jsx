@@ -512,6 +512,10 @@ export function ShiftCalendar() {
         open={Boolean(vehicleSalesTarget)}
         workDate={vehicleSalesTarget?.date ?? null}
         carNum={vehicleSalesTarget?.carNum ?? null}
+        dayShifts={
+          vehicleSalesTarget?.date ? (groupedData[vehicleSalesTarget.date]?.shifts ?? []) : []
+        }
+        employees={employees}
         onClose={() => setVehicleSalesTarget(null)}
       />
     </div>
