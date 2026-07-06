@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useShiftsByMonth } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
+import { useDailySales } from '@/hooks/billing/useDailySales'
+import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
+import { VehicleSalesModal } from '@/components/ShiftCalendar/VehicleSalesModal'
 import {
   buildStaffColorByName,
   getEmployeeSelectOptions,
@@ -88,9 +91,11 @@ export function ShiftCalendar() {
   const hasScrolledRef = useRef(false)
   const [searchExpanded, setSearchExpanded] = useState(false) // デフォルトは閉じた状態
   const [headerCollapsed, setHeaderCollapsed] = useState(false)
+  const [vehicleSalesTarget, setVehicleSalesTarget] = useState(null)
 
   const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
   const employeesQuery = useEmployees()
+  const dailySalesQuery = useDailySales(selectedYear, selectedMonth)
 
   const shifts = shiftsQuery.data ?? []
   const employees = employeesQuery.data ?? []
@@ -107,6 +112,14 @@ export function ShiftCalendar() {
     () => getEmployeeSelectOptions(employees, shifts),
     [employees, shifts]
   )
+
+  const salesByDate = useMemo(() => {
+    const map = {}
+    for (const row of dailySalesQuery.data ?? []) {
+      map[row.work_date] = row
+    }
+    return map
+  }, [dailySalesQuery.data])
 
   // 本日の日付まで自動スクロール
   useEffect(() => {
@@ -485,16 +498,34 @@ export function ShiftCalendar() {
                 visibleEmployeeIds={visibleEmployeeIds}
                 employees={employees}
                 colorByName={colorByName}
+                salesByDate={salesByDate}
+                onOpenVehicleSales={(carNum) =>
+                  setVehicleSalesTarget({ date, carNum })
+                }
               />
             ))}
           </div>
         )}
       </div>
+
+      <VehicleSalesModal
+        open={Boolean(vehicleSalesTarget)}
+        workDate={vehicleSalesTarget?.date ?? null}
+        carNum={vehicleSalesTarget?.carNum ?? null}
+        onClose={() => setVehicleSalesTarget(null)}
+      />
     </div>
   )
 }
 
-function DayBlock({ dayData, visibleEmployeeIds, employees, colorByName }) {
+function DayBlock({
+  dayData,
+  visibleEmployeeIds,
+  employees,
+  colorByName,
+  salesByDate,
+  onOpenVehicleSales,
+}) {
   const isFriSat = dayData.dow === '金' || dayData.dow === '土'
   const dateParts = dayData.date.split('-')
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
@@ -543,6 +574,7 @@ function DayBlock({ dayData, visibleEmployeeIds, employees, colorByName }) {
   }
 
   const targetAmount = calculateTargetAmount()
+  const salesRow = salesByDate?.[dayData.date] ?? null
 
   return (
     <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`} data-date={dayData.date}>
@@ -580,6 +612,8 @@ function DayBlock({ dayData, visibleEmployeeIds, employees, colorByName }) {
               visibleEmployeeIds={visibleEmployeeIds}
               colorByName={colorByName}
               employees={employees}
+              salesRow={salesRow}
+              onOpenVehicleSales={onOpenVehicleSales}
             />
           ))}
         </div>
@@ -649,13 +683,34 @@ function TimeAxis() {
   )
 }
 
-function CarBlock({ carNum, shifts, visibleEmployeeIds, colorByName, employees }) {
+function CarBlock({
+  carNum,
+  shifts,
+  visibleEmployeeIds,
+  colorByName,
+  employees,
+  salesRow,
+  onOpenVehicleSales,
+}) {
   const driverShifts = shifts.filter((s) => s.car === carNum && s.role === '代行')
   const companionShifts = shifts.filter((s) => s.car === carNum && s.role === '随伴')
+  const salesKeys = getVehicleFieldKeys(carNum)
+  const salesAmount = salesKeys ? salesRow?.[salesKeys.sales] : null
+  const hasSales = salesAmount != null && Number(salesAmount) > 0
 
   return (
     <div className="car-block">
-      <div className="car-header">{carNum}号車</div>
+      <div className="car-header">
+        <span>{carNum}号車</span>
+        <Button
+          size="small"
+          variant="outlined"
+          className="car-sales-btn"
+          onClick={() => onOpenVehicleSales?.(carNum)}
+        >
+          売上入力{hasSales ? ` ¥${Number(salesAmount).toLocaleString('ja-JP')}` : ''}
+        </Button>
+      </div>
       <Lane
         role="代行"
         shifts={driverShifts}

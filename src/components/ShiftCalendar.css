@@ -342,10 +342,22 @@
 }
 
 .car-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
   font-weight: bold;
   margin-bottom: 8px;
   font-size: 14px;
   color: #555;
+}
+
+.car-sales-btn {
+  flex-shrink: 0;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  min-width: 0 !important;
+  text-transform: none !important;
 }
 
 .lane {
