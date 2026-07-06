@@ -2,7 +2,7 @@ import { toBillingMonthFromWorkDate } from '@/lib/billing/receivableForm'
 
 export const SHIFT_RECEIVABLE_SOURCE = 'shift-calendar'
 
-export const EMPTY_RECEIVABLE_LINE = Object.freeze({ amount: '', note: '' })
+export const EMPTY_RECEIVABLE_LINE = Object.freeze({ company_id: null, amount: '', note: '' })
 
 function parseAmount(v) {
   if (v == null || v === '') return 0
@@ -10,12 +10,16 @@ function parseAmount(v) {
   return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0
 }
 
-/** シフト表モーダルで編集対象の売掛行（請求先未選択・シフト由来・号車一致） */
-export function isShiftDraftReceivable(row, carNum = null) {
-  if (row?.source_file !== SHIFT_RECEIVABLE_SOURCE || row?.company_id != null) return false
+/** シフト表モーダルで編集対象の売掛行（シフト由来・号車一致・未請求） */
+export function isShiftEditableReceivable(row, carNum = null) {
+  if (row?.source_file !== SHIFT_RECEIVABLE_SOURCE) return false
+  if (row?.invoice_id != null) return false
   if (carNum == null) return true
   return row.vehicle_num != null && String(row.vehicle_num) === String(carNum)
 }
+
+/** @deprecated isShiftEditableReceivable を使用 */
+export const isShiftDraftReceivable = isShiftEditableReceivable
 
 /** 集計表示用: 号車別売掛（シフト表・売掛一覧のいずれも vehicle_num で紐付け） */
 export function filterReceivablesByVehicle(rows = [], carNum) {
@@ -30,12 +34,13 @@ export function filterReceivablesByVehicle(rows = [], carNum) {
  * DB行 → モーダル用フォーム行
  */
 export function toShiftReceivableFormLines(rows = [], carNum = null) {
-  const drafts = rows.filter((row) => isShiftDraftReceivable(row, carNum))
+  const drafts = rows.filter((row) => isShiftEditableReceivable(row, carNum))
   if (drafts.length === 0) {
     return [{ ...EMPTY_RECEIVABLE_LINE }]
   }
   return drafts.map((row) => ({
     id: row.id,
+    company_id: row.company_id ?? null,
     amount: row.amount != null ? String(row.amount) : '',
     note: row.note ?? '',
   }))
@@ -54,7 +59,7 @@ export function buildShiftReceivableInsertPayloads(workDate, lines = [], carNum 
     .map((line) => ({
       work_date: workDate,
       billing_month: billingMonth,
-      company_id: null,
+      company_id: line.company_id ?? null,
       departure: null,
       destination: null,
       amount: parseAmount(line.amount),

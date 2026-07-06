@@ -5,12 +5,20 @@ import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { EMPTY_RECEIVABLE_LINE } from '@/lib/billing/shiftReceivables'
 
 /**
- * 売掛の複数行入力（金額 + 備考）
+ * 売掛の複数行入力（請求先 + 金額 + 備考）
  */
-export function ReceivableLinesEditor({ lines, onChange, disabled = false }) {
+export function ReceivableLinesEditor({
+  lines,
+  onChange,
+  disabled = false,
+  companies = null,
+}) {
+  const showCompany = Array.isArray(companies)
+
   const updateLine = (index, patch) => {
     onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)))
   }
@@ -34,11 +42,22 @@ export function ReceivableLinesEditor({ lines, onChange, disabled = false }) {
           key={line.id ?? `line-${index}`}
           sx={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr auto',
+            gridTemplateColumns: showCompany
+              ? 'minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1fr) auto'
+              : '1fr 1fr auto',
             gap: 1,
             alignItems: 'start',
           }}
         >
+          {showCompany && (
+            <CompanySelect
+              companies={companies}
+              value={line.company_id}
+              onChange={(company_id) => updateLine(index, { company_id })}
+              disabled={disabled}
+              label="請求先"
+            />
+          )}
           <TextField
             label="金額 (円)"
             type="number"

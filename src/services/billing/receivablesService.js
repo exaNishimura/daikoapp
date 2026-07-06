@@ -182,7 +182,7 @@ export async function replaceShiftReceivables(workDate, lines = [], carNum = nul
       .delete()
       .eq('work_date', workDate)
       .eq('source_file', 'shift-calendar')
-      .is('company_id', null)
+      .is('invoice_id', null)
 
     if (carNum != null) {
       deleteQuery = deleteQuery.eq('vehicle_num', Number(carNum))

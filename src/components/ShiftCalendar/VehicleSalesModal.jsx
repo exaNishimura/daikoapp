@@ -24,11 +24,12 @@ import {
   useReceivablesByWorkDate,
   useReplaceShiftReceivables,
 } from '@/hooks/billing/useReceivables'
+import { useCompanies } from '@/hooks/billing/useCompanies'
 import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesEditor'
 import { useUpdateShiftsBulk } from '@/hooks/useShifts'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { sumShiftTimesHours } from '@/lib/billing/shiftStaffHours'
-import { sumReceivableAmounts, sumReceivableFormAmounts } from '@/lib/billing/shiftReceivables'
+import { sumReceivableAmounts, isShiftEditableReceivable } from '@/lib/billing/shiftReceivables'
 import {
   buildVehicleSalesSavePayload,
   readVehicleSalesForm,
@@ -41,7 +42,7 @@ const EMPTY_FORM = {
   shiftTimes: [],
   expense_note: '',
   expense_amount: '',
-  receivables: [{ amount: '', note: '' }],
+  receivables: [{ company_id: null, amount: '', note: '' }],
 }
 
 export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], employees = [], onClose }) {
@@ -52,13 +53,17 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
   const saleQuery = useDailySaleByDate(open ? workDate : null)
   const staffSalesQuery = useDailyStaffSalesByDate(open ? workDate : null)
   const receivablesQuery = useReceivablesByWorkDate(open ? workDate : null)
+  const companiesQuery = useCompanies({ activeOnly: true })
   const upsertMutation = useUpsertDailySale()
   const upsertStaffMutation = useUpsertDailyStaffSalesBatch()
   const replaceReceivablesMutation = useReplaceShiftReceivables()
   const updateShiftsMutation = useUpdateShiftsBulk()
 
   const dataLoading =
-    saleQuery.isLoading || staffSalesQuery.isLoading || receivablesQuery.isLoading
+    saleQuery.isLoading ||
+    staffSalesQuery.isLoading ||
+    receivablesQuery.isLoading ||
+    companiesQuery.isLoading
   const saving =
     upsertMutation.isPending ||
     upsertStaffMutation.isPending ||
@@ -153,12 +158,12 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
       }
 
       const derived = calcDailyDerived(saved)
-      const hasAssignedReceivables =
-        sumReceivableAmounts(receivablesQuery.data ?? []) >
-        sumReceivableFormAmounts(form.receivables)
+      const hasOtherReceivables = (receivablesQuery.data ?? []).some(
+        (row) => !isShiftEditableReceivable(row, carNum)
+      )
       let message = `保存しました（総売上: ¥${derived.total_sales.toLocaleString('ja-JP')} / 人件費: ¥${saved.labor_cost?.toLocaleString('ja-JP') ?? 0} / 現金: ¥${saved.cash?.toLocaleString('ja-JP') ?? 0} / 売掛: ¥${receivableResult.receivable_total.toLocaleString('ja-JP')}）`
-      if (hasAssignedReceivables) {
-        message += ' ※請求先割当済みの売掛を含む合計です。'
+      if (hasOtherReceivables) {
+        message += ' ※他号車・売掛一覧の売掛を含む合計です。'
       }
       setSuccess(message)
     } catch (err) {
@@ -174,7 +179,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     : ''
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         {dateLabel} {carNum}号車 売上入力
       </DialogTitle>
@@ -322,9 +327,10 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               lines={form.receivables}
               onChange={(receivables) => setForm((prev) => ({ ...prev, receivables }))}
               disabled={loading}
+              companies={companiesQuery.data ?? []}
             />
             <Typography variant="caption" color="text.secondary" display="block">
-              複数行入力可。請求先は売掛一覧で後から割り当てられます。
+              複数行入力可。請求先を選択すると売掛一覧に反映されます。
               {receivablesQuery.data?.length > 0 && (
                 <>
                   {' '}
