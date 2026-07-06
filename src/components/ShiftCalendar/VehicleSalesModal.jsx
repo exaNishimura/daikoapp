@@ -6,6 +6,7 @@ import DialogActions from '@mui/material/DialogActions'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
+import Box from '@mui/material/Box'
 import Alert from '@mui/material/Alert'
 import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
@@ -15,6 +16,8 @@ import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import { useDailySaleByDate, useUpsertDailySale } from '@/hooks/billing/useDailySales'
 import {
   useDailyStaffSalesByDate,
@@ -45,7 +48,26 @@ const EMPTY_FORM = {
   receivables: [{ company_id: null, amount: '', note: '' }],
 }
 
+function ShiftTimeField({ label, value, onChange, disabled, fullWidth = false }) {
+  return (
+    <TextField
+      label={label}
+      type="time"
+      value={value}
+      onChange={onChange}
+      size="small"
+      disabled={disabled}
+      fullWidth={fullWidth}
+      InputLabelProps={{ shrink: true }}
+      inputProps={{ style: { fontVariantNumeric: 'tabular-nums' } }}
+      sx={fullWidth ? undefined : { maxWidth: 108 }}
+    />
+  )
+}
+
 export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], employees = [], onClose }) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [form, setForm] = useState(EMPTY_FORM)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -179,11 +201,24 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     : ''
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      fullScreen={isMobile}
+      maxWidth="md"
+      fullWidth
+      scroll="paper"
+    >
+      <DialogTitle sx={{ py: isMobile ? 1.5 : 2, fontSize: isMobile ? '1rem' : undefined }}>
         {dateLabel} {carNum}号車 売上入力
       </DialogTitle>
-      <DialogContent>
+      <DialogContent
+        dividers
+        sx={{
+          px: isMobile ? 2 : 3,
+          py: isMobile ? 2 : undefined,
+        }}
+      >
         {dataLoading ? (
           <Stack alignItems="center" py={3}>
             <CircularProgress size={28} />
@@ -230,7 +265,12 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
 
             <Divider />
 
-            <Stack direction="row" alignItems="baseline" justifyContent="space-between">
+            <Stack
+              direction={isMobile ? 'column' : 'row'}
+              alignItems={isMobile ? 'stretch' : 'baseline'}
+              justifyContent="space-between"
+              spacing={isMobile ? 0.5 : 0}
+            >
               <Typography variant="subtitle2" color="text.secondary">
                 {carNum}号車 実績勤務時間
               </Typography>
@@ -242,6 +282,47 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               <Typography variant="body2" color="text.secondary">
                 この号車のシフトがありません
               </Typography>
+            ) : isMobile ? (
+              <Stack spacing={1.5}>
+                {form.shiftTimes.map((row) => (
+                  <Box
+                    key={row.shiftId}
+                    sx={{
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 1.5,
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      {row.staffName}
+                      <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        {row.role}
+                      </Typography>
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      <ShiftTimeField
+                        label="開始"
+                        value={row.start}
+                        onChange={(e) =>
+                          handleShiftTimeChange(row.shiftId, 'start', e.target.value)
+                        }
+                        disabled={loading}
+                        fullWidth
+                      />
+                      <ShiftTimeField
+                        label="終了"
+                        value={row.end}
+                        onChange={(e) =>
+                          handleShiftTimeChange(row.shiftId, 'end', e.target.value)
+                        }
+                        disabled={loading}
+                        fullWidth
+                      />
+                    </Stack>
+                  </Box>
+                ))}
+              </Stack>
             ) : (
               <Table size="small" sx={{ '& td, & th': { py: 0.5, px: 1 } }}>
                 <TableHead>
@@ -258,31 +339,21 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
                       <TableCell>{row.staffName}</TableCell>
                       <TableCell>{row.role}</TableCell>
                       <TableCell>
-                        <TextField
-                          type="time"
+                        <ShiftTimeField
                           value={row.start}
                           onChange={(e) =>
                             handleShiftTimeChange(row.shiftId, 'start', e.target.value)
                           }
-                          size="small"
                           disabled={loading}
-                          InputLabelProps={{ shrink: true }}
-                          inputProps={{ style: { fontVariantNumeric: 'tabular-nums' } }}
-                          sx={{ maxWidth: 108 }}
                         />
                       </TableCell>
                       <TableCell>
-                        <TextField
-                          type="time"
+                        <ShiftTimeField
                           value={row.end}
                           onChange={(e) =>
                             handleShiftTimeChange(row.shiftId, 'end', e.target.value)
                           }
-                          size="small"
                           disabled={loading}
-                          InputLabelProps={{ shrink: true }}
-                          inputProps={{ style: { fontVariantNumeric: 'tabular-nums' } }}
-                          sx={{ maxWidth: 108 }}
                         />
                       </TableCell>
                     </TableRow>
@@ -346,11 +417,20 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
           </Stack>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={saving}>
+      <DialogActions
+        sx={{
+          flexDirection: isMobile ? 'column-reverse' : 'row',
+          alignItems: 'stretch',
+          gap: 1,
+          px: isMobile ? 2 : undefined,
+          py: isMobile ? 2 : undefined,
+          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
+        }}
+      >
+        <Button onClick={handleClose} disabled={saving} fullWidth={isMobile}>
           閉じる
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={loading}>
+        <Button variant="contained" onClick={handleSave} disabled={loading} fullWidth={isMobile}>
           保存
         </Button>
       </DialogActions>
