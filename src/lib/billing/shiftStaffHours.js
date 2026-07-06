@@ -16,6 +16,18 @@ export function calcShiftWorkHours(start, end) {
   return (endMinutes - startMinutes) / 60
 }
 
+/** TIME / HH:MM / HH:MM:SS を type="time" 用 HH:MM に正規化 */
+export function normalizeTimeForInput(value) {
+  if (value == null || value === '') return ''
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return ''
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
+
+export function normalizeTimeForSave(value) {
+  return normalizeTimeForInput(value)
+}
+
 export function filterShiftsByCar(shifts, carNum) {
   if (carNum == null || carNum === '') return shifts ?? []
   const car = String(carNum)
@@ -53,61 +65,59 @@ function roundHours(n) {
   return Math.round(n * 100) / 100
 }
 
-function formatHoursValue(n) {
-  if (n == null || n === '' || !Number.isFinite(Number(n))) return ''
-  return String(roundHours(Number(n)))
+function shiftStartSortKey(shift) {
+  const [h, m] = normalizeTimeForInput(shift.start).split(':').map(Number)
+  if (!Number.isFinite(h)) return 9999
+  // 19:00 基準のシフト表に合わせ、19 時未満は翌日扱いで後ろに
+  const minutes = h >= 19 ? h * 60 + m : (24 + h) * 60 + m
+  return minutes
 }
 
 /**
- * 号車別の表示用時間を算出。
- * 保存済みがある場合は「全体 − 他号車シフト基準値」で当該号車分を推定する。
+ * 売上入力モーダル用: 号車の各シフト行（開始・終了）。
  */
-function resolveCarSpecificHours(staffName, carNum, dayShifts, employees, savedRows) {
-  const carBaseline = computeStaffHoursByCar(dayShifts, employees, carNum).get(staffName) ?? 0
-  const saved = (savedRows ?? []).find((r) => r.staff_name === staffName)
-  if (!saved) return carBaseline
-
-  const otherBaseline = computeStaffHoursOtherCars(dayShifts, employees, carNum).get(staffName) ?? 0
-  const savedTotal = Number(saved.hours)
-  if (!Number.isFinite(savedTotal)) return carBaseline
-
-  if (otherBaseline === 0) return savedTotal
-  return Math.max(0, roundHours(savedTotal - otherBaseline))
-}
-
-/**
- * モーダル表示用スタッフ行（号車別）。
- */
-export function buildStaffHoursRows(shifts, employees, savedRows = [], carNum) {
-  const carShifts = filterShiftsByCar(shifts, carNum)
-  const computed = computeStaffHoursByCar(shifts, employees, carNum)
-  const savedOnCar = new Set(
-    (savedRows ?? [])
-      .filter((r) => {
-        const other = computeStaffHoursOtherCars(shifts, employees, carNum).get(r.staff_name) ?? 0
-        const car = computed.get(r.staff_name) ?? 0
-        return car > 0 || (Number(r.hours) > 0 && other === 0)
-      })
-      .map((r) => r.staff_name)
-  )
-  const names = new Set([...computed.keys(), ...savedOnCar])
-
-  return [...names]
-    .sort((a, b) => a.localeCompare(b, 'ja'))
-    .map((staffName) => ({
-      staffName,
-      hours: formatHoursValue(
-        resolveCarSpecificHours(staffName, carNum, shifts, employees, savedRows)
-      ),
+export function buildShiftTimeRows(shifts, employees, carNum) {
+  return filterShiftsByCar(shifts, carNum)
+    .filter((shift) => shift?.id && getStaffDisplayName(shift, employees))
+    .sort((a, b) => shiftStartSortKey(a) - shiftStartSortKey(b))
+    .map((shift) => ({
+      shiftId: shift.id,
+      staffName: getStaffDisplayName(shift, employees),
+      role: shift.role ?? '',
+      start: normalizeTimeForInput(shift.start),
+      end: normalizeTimeForInput(shift.end),
     }))
-    .filter((row) => {
-      const hasShift = carShifts.some(
-        (s) => getStaffDisplayName(s, employees) === row.staffName
-      )
-      return hasShift || row.hours !== ''
-    })
 }
 
+/**
+ * フォームの開始/終了を当日シフトにマージした配列を返す。
+ */
+export function applyShiftTimeUpdates(dayShifts, shiftTimeUpdates = []) {
+  const updatesById = new Map(
+    (shiftTimeUpdates ?? [])
+      .filter((row) => row?.shiftId)
+      .map((row) => [row.shiftId, row])
+  )
+  if (updatesById.size === 0) return dayShifts ?? []
+
+  return (dayShifts ?? []).map((shift) => {
+    const update = updatesById.get(shift.id)
+    if (!update) return shift
+    return {
+      ...shift,
+      start: normalizeTimeForSave(update.start) || shift.start,
+      end: normalizeTimeForSave(update.end) || shift.end,
+    }
+  })
+}
+
+export function sumShiftTimesHours(shiftTimes) {
+  return roundHours(
+    (shiftTimes ?? []).reduce((sum, row) => sum + calcShiftWorkHours(row.start, row.end), 0)
+  )
+}
+
+/** @deprecated sumShiftTimesHours を使用 */
 export function sumStaffHours(staffHours) {
   return roundHours(
     (staffHours ?? []).reduce((sum, row) => {
@@ -117,47 +127,19 @@ export function sumStaffHours(staffHours) {
   )
 }
 
-function parseNumOrZero(v) {
-  if (v == null || v === '') return 0
-  const n = Number(v)
-  return Number.isFinite(n) ? Math.max(0, roundHours(n)) : 0
-}
-
 /**
- * 保存用: 号車別入力を日次スタッフ合計にマージする。
+ * 保存用: シフト start/end 更新ペイロード
  */
-export function buildStaffRowsForSave({
-  workDate,
-  carNum,
-  formStaffHours,
-  dayShifts,
-  employees,
-  existingStaffRows = [],
-}) {
-  const existingByName = new Map((existingStaffRows ?? []).map((r) => [r.staff_name, r]))
-  const carBaseline = computeStaffHoursByCar(dayShifts, employees, carNum)
-  const otherBaseline = computeStaffHoursOtherCars(dayShifts, employees, carNum)
-
-  return (formStaffHours ?? []).map((row) => {
-    const formCarHours = parseNumOrZero(row.hours)
-    const baseCar = carBaseline.get(row.staffName) ?? 0
-    const baseOther = otherBaseline.get(row.staffName) ?? 0
-    const existing = existingByName.get(row.staffName)
-    const existingTotal = existing != null ? Number(existing.hours) : baseCar + baseOther
-    const priorCar =
-      existing != null && baseOther > 0
-        ? Math.max(0, roundHours(existingTotal - baseOther))
-        : baseCar
-    const newTotal =
-      baseOther > 0 ? roundHours(baseOther + formCarHours) : formCarHours || priorCar
-
-    return {
-      work_date: workDate,
-      staff_name: row.staffName,
-      hours: newTotal,
-      sales: existing?.sales ?? 0,
-    }
-  })
+export function buildShiftUpdatePayloads(shiftTimeUpdates = []) {
+  return (shiftTimeUpdates ?? [])
+    .filter((row) => row?.shiftId && row.start && row.end)
+    .map((row) => ({
+      id: row.shiftId,
+      shiftData: {
+        start: normalizeTimeForSave(row.start),
+        end: normalizeTimeForSave(row.end),
+      },
+    }))
 }
 
 /**
@@ -166,42 +148,13 @@ export function buildStaffRowsForSave({
 export function computeDayStaffHoursRows({
   dayShifts,
   employees,
-  carNum,
-  formStaffHours,
-  existingStaffRows = [],
+  shiftTimeUpdates = [],
 }) {
-  const merged = buildStaffRowsForSave({
-    workDate: '',
-    carNum,
-    formStaffHours,
-    dayShifts,
-    employees,
-    existingStaffRows,
-  })
-  const mergedByName = new Map(merged.map((r) => [r.staff_name, r.hours]))
-
-  const allNames = new Set([
-    ...computeStaffHoursFromShifts(dayShifts, employees).keys(),
-    ...(existingStaffRows ?? []).map((r) => r.staff_name),
-    ...merged.map((r) => r.staff_name),
-  ])
-
-  return [...allNames]
-    .sort((a, b) => a.localeCompare(b, 'ja'))
-    .map((name) => {
-      let hours = 0
-      if (mergedByName.has(name)) {
-        hours = mergedByName.get(name) ?? 0
-      } else {
-        const existing = (existingStaffRows ?? []).find((r) => r.staff_name === name)
-        if (existing) {
-          hours = Number(existing.hours) || 0
-        } else {
-          hours = computeStaffHoursFromShifts(dayShifts, employees).get(name) ?? 0
-        }
-      }
-      return { staff_name: name, hours: roundHours(hours) }
-    })
+  const effective = applyShiftTimeUpdates(dayShifts, shiftTimeUpdates)
+  const map = computeStaffHoursFromShifts(effective, employees)
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, 'ja'))
+    .map(([staff_name, hours]) => ({ staff_name, hours: roundHours(hours) }))
     .filter((row) => row.hours > 0)
 }
 

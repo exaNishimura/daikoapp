@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcDailyDerived, calcMonthlySalesSummary, computeCashFromShiftSales } from './dailySalesCalc'
+import { calcDailyDerived, calcMonthlySalesSummary, computeCashFromShiftSales, getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from './dailySalesCalc'
 
 describe('calcDailyDerived', () => {
   it('returns zero-filled derived values for null/empty row', () => {
@@ -21,6 +21,15 @@ describe('calcDailyDerived', () => {
       vehicle2_sales: 5000,
     })
     expect(result.total_sales).toBe(8000)
+  })
+
+  it('prefers DB total_sales column when present', () => {
+    const result = calcDailyDerived({
+      vehicle1_sales: 0,
+      vehicle2_sales: 0,
+      total_sales: 42000,
+    })
+    expect(result.total_sales).toBe(42000)
   })
 
   it('ignores vehicle3_sales even if present (legacy data)', () => {
@@ -88,6 +97,29 @@ describe('computeCashFromShiftSales', () => {
         receivable_total: 5000,
       })
     ).toBe(0)
+  })
+})
+
+describe('toWorkDateKey', () => {
+  it('normalizes ISO date strings', () => {
+    expect(toWorkDateKey('2026-07-06')).toBe('2026-07-06')
+    expect(toWorkDateKey('2026-07-06T00:00:00.000Z')).toBe('2026-07-06')
+  })
+})
+
+describe('indexDailySalesByDate', () => {
+  it('indexes rows by normalized work_date', () => {
+    const map = indexDailySalesByDate([
+      { work_date: '2026-07-06T00:00:00.000Z', total_sales: 10000 },
+    ])
+    expect(map['2026-07-06']?.total_sales).toBe(10000)
+  })
+})
+
+describe('getDailyTotalSales', () => {
+  it('returns total_sales from daily_sales row', () => {
+    expect(getDailyTotalSales({ total_sales: 35000 })).toBe(35000)
+    expect(getDailyTotalSales(null)).toBe(0)
   })
 })
 

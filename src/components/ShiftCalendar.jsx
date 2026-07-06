@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useShiftsByMonth } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
 import { useDailySales } from '@/hooks/billing/useDailySales'
+import { getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
 import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
 import { VehicleSalesModal } from '@/components/ShiftCalendar/VehicleSalesModal'
 import {
@@ -113,13 +114,10 @@ export function ShiftCalendar() {
     [employees, shifts]
   )
 
-  const salesByDate = useMemo(() => {
-    const map = {}
-    for (const row of dailySalesQuery.data ?? []) {
-      map[row.work_date] = row
-    }
-    return map
-  }, [dailySalesQuery.data])
+  const salesByDate = useMemo(
+    () => indexDailySalesByDate(dailySalesQuery.data),
+    [dailySalesQuery.data]
+  )
 
   // 本日の日付まで自動スクロール
   useEffect(() => {
@@ -578,7 +576,14 @@ function DayBlock({
   }
 
   const targetAmount = calculateTargetAmount()
-  const salesRow = salesByDate?.[dayData.date] ?? null
+  const salesRow = salesByDate[toWorkDateKey(dayData.date)] ?? null
+  const displayTarget =
+    targetAmount !== null ? Math.ceil(Math.round(targetAmount) / 1000) * 1000 : null
+  const totalSales = getDailyTotalSales(salesRow)
+  const targetPct =
+    displayTarget != null && displayTarget > 0
+      ? Math.round((totalSales / displayTarget) * 100)
+      : null
 
   return (
     <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`} data-date={dayData.date}>
@@ -588,10 +593,16 @@ function DayBlock({
             {dateFormatted}
             <span className="day-dow">({dayData.dow})</span>
           </div>
-          {targetAmount !== null && (
-            <div className="target-amount">
-              目標: ¥{(Math.ceil(Math.round(targetAmount) / 1000) * 1000).toLocaleString()}
-            </div>
+          {displayTarget !== null && (
+            <>
+              <div className="target-amount">目標: ¥{displayTarget.toLocaleString()}</div>
+              <div className="daily-sales-total">総売上: ¥{totalSales.toLocaleString()}</div>
+              <div
+                className={`target-pct${targetPct != null && targetPct >= 100 ? ' achieved' : ''}`}
+              >
+                {targetPct}%
+              </div>
+            </>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

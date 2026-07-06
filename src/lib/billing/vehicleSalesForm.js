@@ -3,10 +3,11 @@ import {
   readVehicleFormFromRow,
 } from '@/lib/billing/vehicleSalesFields'
 import {
-  buildStaffHoursRows,
+  buildShiftTimeRows,
   computeDayStaffHoursRows,
   computeDayTotalHours,
   computeLaborCostFromStaffHours,
+  buildShiftUpdatePayloads,
 } from '@/lib/billing/shiftStaffHours'
 import { computeCashFromShiftSales } from '@/lib/billing/dailySalesCalc'
 import { toShiftReceivableFormLines } from '@/lib/billing/shiftReceivables'
@@ -35,7 +36,7 @@ export function readVehicleSalesForm({
 }) {
   return {
     ...readVehicleFormFromRow(dailyRow, carNum),
-    staffHours: buildStaffHoursRows(dayShifts, employees, savedStaffRows, carNum),
+    shiftTimes: buildShiftTimeRows(dayShifts, employees, carNum),
     expense_note: dailyRow?.expense_note ?? '',
     expense_amount: dailyRow?.expense_amount ?? '',
     receivables: toShiftReceivableFormLines(receivableRows),
@@ -60,20 +61,18 @@ export function buildVehicleSalesSavePayload({
   dailyPayload.expense_amount = parseInt0OrZero(form.expense_amount)
   dailyPayload.receivable_total = parseInt0OrZero(receivableTotal)
 
+  const shiftUpdates = buildShiftUpdatePayloads(form.shiftTimes)
+
   const dayStaffHoursRows = computeDayStaffHoursRows({
     dayShifts,
     employees,
-    carNum,
-    formStaffHours: form.staffHours,
-    existingStaffRows,
+    shiftTimeUpdates: form.shiftTimes,
   })
 
   dailyPayload.total_hours = computeDayTotalHours({
     dayShifts,
     employees,
-    carNum,
-    formStaffHours: form.staffHours,
-    existingStaffRows,
+    shiftTimeUpdates: form.shiftTimes,
   })
   dailyPayload.labor_cost = computeLaborCostFromStaffHours(dayStaffHoursRows, employees)
   dailyPayload.cash = computeCashFromShiftSales(dailyPayload)
@@ -89,5 +88,5 @@ export function buildVehicleSalesSavePayload({
     sales: existingSalesByName.get(row.staff_name) ?? 0,
   }))
 
-  return { dailyPayload, staffRows }
+  return { dailyPayload, staffRows, shiftUpdates }
 }

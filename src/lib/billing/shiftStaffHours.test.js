@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildStaffHoursRows,
-  buildStaffRowsForSave,
+  applyShiftTimeUpdates,
+  buildShiftTimeRows,
+  buildShiftUpdatePayloads,
   calcShiftWorkHours,
+  computeDayStaffHoursRows,
   computeLaborCostFromStaffHours,
   computeStaffHoursByCar,
   computeStaffHoursFromShifts,
   filterShiftsByCar,
-  sumStaffHours,
+  normalizeTimeForInput,
+  sumShiftTimesHours,
 } from './shiftStaffHours'
 
 const employees = [{ id: '1', name: '西村' }, { id: '2', name: '井上' }]
@@ -19,6 +22,13 @@ describe('calcShiftWorkHours', () => {
 
   it('翌日跨ぎを計算する', () => {
     expect(calcShiftWorkHours('22:00', '02:00')).toBe(4)
+  })
+})
+
+describe('normalizeTimeForInput', () => {
+  it('HH:MM:SS を HH:MM に正規化する', () => {
+    expect(normalizeTimeForInput('19:30:00')).toBe('19:30')
+    expect(normalizeTimeForInput('9:05')).toBe('09:05')
   })
 })
 
@@ -56,45 +66,97 @@ describe('computeStaffHoursFromShifts', () => {
   })
 })
 
-describe('buildStaffHoursRows', () => {
-  it('号車のシフトにいるスタッフのみ表示する', () => {
+describe('buildShiftTimeRows', () => {
+  it('号車のシフト行を開始・終了付きで返す', () => {
     const shifts = [
-      { car: '1', staff: '西村', employee_id: '1', start: '19:00', end: '23:00' },
-      { car: '2', staff: '井上', employee_id: '2', start: '20:00', end: '24:00' },
+      {
+        id: 's1',
+        car: '1',
+        staff: '西村',
+        employee_id: '1',
+        role: '代行',
+        start: '19:00:00',
+        end: '23:00:00',
+      },
+      {
+        id: 's2',
+        car: '2',
+        staff: '井上',
+        employee_id: '2',
+        role: '代行',
+        start: '20:00',
+        end: '24:00',
+      },
     ]
-    const rows = buildStaffHoursRows(shifts, employees, [], '1')
-    expect(rows).toEqual([{ staffName: '西村', hours: '4' }])
-  })
-
-  it('単一号車のみの保存済み時間を号車表示に使う', () => {
-    const shifts = [{ car: '1', staff: '西村', employee_id: '1', start: '19:00', end: '23:00' }]
-    const saved = [{ staff_name: '西村', hours: 6 }]
-    const rows = buildStaffHoursRows(shifts, employees, saved, '1')
-    expect(rows).toEqual([{ staffName: '西村', hours: '6' }])
+    const rows = buildShiftTimeRows(shifts, employees, '1')
+    expect(rows).toEqual([
+      {
+        shiftId: 's1',
+        staffName: '西村',
+        role: '代行',
+        start: '19:00',
+        end: '23:00',
+      },
+    ])
   })
 })
 
-describe('buildStaffRowsForSave', () => {
-  it('号車別入力を日次合計にマージする', () => {
+describe('applyShiftTimeUpdates', () => {
+  it('フォームの開始/終了をシフトにマージする', () => {
     const shifts = [
-      { car: '1', staff: '西村', employee_id: '1', start: '19:00', end: '23:00' },
-      { car: '2', staff: '西村', employee_id: '1', start: '23:30', end: '01:00' },
+      { id: 's1', staff: '西村', employee_id: '1', start: '19:00', end: '23:00' },
     ]
-    const rows = buildStaffRowsForSave({
-      workDate: '2026-07-01',
-      carNum: '1',
-      formStaffHours: [{ staffName: '西村', hours: '5' }],
+    const merged = applyShiftTimeUpdates(shifts, [
+      { shiftId: 's1', start: '20:00', end: '00:00' },
+    ])
+    expect(merged[0].start).toBe('20:00')
+    expect(merged[0].end).toBe('00:00')
+  })
+})
+
+describe('buildShiftUpdatePayloads', () => {
+  it('シフト更新ペイロードを生成する', () => {
+    const payloads = buildShiftUpdatePayloads([
+      { shiftId: 's1', start: '20:00', end: '00:30' },
+    ])
+    expect(payloads).toEqual([
+      { id: 's1', shiftData: { start: '20:00', end: '00:30' } },
+    ])
+  })
+})
+
+describe('computeDayStaffHoursRows', () => {
+  it('号車別の時間更新を含めて日次合計を算出する', () => {
+    const shifts = [
+      {
+        id: 's1',
+        car: '1',
+        staff: '西村',
+        employee_id: '1',
+        start: '19:00',
+        end: '23:00',
+      },
+      {
+        id: 's2',
+        car: '2',
+        staff: '西村',
+        employee_id: '1',
+        start: '23:30',
+        end: '01:00',
+      },
+    ]
+    const rows = computeDayStaffHoursRows({
       dayShifts: shifts,
       employees,
-      existingStaffRows: [],
+      shiftTimeUpdates: [{ shiftId: 's1', start: '19:30', end: '23:30' }],
     })
-    expect(rows[0].hours).toBe(6.5)
+    expect(rows).toEqual([{ staff_name: '西村', hours: 5.5 }])
   })
 })
 
 describe('computeLaborCostFromStaffHours', () => {
   it('稼働時間×時給の合計を算出する', () => {
-    const employees = [
+    const employeesWithWage = [
       { name: '西村', hourly_wage: 1500 },
       { name: '井上', hourly_wage: 1200 },
     ]
@@ -103,7 +165,7 @@ describe('computeLaborCostFromStaffHours', () => {
         { staff_name: '西村', hours: 4 },
         { staff_name: '井上', hours: 3.5 },
       ],
-      employees
+      employeesWithWage
     )
     expect(cost).toBe(4 * 1500 + Math.round(3.5 * 1200))
   })
@@ -115,13 +177,13 @@ describe('computeLaborCostFromStaffHours', () => {
   })
 })
 
-describe('sumStaffHours', () => {
-  it('スタッフ時間の合計を返す', () => {
+describe('sumShiftTimesHours', () => {
+  it('シフト時間の合計を返す', () => {
     expect(
-      sumStaffHours([
-        { staffName: 'A', hours: '4' },
-        { staffName: 'B', hours: '3.5' },
+      sumShiftTimesHours([
+        { start: '19:00', end: '23:00' },
+        { start: '23:30', end: '01:00' },
       ])
-    ).toBe(7.5)
+    ).toBe(5.5)
   })
 })

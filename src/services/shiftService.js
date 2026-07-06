@@ -85,6 +85,29 @@ export async function updateShift(id, shiftData) {
 }
 
 /**
+ * 複数シフトを一括更新（売上入力の実績時間反映用）
+ * @param {Array<{ id: string, shiftData: Object }>} updates
+ */
+export async function updateShiftsBulk(updates = []) {
+  if (!updates.length) return { data: [], error: null }
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+
+  try {
+    const results = await Promise.all(
+      updates.map(({ id, shiftData }) => updateShift(id, shiftData))
+    )
+    const failed = results.find((r) => r.error)
+    if (failed?.error) throw failed.error
+    return { data: results.map((r) => r.data).filter(Boolean), error: null }
+  } catch (error) {
+    console.error('Error bulk updating shifts:', error)
+    return { data: null, error }
+  }
+}
+
+/**
  * シフトデータを削除
  * @param {string} id - シフトID
  * @returns {Promise<{data: Object|null, error: Error|null}>}

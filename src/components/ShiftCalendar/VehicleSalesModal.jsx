@@ -25,8 +25,9 @@ import {
   useReplaceShiftReceivables,
 } from '@/hooks/billing/useReceivables'
 import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesEditor'
+import { useUpdateShiftsBulk } from '@/hooks/useShifts'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
-import { sumStaffHours } from '@/lib/billing/shiftStaffHours'
+import { sumShiftTimesHours } from '@/lib/billing/shiftStaffHours'
 import { sumReceivableAmounts, sumReceivableFormAmounts } from '@/lib/billing/shiftReceivables'
 import {
   buildVehicleSalesSavePayload,
@@ -37,7 +38,7 @@ const EMPTY_FORM = {
   distance_km: '',
   fuel_yen: '',
   sales: '',
-  staffHours: [],
+  shiftTimes: [],
   expense_note: '',
   expense_amount: '',
   receivables: [{ amount: '', note: '' }],
@@ -54,13 +55,15 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
   const upsertMutation = useUpsertDailySale()
   const upsertStaffMutation = useUpsertDailyStaffSalesBatch()
   const replaceReceivablesMutation = useReplaceShiftReceivables()
+  const updateShiftsMutation = useUpdateShiftsBulk()
 
   const dataLoading =
     saleQuery.isLoading || staffSalesQuery.isLoading || receivablesQuery.isLoading
   const saving =
     upsertMutation.isPending ||
     upsertStaffMutation.isPending ||
-    replaceReceivablesMutation.isPending
+    replaceReceivablesMutation.isPending ||
+    updateShiftsMutation.isPending
   const loading = dataLoading || saving
 
   useEffect(() => {
@@ -98,11 +101,11 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     onClose()
   }
 
-  const handleStaffHoursChange = (staffName, value) => {
+  const handleShiftTimeChange = (shiftId, field, value) => {
     setForm((prev) => ({
       ...prev,
-      staffHours: prev.staffHours.map((row) =>
-        row.staffName === staffName ? { ...row, hours: value } : row
+      shiftTimes: prev.shiftTimes.map((row) =>
+        row.shiftId === shiftId ? { ...row, [field]: value } : row
       ),
     }))
   }
@@ -112,13 +115,23 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     setError(null)
     setSuccess(null)
 
+    const incompleteShift = form.shiftTimes.find((row) => {
+      const hasStart = Boolean(row.start)
+      const hasEnd = Boolean(row.end)
+      return (hasStart && !hasEnd) || (!hasStart && hasEnd)
+    })
+    if (incompleteShift) {
+      setError('勤務時間は開始・終了を両方入力してください')
+      return
+    }
+
     try {
       const receivableResult = await replaceReceivablesMutation.mutateAsync({
         workDate,
         lines: form.receivables,
       })
 
-      const { dailyPayload, staffRows } = buildVehicleSalesSavePayload({
+      const { dailyPayload, staffRows, shiftUpdates } = buildVehicleSalesSavePayload({
         workDate,
         existingRow: saleQuery.data ?? null,
         carNum,
@@ -128,6 +141,10 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
         existingStaffRows: staffSalesQuery.data ?? [],
         receivableTotal: receivableResult.receivable_total,
       })
+
+      if (shiftUpdates.length > 0) {
+        await updateShiftsMutation.mutateAsync(shiftUpdates)
+      }
 
       const saved = await upsertMutation.mutateAsync(dailyPayload)
       if (staffRows.length > 0) {
@@ -209,13 +226,13 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
 
             <Stack direction="row" alignItems="baseline" justifyContent="space-between">
               <Typography variant="subtitle2" color="text.secondary">
-                {carNum}号車 スタッフ稼働時間
+                {carNum}号車 実績勤務時間
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                合計 {sumStaffHours(form.staffHours)}h
+                合計 {sumShiftTimesHours(form.shiftTimes)}h
               </Typography>
             </Stack>
-            {form.staffHours.length === 0 ? (
+            {form.shiftTimes.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 この号車のシフトがありません
               </Typography>
@@ -224,28 +241,42 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
                 <TableHead>
                   <TableRow>
                     <TableCell>スタッフ</TableCell>
-                    <TableCell align="right" width={120}>
-                      稼働 (h)
-                    </TableCell>
+                    <TableCell width={56}>役割</TableCell>
+                    <TableCell width={110}>開始</TableCell>
+                    <TableCell width={110}>終了</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {form.staffHours.map((row) => (
-                    <TableRow key={row.staffName}>
+                  {form.shiftTimes.map((row) => (
+                    <TableRow key={row.shiftId}>
                       <TableCell>{row.staffName}</TableCell>
-                      <TableCell align="right">
+                      <TableCell>{row.role}</TableCell>
+                      <TableCell>
                         <TextField
-                          value={row.hours}
-                          onChange={(e) => handleStaffHoursChange(row.staffName, e.target.value)}
-                          type="number"
-                          inputProps={{
-                            step: 0.25,
-                            min: 0,
-                            style: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
-                          }}
+                          type="time"
+                          value={row.start}
+                          onChange={(e) =>
+                            handleShiftTimeChange(row.shiftId, 'start', e.target.value)
+                          }
                           size="small"
                           disabled={loading}
-                          sx={{ maxWidth: 100 }}
+                          InputLabelProps={{ shrink: true }}
+                          inputProps={{ style: { fontVariantNumeric: 'tabular-nums' } }}
+                          sx={{ maxWidth: 108 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          type="time"
+                          value={row.end}
+                          onChange={(e) =>
+                            handleShiftTimeChange(row.shiftId, 'end', e.target.value)
+                          }
+                          size="small"
+                          disabled={loading}
+                          InputLabelProps={{ shrink: true }}
+                          inputProps={{ style: { fontVariantNumeric: 'tabular-nums' } }}
+                          sx={{ maxWidth: 108 }}
                         />
                       </TableCell>
                     </TableRow>
@@ -254,7 +285,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               </Table>
             )}
             <Typography variant="caption" color="text.secondary">
-              {carNum}号車のシフトから自動計算（編集可）
+              保存するとシフト表のタイムラインにも反映されます
             </Typography>
 
             <Divider />

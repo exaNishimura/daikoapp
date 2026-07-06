@@ -10,7 +10,7 @@ import TableContainer from '@mui/material/TableContainer'
 import Typography from '@mui/material/Typography'
 import InputBase from '@mui/material/InputBase'
 import { useTheme } from '@mui/material/styles'
-import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
+import { calcDailyDerived, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback'
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土']
@@ -129,7 +129,10 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
   const totalDays = daysInMonth(year, month)
   const rowsByDate = useMemo(() => {
     const map = new Map()
-    for (const r of rows ?? []) map.set(r.work_date, r)
+    for (const r of rows ?? []) {
+      const key = toWorkDateKey(r.work_date)
+      if (key) map.set(key, r)
+    }
     return map
   }, [rows])
 

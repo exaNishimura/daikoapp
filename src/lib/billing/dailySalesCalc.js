@@ -15,6 +15,40 @@ function n(v) {
 }
 
 /**
+ * daily_sales.work_date / shifts.date を 'YYYY-MM-DD' に正規化する。
+ * Supabase の DATE 型がタイムスタンプ付きで返る場合にも対応。
+ */
+export function toWorkDateKey(value) {
+  if (value == null || value === '') return null
+  const match = String(value).trim().match(/^(\d{4}-\d{2}-\d{2})/)
+  return match ? match[1] : null
+}
+
+/**
+ * 日次売上配列を work_date キーの Map 相当オブジェクトへ。
+ */
+export function indexDailySalesByDate(rows) {
+  const map = {}
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const key = toWorkDateKey(row?.work_date)
+    if (key) map[key] = row
+  }
+  return map
+}
+
+/**
+ * daily_sales 行から総売上を取得する。
+ * DB の GENERATED 列 total_sales を優先し、未設定時は号車売上を合算する。
+ */
+export function getDailyTotalSales(row) {
+  if (row == null) return 0
+  if (row.total_sales != null && row.total_sales !== '') {
+    return n(row.total_sales)
+  }
+  return n(row.vehicle1_sales) + n(row.vehicle2_sales)
+}
+
+/**
  * 1 行分の派生値を計算する。
  *
  * @param {Object|null} row daily_sales 行
@@ -24,7 +58,7 @@ export function calcDailyDerived(row) {
   if (row == null) {
     return { total_sales: 0, fuel_total: 0, profit: 0 }
   }
-  const total_sales = n(row.vehicle1_sales) + n(row.vehicle2_sales)
+  const total_sales = getDailyTotalSales(row)
   const fuel_total = n(row.vehicle1_fuel_yen) + n(row.vehicle2_fuel_yen)
   const profit =
     total_sales - n(row.expense_amount) - fuel_total - n(row.labor_cost)

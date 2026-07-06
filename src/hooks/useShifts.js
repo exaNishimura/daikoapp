@@ -4,6 +4,7 @@ import {
   getShiftsByDate,
   createShift,
   updateShift,
+  updateShiftsBulk,
   deleteShift,
   deleteShiftsByDate,
   createShiftsBulk,
@@ -76,6 +77,16 @@ export function useUpdateShift() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, shiftData }) => unwrap(updateShift(id, shiftData)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.shifts.all })
+    },
+  })
+}
+
+export function useUpdateShiftsBulk() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (updates) => unwrap(updateShiftsBulk(updates)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.shifts.all })
     },
