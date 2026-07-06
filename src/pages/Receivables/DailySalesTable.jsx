@@ -9,10 +9,74 @@ import TableRow from '@mui/material/TableRow'
 import TableContainer from '@mui/material/TableContainer'
 import Typography from '@mui/material/Typography'
 import InputBase from '@mui/material/InputBase'
+import { useTheme } from '@mui/material/styles'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback'
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土']
+
+/** 左固定列の幅（日・曜） */
+const STICKY_DAY_WIDTH = 44
+const STICKY_DOW_WIDTH = 40
+const STICKY_DOW_LEFT = STICKY_DAY_WIDTH
+
+function rowBackground(dow) {
+  if (dow === 0) return 'rgba(255, 80, 80, 0.06)'
+  if (dow === 6) return 'rgba(80, 140, 255, 0.06)'
+  return 'background.paper'
+}
+
+function parseCssColor(color) {
+  if (typeof color !== 'string') return [42, 42, 42]
+  if (color.startsWith('#')) {
+    const h = color.slice(1)
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+    return [
+      parseInt(full.slice(0, 2), 16),
+      parseInt(full.slice(2, 4), 16),
+      parseInt(full.slice(4, 6), 16),
+    ]
+  }
+  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])]
+  return [42, 42, 42]
+}
+
+/** 固定列用: paper に色を混ぜた不透明背景（横スクロール時の透け防止） */
+function stickyRowBackground(theme, dow) {
+  const paperRgb = parseCssColor(theme.palette.background.paper)
+  if (dow === 0) {
+    const fg = parseCssColor(theme.palette.error.main)
+    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.06 + paperRgb[i] * 0.94))
+    return `rgb(${r}, ${g}, ${b})`
+  }
+  if (dow === 6) {
+    const fg = parseCssColor(theme.palette.primary.main)
+    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.06 + paperRgb[i] * 0.94))
+    return `rgb(${r}, ${g}, ${b})`
+  }
+  return theme.palette.background.paper
+}
+
+/** 横スクロール時に左端を固定するセル用スタイル */
+function stickyColSx({ left, width, bg, header = false, edge = false }) {
+  return {
+    position: 'sticky',
+    left,
+    zIndex: header ? 4 : 2,
+    minWidth: width,
+    width,
+    maxWidth: width,
+    bgcolor: bg,
+    ...(edge
+      ? {
+          borderRight: 1,
+          borderColor: 'divider',
+          boxShadow: '4px 0 8px -4px rgba(0,0,0,0.12)',
+        }
+      : {}),
+  }
+}
 
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate()
@@ -60,7 +124,8 @@ function CellInput({ value, onChange, type, step }) {
  * - 500ms 静止したら `onUpsert(payload)` に送る (debounce)
  * - total_sales / fuel_total / profit は派生表示 (DB は GENERATED 列)
  */
-export function DailySalesTable({ year, month, rows, onUpsert }) {
+export function DailySalesTable({ year, month, rows, receivableByDate = new Map(), onUpsert }) {
+  const theme = useTheme()
   const totalDays = daysInMonth(year, month)
   const rowsByDate = useMemo(() => {
     const map = new Map()
@@ -116,21 +181,73 @@ export function DailySalesTable({ year, month, rows, onUpsert }) {
   }
 
   return (
-    <TableContainer component={Paper}>
-      <Table size="small" sx={{ '& td, & th': { px: 0.75, py: 0.5 } }}>
+    <TableContainer
+      component={Paper}
+      sx={{
+        width: '100%',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      <Table
+        size="small"
+        sx={{
+          width: 'max-content',
+          minWidth: '100%',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
+          '& td, & th': {
+            px: 0.75,
+            py: 0.5,
+            whiteSpace: 'nowrap',
+          },
+        }}
+      >
         <TableHead>
           <TableRow>
-            <TableCell>日</TableCell>
-            <TableCell>曜</TableCell>
+            <TableCell
+              sx={stickyColSx({
+                left: 0,
+                width: STICKY_DAY_WIDTH,
+                bg: 'background.paper',
+                header: true,
+              })}
+            >
+              日
+            </TableCell>
+            <TableCell
+              sx={stickyColSx({
+                left: STICKY_DOW_LEFT,
+                width: STICKY_DOW_WIDTH,
+                bg: 'background.paper',
+                header: true,
+                edge: true,
+              })}
+            >
+              曜
+            </TableCell>
             {EDITABLE_FIELDS.map((f) => (
-              <TableCell key={f.key} align={f.type === 'number' ? 'right' : 'left'}>
+              <TableCell
+                key={f.key}
+                align={f.type === 'number' ? 'right' : 'left'}
+                sx={{ minWidth: f.type === 'text' ? 140 : 88 }}
+              >
                 {f.label}
                 {f.unit && ` (${f.unit})`}
               </TableCell>
             ))}
-            <TableCell align="right">総売上</TableCell>
-            <TableCell align="right">燃料計</TableCell>
-            <TableCell align="right">推定収益</TableCell>
+            <TableCell align="right" sx={{ minWidth: 88 }}>
+              総売上
+            </TableCell>
+            <TableCell align="right" sx={{ minWidth: 120 }}>
+              未収（売掛）
+            </TableCell>
+            <TableCell align="right" sx={{ minWidth: 88 }}>
+              燃料計
+            </TableCell>
+            <TableCell align="right" sx={{ minWidth: 88 }}>
+              推定利益
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -148,20 +265,44 @@ export function DailySalesTable({ year, month, rows, onUpsert }) {
               expense_amount: parseInt0(merged.expense_amount),
               labor_cost: parseInt0(merged.labor_cost),
             })
+            const receivableSummary = receivableByDate.get(workDate)
+            const receivableTotal = receivableSummary?.total ?? 0
+            const receivableCount = receivableSummary?.count ?? 0
+            const bg = rowBackground(dow)
+            const stickyBg = stickyRowBackground(theme, dow)
             return (
               <TableRow
                 key={workDate}
                 hover
-                sx={{
-                  bgcolor: dow === 0 ? 'rgba(255, 80, 80, 0.06)' : dow === 6 ? 'rgba(80, 140, 255, 0.06)' : undefined,
-                }}
+                sx={{ bgcolor: bg }}
               >
-                <TableCell sx={{ fontVariantNumeric: 'tabular-nums' }}>{day}</TableCell>
-                <TableCell sx={{ color: isWeekend ? (dow === 0 ? 'error.main' : 'primary.main') : 'text.secondary' }}>
+                <TableCell
+                  sx={{
+                    ...stickyColSx({ left: 0, width: STICKY_DAY_WIDTH, bg: stickyBg }),
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {day}
+                </TableCell>
+                <TableCell
+                  sx={{
+                    ...stickyColSx({
+                      left: STICKY_DOW_LEFT,
+                      width: STICKY_DOW_WIDTH,
+                      bg: stickyBg,
+                      edge: true,
+                    }),
+                    color: isWeekend ? (dow === 0 ? 'error.main' : 'primary.main') : 'text.secondary',
+                  }}
+                >
                   {DOW_LABELS[dow]}
                 </TableCell>
                 {EDITABLE_FIELDS.map((f) => (
-                  <TableCell key={f.key} align={f.type === 'number' ? 'right' : 'left'} sx={{ minWidth: f.type === 'text' ? 120 : 70 }}>
+                  <TableCell
+                    key={f.key}
+                    align={f.type === 'number' ? 'right' : 'left'}
+                    sx={{ minWidth: f.type === 'text' ? 140 : 88 }}
+                  >
                     <CellInput
                       value={getCellValue(workDate, f.key)}
                       onChange={(raw) => handleChange(workDate, f, raw)}
@@ -170,10 +311,28 @@ export function DailySalesTable({ year, month, rows, onUpsert }) {
                     />
                   </TableCell>
                 ))}
-                <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>
+                <TableCell
+                  align="right"
+                  sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary', minWidth: 88 }}
+                >
                   ¥{derived.total_sales.toLocaleString('ja-JP')}
                 </TableCell>
-                <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>
+                <TableCell
+                  align="right"
+                  sx={{
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'text.secondary',
+                    minWidth: 120,
+                  }}
+                >
+                  {receivableCount > 0
+                    ? `${receivableCount}件 ¥${receivableTotal.toLocaleString('ja-JP')}`
+                    : '—'}
+                </TableCell>
+                <TableCell
+                  align="right"
+                  sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary', minWidth: 88 }}
+                >
                   ¥{derived.fuel_total.toLocaleString('ja-JP')}
                 </TableCell>
                 <TableCell
@@ -182,6 +341,7 @@ export function DailySalesTable({ year, month, rows, onUpsert }) {
                     fontVariantNumeric: 'tabular-nums',
                     fontWeight: 500,
                     color: derived.profit < 0 ? 'error.main' : 'success.main',
+                    minWidth: 88,
                   }}
                 >
                   ¥{derived.profit.toLocaleString('ja-JP')}

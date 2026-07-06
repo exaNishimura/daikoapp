@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
 import IconButton from '@mui/material/IconButton'
@@ -57,7 +56,7 @@ export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDele
   }
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Typography variant="h6">月額固定経費</Typography>
         <Typography variant="body2" color="text.secondary">
@@ -131,7 +130,7 @@ export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDele
           </Box>
         )}
       </Box>
-    </Paper>
+    </Box>
   )
 }
 

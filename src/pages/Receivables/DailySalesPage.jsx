@@ -22,6 +22,7 @@ import {
 } from '@/hooks/billing/useFixedExpenses'
 import { useReceivables } from '@/hooks/billing/useReceivables'
 import { calcMonthlySalesSummary } from '@/lib/billing/dailySalesCalc'
+import { summarizeReceivablesByDate } from '@/lib/billing/shiftReceivables'
 import { DailySalesTable } from './DailySalesTable'
 import { MonthlyFixedExpensesPanel } from './MonthlyFixedExpensesPanel'
 import { MonthlySummary } from './MonthlySummary'
@@ -55,6 +56,11 @@ export function DailySalesPage() {
   const receivableRows = useMemo(
     () => receivablesQuery.data ?? [],
     [receivablesQuery.data]
+  )
+
+  const receivableByDate = useMemo(
+    () => summarizeReceivablesByDate(receivableRows),
+    [receivableRows]
   )
 
   // daily_sales.receivable_total が未入力でも、accounts_receivable から集計して
@@ -104,7 +110,18 @@ export function DailySalesPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1600, mx: 'auto' }}>
+    <Box
+      sx={{
+        p: 3,
+        maxWidth: 1600,
+        mx: 'auto',
+        width: '100%',
+        minWidth: 0,
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}
+    >
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <IconButton onClick={() => navigate(-1)} aria-label="戻る">
           <ArrowBackIcon />
@@ -126,21 +143,27 @@ export function DailySalesPage() {
           日次売上の取得に失敗: {dailyQuery.error.message}
         </Alert>
       )}
+      {fixedExpensesQuery.error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          月額固定経費の取得に失敗: {fixedExpensesQuery.error.message}
+        </Alert>
+      )}
 
       <Stack spacing={2}>
         <MonthlySummary summary={summary} />
 
-        <Paper>
+        <Paper sx={{ minWidth: 0 }}>
           <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 2 }}>
             <Tab label="日次売上" />
             <Tab label="月額固定経費" />
           </Tabs>
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: 2, minWidth: 0 }}>
             {tab === 0 && (
               <DailySalesTable
                 year={year}
                 month={month}
                 rows={dailyRows}
+                receivableByDate={receivableByDate}
                 onUpsert={handleDailyUpsert}
               />
             )}

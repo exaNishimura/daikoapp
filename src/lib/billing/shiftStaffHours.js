@@ -1,4 +1,4 @@
-import { getStaffDisplayName } from '@/lib/staffFromEmployees'
+import { findEmployeeByStaffName, getStaffDisplayName } from '@/lib/staffFromEmployees'
 
 /**
  * シフトの start/end (HH:MM) から勤務時間（時間）を計算。翌日跨ぎ対応。
@@ -163,7 +163,7 @@ export function buildStaffRowsForSave({
 /**
  * 当日の total_hours（全号車合算）を算出。
  */
-export function computeDayTotalHours({
+export function computeDayStaffHoursRows({
   dayShifts,
   employees,
   carNum,
@@ -186,18 +186,42 @@ export function computeDayTotalHours({
     ...merged.map((r) => r.staff_name),
   ])
 
+  return [...allNames]
+    .sort((a, b) => a.localeCompare(b, 'ja'))
+    .map((name) => {
+      let hours = 0
+      if (mergedByName.has(name)) {
+        hours = mergedByName.get(name) ?? 0
+      } else {
+        const existing = (existingStaffRows ?? []).find((r) => r.staff_name === name)
+        if (existing) {
+          hours = Number(existing.hours) || 0
+        } else {
+          hours = computeStaffHoursFromShifts(dayShifts, employees).get(name) ?? 0
+        }
+      }
+      return { staff_name: name, hours: roundHours(hours) }
+    })
+    .filter((row) => row.hours > 0)
+}
+
+/**
+ * 稼働時間 × 従業員マスタ時給で人件費を算出（円、四捨五入）
+ */
+export function computeLaborCostFromStaffHours(staffRows, employees) {
   let total = 0
-  for (const name of allNames) {
-    if (mergedByName.has(name)) {
-      total += mergedByName.get(name) ?? 0
-      continue
-    }
-    const existing = (existingStaffRows ?? []).find((r) => r.staff_name === name)
-    if (existing) {
-      total += Number(existing.hours) || 0
-      continue
-    }
-    total += computeStaffHoursFromShifts(dayShifts, employees).get(name) ?? 0
+  for (const row of staffRows ?? []) {
+    const hours = Number(row.hours) || 0
+    if (hours <= 0) continue
+    const emp = findEmployeeByStaffName(employees, row.staff_name)
+    const hourly = Number(emp?.hourly_wage) || 0
+    total += Math.round(hours * hourly)
   }
-  return roundHours(total)
+  return Math.max(0, total)
+}
+
+export function computeDayTotalHours(params) {
+  return roundHours(
+    computeDayStaffHoursRows(params).reduce((sum, row) => sum + row.hours, 0)
+  )
 }

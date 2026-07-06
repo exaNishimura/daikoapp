@@ -3,6 +3,7 @@ import {
   buildStaffHoursRows,
   buildStaffRowsForSave,
   calcShiftWorkHours,
+  computeLaborCostFromStaffHours,
   computeStaffHoursByCar,
   computeStaffHoursFromShifts,
   filterShiftsByCar,
@@ -88,6 +89,29 @@ describe('buildStaffRowsForSave', () => {
       existingStaffRows: [],
     })
     expect(rows[0].hours).toBe(6.5)
+  })
+})
+
+describe('computeLaborCostFromStaffHours', () => {
+  it('稼働時間×時給の合計を算出する', () => {
+    const employees = [
+      { name: '西村', hourly_wage: 1500 },
+      { name: '井上', hourly_wage: 1200 },
+    ]
+    const cost = computeLaborCostFromStaffHours(
+      [
+        { staff_name: '西村', hours: 4 },
+        { staff_name: '井上', hours: 3.5 },
+      ],
+      employees
+    )
+    expect(cost).toBe(4 * 1500 + Math.round(3.5 * 1200))
+  })
+
+  it('マスタに無いスタッフは0円扱い', () => {
+    expect(
+      computeLaborCostFromStaffHours([{ staff_name: '臨時', hours: 5 }], [])
+    ).toBe(0)
   })
 })
 

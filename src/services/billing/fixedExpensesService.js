@@ -22,7 +22,6 @@ export async function getFixedExpensesByMonth(year, month) {
       .from('monthly_fixed_expenses')
       .select('*')
       .eq('billing_month', toBillingMonth(year, month))
-      .order('display_order', { ascending: true })
       .order('label', { ascending: true })
     if (error) throw error
     return { data: data || [], error: null }
@@ -35,9 +34,10 @@ export async function getFixedExpensesByMonth(year, month) {
 export async function upsertFixedExpense(payload) {
   if (!supabase) return NOT_INITIALIZED()
   try {
+    const { id: _id, ...rest } = payload
     const { data, error } = await supabase
       .from('monthly_fixed_expenses')
-      .upsert(payload, { onConflict: 'billing_month,label' })
+      .upsert(rest, { onConflict: 'billing_month,label' })
       .select()
       .single()
     if (error) throw error

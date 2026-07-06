@@ -50,7 +50,11 @@ function buildUpdatePayload(form) {
 function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
   const [form, setForm] = useState(() => rowToForm(row))
   const { errors, isValid } = useMemo(
-    () => validateReceivableForm(form, options),
+    () =>
+      validateReceivableForm(form, {
+        ...options,
+        allowUnsetCompany: form.company_id == null,
+      }),
     [form, options]
   )
 
@@ -142,7 +146,9 @@ function DisplayRow({ row, onEdit, onDelete, disabled }) {
   const status = receivableStatus(row)
   const locked = row.invoice_id != null
   const companyName =
-    row.companies?.invoice_display_name || row.companies?.name || '(取引先未設定)'
+    row.companies?.invoice_display_name ||
+    row.companies?.name ||
+    (row.company_id == null ? '（請求先未選択）' : '(取引先未設定)')
 
   return (
     <TableRow hover sx={{ opacity: row.companies?.is_active === false ? 0.6 : 1 }}>

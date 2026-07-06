@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getReceivables,
+  getReceivablesByWorkDate,
   getUnbilledByCompany,
   createReceivable,
   updateReceivable,
   deleteReceivable,
+  replaceShiftReceivables,
 } from '@/services/billing/receivablesService'
 import { queryKeys } from '@/lib/queryClient'
 
@@ -21,6 +23,14 @@ export function useReceivables(filter = {}) {
   return useQuery({
     queryKey: queryKeys.receivables.list(filter),
     queryFn: () => unwrap(getReceivables(filter)),
+  })
+}
+
+export function useReceivablesByWorkDate(workDate) {
+  return useQuery({
+    queryKey: queryKeys.receivables.byWorkDate(workDate),
+    queryFn: () => unwrap(getReceivablesByWorkDate(workDate)),
+    enabled: !!workDate,
   })
 }
 
@@ -41,6 +51,7 @@ export function useCreateReceivable() {
     mutationFn: (payload) => unwrap(createReceivable(payload)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+      qc.invalidateQueries({ queryKey: queryKeys.dailySales.all })
     },
   })
 }
@@ -51,6 +62,7 @@ export function useUpdateReceivable() {
     mutationFn: ({ id, payload }) => unwrap(updateReceivable(id, payload)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+      qc.invalidateQueries({ queryKey: queryKeys.dailySales.all })
     },
   })
 }
@@ -61,6 +73,18 @@ export function useDeleteReceivable() {
     mutationFn: (id) => unwrap(deleteReceivable(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+      qc.invalidateQueries({ queryKey: queryKeys.dailySales.all })
+    },
+  })
+}
+
+export function useReplaceShiftReceivables() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workDate, lines }) => unwrap(replaceShiftReceivables(workDate, lines)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+      qc.invalidateQueries({ queryKey: queryKeys.dailySales.all })
     },
   })
 }

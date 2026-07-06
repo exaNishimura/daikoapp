@@ -47,8 +47,8 @@ export function MonthlySummary({ summary }) {
         <Stat label="経費合計" value={summary.expense_total} />
         <Stat label="燃料代合計" value={summary.fuel_total} />
         <Stat label="人件費合計" value={summary.labor_cost_total} />
-        <Stat label="月額固定経費" value={summary.fixed_expense_total} />
-        <Stat label="推定粗利" value={summary.estimated_profit} accent />
+        <Stat label="経費" value={summary.fixed_expense_total} />
+        <Stat label="推定利益" value={summary.estimated_profit} accent />
       </Box>
     </Paper>
   )

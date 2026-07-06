@@ -4,9 +4,12 @@ import {
 } from '@/lib/billing/vehicleSalesFields'
 import {
   buildStaffHoursRows,
-  buildStaffRowsForSave,
+  computeDayStaffHoursRows,
   computeDayTotalHours,
+  computeLaborCostFromStaffHours,
 } from '@/lib/billing/shiftStaffHours'
+import { computeCashFromShiftSales } from '@/lib/billing/dailySalesCalc'
+import { toShiftReceivableFormLines } from '@/lib/billing/shiftReceivables'
 
 function parseInt0OrZero(v) {
   if (v == null || v === '') return 0
@@ -28,13 +31,14 @@ export function readVehicleSalesForm({
   dayShifts,
   employees,
   savedStaffRows,
+  receivableRows = [],
 }) {
   return {
     ...readVehicleFormFromRow(dailyRow, carNum),
     staffHours: buildStaffHoursRows(dayShifts, employees, savedStaffRows, carNum),
     expense_note: dailyRow?.expense_note ?? '',
     expense_amount: dailyRow?.expense_amount ?? '',
-    receivable_total: dailyRow?.receivable_total ?? '',
+    receivables: toShiftReceivableFormLines(receivableRows),
   }
 }
 
@@ -49,12 +53,14 @@ export function buildVehicleSalesSavePayload({
   dayShifts = [],
   employees = [],
   existingStaffRows = [],
+  receivableTotal = 0,
 }) {
   const dailyPayload = buildDailySalesUpsertPayload(workDate, existingRow, carNum, form)
   dailyPayload.expense_note = nullableText(form.expense_note)
   dailyPayload.expense_amount = parseInt0OrZero(form.expense_amount)
-  dailyPayload.receivable_total = parseInt0OrZero(form.receivable_total)
-  dailyPayload.total_hours = computeDayTotalHours({
+  dailyPayload.receivable_total = parseInt0OrZero(receivableTotal)
+
+  const dayStaffHoursRows = computeDayStaffHoursRows({
     dayShifts,
     employees,
     carNum,
@@ -62,14 +68,26 @@ export function buildVehicleSalesSavePayload({
     existingStaffRows,
   })
 
-  const staffRows = buildStaffRowsForSave({
-    workDate,
-    carNum,
-    formStaffHours: form.staffHours,
+  dailyPayload.total_hours = computeDayTotalHours({
     dayShifts,
     employees,
+    carNum,
+    formStaffHours: form.staffHours,
     existingStaffRows,
-  }).filter((row) => row.hours > 0)
+  })
+  dailyPayload.labor_cost = computeLaborCostFromStaffHours(dayStaffHoursRows, employees)
+  dailyPayload.cash = computeCashFromShiftSales(dailyPayload)
+
+  const existingSalesByName = new Map(
+    (existingStaffRows ?? []).map((r) => [r.staff_name, r.sales ?? 0])
+  )
+
+  const staffRows = dayStaffHoursRows.map((row) => ({
+    work_date: workDate,
+    staff_name: row.staff_name,
+    hours: row.hours,
+    sales: existingSalesByName.get(row.staff_name) ?? 0,
+  }))
 
   return { dailyPayload, staffRows }
 }

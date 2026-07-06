@@ -51,8 +51,9 @@ function isInTargetMonth(workDate, year, month) {
  */
 export function validateReceivableForm(form, options = {}) {
   const errors = {}
+  const allowUnsetCompany = options.allowUnsetCompany === true
 
-  if (form?.company_id == null) {
+  if (form?.company_id == null && !allowUnsetCompany) {
     errors.company_id = '取引先は必須です'
   }
 

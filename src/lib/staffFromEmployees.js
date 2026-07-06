@@ -84,6 +84,11 @@ function findEmployeeByName(employees, staffName) {
   return (employees || []).find((e) => normalizeStaffName(e?.name) === name) ?? null
 }
 
+/** スタッフ名で従業員マスタを検索 */
+export function findEmployeeByStaffName(employees, staffName) {
+  return findEmployeeByName(employees, staffName)
+}
+
 export function findEmployeeById(employees, employeeId) {
   if (!employeeId) return null
   return (employees || []).find((e) => e?.id === employeeId) ?? null

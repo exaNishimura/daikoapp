@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcDailyDerived, calcMonthlySalesSummary } from './dailySalesCalc'
+import { calcDailyDerived, calcMonthlySalesSummary, computeCashFromShiftSales } from './dailySalesCalc'
 
 describe('calcDailyDerived', () => {
   it('returns zero-filled derived values for null/empty row', () => {
@@ -64,6 +64,30 @@ describe('calcDailyDerived', () => {
     expect(result.total_sales).toBe(0)
     expect(result.fuel_total).toBe(0)
     expect(result.profit).toBe(-500)
+  })
+})
+
+describe('computeCashFromShiftSales', () => {
+  it('総売上 - 経費 - 売掛で現金を算出する', () => {
+    expect(
+      computeCashFromShiftSales({
+        vehicle1_sales: 50000,
+        vehicle2_sales: 30000,
+        expense_amount: 5000,
+        receivable_total: 12000,
+      })
+    ).toBe(63000)
+  })
+
+  it('マイナスは0に丸める', () => {
+    expect(
+      computeCashFromShiftSales({
+        vehicle1_sales: 10000,
+        vehicle2_sales: 0,
+        expense_amount: 8000,
+        receivable_total: 5000,
+      })
+    ).toBe(0)
   })
 })
 

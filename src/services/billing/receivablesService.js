@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { buildShiftReceivableInsertPayloads } from '@/lib/billing/shiftReceivables'
 
 /**
  * 売掛 (accounts_receivable) の CRUD と集計取得。
@@ -138,6 +139,64 @@ export async function deleteReceivable(id) {
     return { data: { id }, error: null }
   } catch (error) {
     console.error('Error deleting receivable:', error)
+    return { data: null, error }
+  }
+}
+
+/**
+ * 指定日の売掛一覧（全取引先）
+ */
+export async function getReceivablesByWorkDate(workDate) {
+  if (!supabase) return NOT_INITIALIZED()
+  try {
+    const { data, error } = await supabase
+      .from('accounts_receivable')
+      .select('*, companies(id, name, invoice_display_name), invoices(id, paid_at)')
+      .eq('work_date', workDate)
+      .order('id', { ascending: true })
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (error) {
+    console.error('Error fetching receivables by work_date:', error)
+    return { data: null, error }
+  }
+}
+
+async function sumReceivableTotalForWorkDate(workDate) {
+  const { data, error } = await supabase
+    .from('accounts_receivable')
+    .select('amount')
+    .eq('work_date', workDate)
+  if (error) throw error
+  return (data ?? []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+}
+
+/**
+ * シフト表モーダル用: 請求先未選択のシフト由来売掛を置き換え、当日合計を返す。
+ */
+export async function replaceShiftReceivables(workDate, lines = []) {
+  if (!supabase) return NOT_INITIALIZED()
+  try {
+    const { error: deleteError } = await supabase
+      .from('accounts_receivable')
+      .delete()
+      .eq('work_date', workDate)
+      .eq('source_file', 'shift-calendar')
+      .is('company_id', null)
+    if (deleteError) throw deleteError
+
+    const payloads = buildShiftReceivableInsertPayloads(workDate, lines)
+    if (payloads.length > 0) {
+      const { error: insertError } = await supabase
+        .from('accounts_receivable')
+        .insert(payloads)
+      if (insertError) throw insertError
+    }
+
+    const total = await sumReceivableTotalForWorkDate(workDate)
+    return { data: { work_date: workDate, receivable_total: total }, error: null }
+  } catch (error) {
+    console.error('Error replacing shift receivables:', error)
     return { data: null, error }
   }
 }

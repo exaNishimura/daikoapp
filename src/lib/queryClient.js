@@ -71,6 +71,7 @@ export const queryKeys = {
     all: ['receivables'],
     list: (filters = {}) => ['receivables', 'list', filters],
     byMonth: (year, month) => ['receivables', 'byMonth', year, month],
+    byWorkDate: (workDate) => ['receivables', 'byWorkDate', workDate],
     unbilledByCompany: (year, month) =>
       ['receivables', 'unbilledByCompany', year, month],
   },

@@ -20,8 +20,14 @@ import {
   useDailyStaffSalesByDate,
   useUpsertDailyStaffSalesBatch,
 } from '@/hooks/billing/useDailyStaffSales'
+import {
+  useReceivablesByWorkDate,
+  useReplaceShiftReceivables,
+} from '@/hooks/billing/useReceivables'
+import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesEditor'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { sumStaffHours } from '@/lib/billing/shiftStaffHours'
+import { sumReceivableAmounts, sumReceivableFormAmounts } from '@/lib/billing/shiftReceivables'
 import {
   buildVehicleSalesSavePayload,
   readVehicleSalesForm,
@@ -34,7 +40,7 @@ const EMPTY_FORM = {
   staffHours: [],
   expense_note: '',
   expense_amount: '',
-  receivable_total: '',
+  receivables: [{ amount: '', note: '' }],
 }
 
 export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], employees = [], onClose }) {
@@ -44,11 +50,17 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
 
   const saleQuery = useDailySaleByDate(open ? workDate : null)
   const staffSalesQuery = useDailyStaffSalesByDate(open ? workDate : null)
+  const receivablesQuery = useReceivablesByWorkDate(open ? workDate : null)
   const upsertMutation = useUpsertDailySale()
   const upsertStaffMutation = useUpsertDailyStaffSalesBatch()
+  const replaceReceivablesMutation = useReplaceShiftReceivables()
 
-  const dataLoading = saleQuery.isLoading || staffSalesQuery.isLoading
-  const saving = upsertMutation.isPending || upsertStaffMutation.isPending
+  const dataLoading =
+    saleQuery.isLoading || staffSalesQuery.isLoading || receivablesQuery.isLoading
+  const saving =
+    upsertMutation.isPending ||
+    upsertStaffMutation.isPending ||
+    replaceReceivablesMutation.isPending
   const loading = dataLoading || saving
 
   useEffect(() => {
@@ -66,6 +78,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
         dayShifts,
         employees,
         savedStaffRows: staffSalesQuery.data ?? [],
+        receivableRows: receivablesQuery.data ?? [],
       })
     )
   }, [
@@ -75,6 +88,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     dataLoading,
     saleQuery.dataUpdatedAt,
     staffSalesQuery.dataUpdatedAt,
+    receivablesQuery.dataUpdatedAt,
     // dayShifts/employees はデータ取得完了時のスナップショットを使用
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ])
@@ -99,6 +113,11 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     setSuccess(null)
 
     try {
+      const receivableResult = await replaceReceivablesMutation.mutateAsync({
+        workDate,
+        lines: form.receivables,
+      })
+
       const { dailyPayload, staffRows } = buildVehicleSalesSavePayload({
         workDate,
         existingRow: saleQuery.data ?? null,
@@ -107,6 +126,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
         dayShifts,
         employees,
         existingStaffRows: staffSalesQuery.data ?? [],
+        receivableTotal: receivableResult.receivable_total,
       })
 
       const saved = await upsertMutation.mutateAsync(dailyPayload)
@@ -115,10 +135,14 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
       }
 
       const derived = calcDailyDerived(saved)
-      const totalHours = sumStaffHours(form.staffHours)
-      setSuccess(
-        `保存しました（総売上: ¥${derived.total_sales.toLocaleString('ja-JP')} / 稼働: ${totalHours}h）`
-      )
+      const hasAssignedReceivables =
+        sumReceivableAmounts(receivablesQuery.data ?? []) >
+        sumReceivableFormAmounts(form.receivables)
+      let message = `保存しました（総売上: ¥${derived.total_sales.toLocaleString('ja-JP')} / 人件費: ¥${saved.labor_cost?.toLocaleString('ja-JP') ?? 0} / 現金: ¥${saved.cash?.toLocaleString('ja-JP') ?? 0} / 売掛: ¥${receivableResult.receivable_total.toLocaleString('ja-JP')}）`
+      if (hasAssignedReceivables) {
+        message += ' ※請求先割当済みの売掛を含む合計です。'
+      }
+      setSuccess(message)
     } catch (err) {
       setError(`保存に失敗しました: ${err.message}`)
     }
@@ -260,19 +284,23 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
             <Divider />
 
             <Typography variant="subtitle2" color="text.secondary">
-              未集金額（請求書払い）
+              未収（売掛・請求書払い）
             </Typography>
-            <TextField
-              label="売掛計 (円)"
-              type="number"
-              value={form.receivable_total}
-              onChange={(e) => setForm((prev) => ({ ...prev, receivable_total: e.target.value }))}
-              inputProps={{ step: 1, min: 0 }}
-              fullWidth
+            <ReceivableLinesEditor
+              lines={form.receivables}
+              onChange={(receivables) => setForm((prev) => ({ ...prev, receivables }))}
               disabled={loading}
-              size="small"
-              helperText="当日の請求書払い・未集金の合計（daily_sales.receivable_total）"
             />
+            <Typography variant="caption" color="text.secondary" display="block">
+              複数行入力可。請求先は売掛一覧で後から割り当てられます。
+              {receivablesQuery.data?.length > 0 && (
+                <>
+                  {' '}
+                  当日合計: ¥
+                  {sumReceivableAmounts(receivablesQuery.data).toLocaleString('ja-JP')}
+                </>
+              )}
+            </Typography>
 
             <Typography variant="caption" color="text.secondary">
               ログイン不要で保存できます

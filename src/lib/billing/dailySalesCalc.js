@@ -32,6 +32,15 @@ export function calcDailyDerived(row) {
 }
 
 /**
+ * シフト表入力ベースの現金 = 総売上 - 経費 - 未収（売掛）
+ */
+export function computeCashFromShiftSales(row) {
+  const total_sales = n(row?.vehicle1_sales) + n(row?.vehicle2_sales)
+  const cash = total_sales - n(row?.expense_amount) - n(row?.receivable_total)
+  return Math.max(0, Math.trunc(cash))
+}
+
+/**
  * 月次サマリ。
  *
  * 推定粗利 = 総売上 - 経費 - 燃料代 - 人件費(日次合算) - 月額固定経費
