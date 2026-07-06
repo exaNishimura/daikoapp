@@ -174,18 +174,24 @@ async function sumReceivableTotalForWorkDate(workDate) {
 /**
  * シフト表モーダル用: 請求先未選択のシフト由来売掛を置き換え、当日合計を返す。
  */
-export async function replaceShiftReceivables(workDate, lines = []) {
+export async function replaceShiftReceivables(workDate, lines = [], carNum = null) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { error: deleteError } = await supabase
+    let deleteQuery = supabase
       .from('accounts_receivable')
       .delete()
       .eq('work_date', workDate)
       .eq('source_file', 'shift-calendar')
       .is('company_id', null)
+
+    if (carNum != null) {
+      deleteQuery = deleteQuery.eq('vehicle_num', Number(carNum))
+    }
+
+    const { error: deleteError } = await deleteQuery
     if (deleteError) throw deleteError
 
-    const payloads = buildShiftReceivableInsertPayloads(workDate, lines)
+    const payloads = buildShiftReceivableInsertPayloads(workDate, lines, carNum)
     if (payloads.length > 0) {
       const { error: insertError } = await supabase
         .from('accounts_receivable')

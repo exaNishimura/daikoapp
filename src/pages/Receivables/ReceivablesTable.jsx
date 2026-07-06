@@ -15,18 +15,23 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import DeleteIcon from '@mui/icons-material/Delete'
 import LockIcon from '@mui/icons-material/Lock'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
+import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
 import { StatusBadge } from '@/components/Receivables/StatusBadge'
 import { receivableStatus } from '@/components/Receivables/statusUtils'
 import {
+  formatVehicleNumLabel,
+  parseVehicleNumForSave,
   toBillingMonthFromWorkDate,
   validateReceivableForm,
+  vehicleNumToFormValue,
 } from '@/lib/billing/receivableForm'
 
 function rowToForm(row) {
   return {
     company_id: row.company_id ?? null,
     work_date: row.work_date ?? '',
+    vehicle_num: vehicleNumToFormValue(row.vehicle_num),
     departure: row.departure ?? '',
     destination: row.destination ?? '',
     amount: row.amount ?? null,
@@ -40,6 +45,7 @@ function buildUpdatePayload(form) {
     company_id: form.company_id,
     work_date: form.work_date,
     billing_month: billingMonth,
+    vehicle_num: parseVehicleNumForSave(form.vehicle_num),
     departure: form.departure?.trim() || null,
     destination: form.destination?.trim() || null,
     amount: Number(form.amount) || 0,
@@ -86,6 +92,12 @@ function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
           value={form.company_id}
           onChange={(id) => setForm({ ...form, company_id: id })}
           includeInactive
+        />
+      </TableCell>
+      <TableCell sx={{ minWidth: 100 }}>
+        <VehicleNumSelect
+          value={form.vehicle_num}
+          onChange={(vehicle_num) => setForm({ ...form, vehicle_num })}
         />
       </TableCell>
       <TableCell>
@@ -161,6 +173,7 @@ function DisplayRow({ row, onEdit, onDelete, disabled }) {
       </TableCell>
       <TableCell>{row.work_date}</TableCell>
       <TableCell>{companyName}</TableCell>
+      <TableCell>{formatVehicleNumLabel(row.vehicle_num)}</TableCell>
       <TableCell>{row.departure || '—'}</TableCell>
       <TableCell>{row.destination || '—'}</TableCell>
       <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -247,6 +260,7 @@ export function ReceivablesTable({
             <TableCell />
             <TableCell>日付</TableCell>
             <TableCell>取引先</TableCell>
+            <TableCell>号車</TableCell>
             <TableCell>出発</TableCell>
             <TableCell>到着</TableCell>
             <TableCell align="right">金額</TableCell>
@@ -258,7 +272,7 @@ export function ReceivablesTable({
         <TableBody>
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+              <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                 該当する売掛がありません
               </TableCell>
             </TableRow>

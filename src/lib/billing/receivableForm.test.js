@@ -10,6 +10,7 @@ describe('EMPTY_RECEIVABLE_FORM', () => {
     expect(EMPTY_RECEIVABLE_FORM).toEqual({
       company_id: null,
       work_date: '',
+      vehicle_num: '',
       departure: '',
       destination: '',
       amount: null,

@@ -178,3 +178,19 @@ export function computeDayTotalHours(params) {
     computeDayStaffHoursRows(params).reduce((sum, row) => sum + row.hours, 0)
   )
 }
+
+/** 表示用: "西村　8h" */
+export function formatStaffHoursLabel(name, hours) {
+  const h = roundHours(hours)
+  const text = Number.isInteger(h) ? String(h) : h.toFixed(1)
+  return `${name}　${text}h`
+}
+
+/** 号車別スタッフ稼働時間ラベル（名前昇順） */
+export function getStaffHoursLabelsByCar(shifts, employees, carNum) {
+  const map = computeStaffHoursByCar(shifts, employees, carNum)
+  return [...map.entries()]
+    .filter(([, hours]) => hours > 0)
+    .sort(([a], [b]) => a.localeCompare(b, 'ja'))
+    .map(([name, hours]) => formatStaffHoursLabel(name, hours))
+}

@@ -81,7 +81,8 @@ export function useDeleteReceivable() {
 export function useReplaceShiftReceivables() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ workDate, lines }) => unwrap(replaceShiftReceivables(workDate, lines)),
+    mutationFn: ({ workDate, lines, carNum }) =>
+      unwrap(replaceShiftReceivables(workDate, lines, carNum)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
       qc.invalidateQueries({ queryKey: queryKeys.dailySales.all })

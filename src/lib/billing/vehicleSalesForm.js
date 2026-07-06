@@ -39,7 +39,7 @@ export function readVehicleSalesForm({
     shiftTimes: buildShiftTimeRows(dayShifts, employees, carNum),
     expense_note: dailyRow?.expense_note ?? '',
     expense_amount: dailyRow?.expense_amount ?? '',
-    receivables: toShiftReceivableFormLines(receivableRows),
+    receivables: toShiftReceivableFormLines(receivableRows, carNum),
   }
 }
 

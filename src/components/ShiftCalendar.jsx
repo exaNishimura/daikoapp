@@ -7,6 +7,7 @@ import { useDailySales } from '@/hooks/billing/useDailySales'
 import { getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
 import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
 import { VehicleSalesModal } from '@/components/ShiftCalendar/VehicleSalesModal'
+import { VehicleSalesSummaryModal } from '@/components/ShiftCalendar/VehicleSalesSummaryModal'
 import {
   buildStaffColorByName,
   getEmployeeSelectOptions,
@@ -93,6 +94,7 @@ export function ShiftCalendar() {
   const [searchExpanded, setSearchExpanded] = useState(false) // デフォルトは閉じた状態
   const [headerCollapsed, setHeaderCollapsed] = useState(false)
   const [vehicleSalesTarget, setVehicleSalesTarget] = useState(null)
+  const [vehicleSummaryTarget, setVehicleSummaryTarget] = useState(null)
 
   const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
   const employeesQuery = useEmployees()
@@ -500,6 +502,9 @@ export function ShiftCalendar() {
                 onOpenVehicleSales={(carNum) =>
                   setVehicleSalesTarget({ date, carNum })
                 }
+                onOpenVehicleSummary={(carNum) =>
+                  setVehicleSummaryTarget({ date, dow: groupedData[date]?.dow, carNum })
+                }
               />
             ))}
           </div>
@@ -516,6 +521,20 @@ export function ShiftCalendar() {
         employees={employees}
         onClose={() => setVehicleSalesTarget(null)}
       />
+
+      <VehicleSalesSummaryModal
+        open={Boolean(vehicleSummaryTarget)}
+        workDate={vehicleSummaryTarget?.date ?? null}
+        dow={vehicleSummaryTarget?.dow ?? ''}
+        carNum={vehicleSummaryTarget?.carNum ?? null}
+        dayShifts={
+          vehicleSummaryTarget?.date
+            ? (groupedData[vehicleSummaryTarget.date]?.shifts ?? [])
+            : []
+        }
+        employees={employees}
+        onClose={() => setVehicleSummaryTarget(null)}
+      />
     </div>
   )
 }
@@ -527,6 +546,7 @@ function DayBlock({
   colorByName,
   salesByDate,
   onOpenVehicleSales,
+  onOpenVehicleSummary,
 }) {
   const isFriSat = dayData.dow === '金' || dayData.dow === '土'
   const dateParts = dayData.date.split('-')
@@ -629,6 +649,7 @@ function DayBlock({
               employees={employees}
               salesRow={salesRow}
               onOpenVehicleSales={onOpenVehicleSales}
+              onOpenVehicleSummary={onOpenVehicleSummary}
             />
           ))}
         </div>
@@ -706,6 +727,7 @@ function CarBlock({
   employees,
   salesRow,
   onOpenVehicleSales,
+  onOpenVehicleSummary,
 }) {
   const driverShifts = shifts.filter((s) => s.car === carNum && s.role === '代行')
   const companionShifts = shifts.filter((s) => s.car === carNum && s.role === '随伴')
@@ -724,6 +746,16 @@ function CarBlock({
           onClick={() => onOpenVehicleSales?.(carNum)}
         >
           売上入力{hasSales ? ` ¥${Number(salesAmount).toLocaleString('ja-JP')}` : ''}
+        </Button>
+        <Button
+          size="small"
+          variant="contained"
+          color="error"
+          className="car-summary-btn"
+          disabled={!hasSales}
+          onClick={() => onOpenVehicleSummary?.(carNum)}
+        >
+          集計結果
         </Button>
       </div>
       <Lane

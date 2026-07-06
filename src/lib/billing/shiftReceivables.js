@@ -10,16 +10,27 @@ function parseAmount(v) {
   return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0
 }
 
-/** シフト表モーダルで編集対象の売掛行（請求先未選択・シフト由来） */
-export function isShiftDraftReceivable(row) {
-  return row?.source_file === SHIFT_RECEIVABLE_SOURCE && row?.company_id == null
+/** シフト表モーダルで編集対象の売掛行（請求先未選択・シフト由来・号車一致） */
+export function isShiftDraftReceivable(row, carNum = null) {
+  if (row?.source_file !== SHIFT_RECEIVABLE_SOURCE || row?.company_id != null) return false
+  if (carNum == null) return true
+  return row.vehicle_num != null && String(row.vehicle_num) === String(carNum)
+}
+
+/** 集計表示用: 号車別売掛（シフト表・売掛一覧のいずれも vehicle_num で紐付け） */
+export function filterReceivablesByVehicle(rows = [], carNum) {
+  if (carNum == null) return rows
+  const car = String(carNum)
+  return (rows ?? []).filter(
+    (row) => row.vehicle_num != null && String(row.vehicle_num) === car
+  )
 }
 
 /**
  * DB行 → モーダル用フォーム行
  */
-export function toShiftReceivableFormLines(rows = []) {
-  const drafts = rows.filter(isShiftDraftReceivable)
+export function toShiftReceivableFormLines(rows = [], carNum = null) {
+  const drafts = rows.filter((row) => isShiftDraftReceivable(row, carNum))
   if (drafts.length === 0) {
     return [{ ...EMPTY_RECEIVABLE_LINE }]
   }
@@ -33,9 +44,11 @@ export function toShiftReceivableFormLines(rows = []) {
 /**
  * フォーム行 → INSERT 用ペイロード
  */
-export function buildShiftReceivableInsertPayloads(workDate, lines = []) {
+export function buildShiftReceivableInsertPayloads(workDate, lines = [], carNum = null) {
   const billingMonth = toBillingMonthFromWorkDate(workDate)
   if (!billingMonth) return []
+
+  const vehicleNum = carNum != null ? Number(carNum) : null
 
   return lines
     .map((line) => ({
@@ -47,6 +60,7 @@ export function buildShiftReceivableInsertPayloads(workDate, lines = []) {
       amount: parseAmount(line.amount),
       note: line.note?.trim() || null,
       source_file: SHIFT_RECEIVABLE_SOURCE,
+      vehicle_num: vehicleNum,
     }))
     .filter((row) => row.amount > 0)
 }

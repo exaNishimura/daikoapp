@@ -8,11 +8,35 @@
 export const EMPTY_RECEIVABLE_FORM = Object.freeze({
   company_id: null,
   work_date: '',
+  vehicle_num: '',
   departure: '',
   destination: '',
   amount: null,
   note: '',
 })
+
+/** 売掛フォーム用の号車選択肢 */
+export const RECEIVABLE_VEHICLE_OPTIONS = Object.freeze([
+  { value: '', label: '未指定' },
+  { value: '1', label: '1号車' },
+  { value: '2', label: '2号車' },
+])
+
+export function vehicleNumToFormValue(vehicleNum) {
+  if (vehicleNum == null || vehicleNum === '') return ''
+  return String(vehicleNum)
+}
+
+export function parseVehicleNumForSave(value) {
+  if (value == null || value === '') return null
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 1 && n <= 9 ? n : null
+}
+
+export function formatVehicleNumLabel(vehicleNum) {
+  if (vehicleNum == null || vehicleNum === '') return '—'
+  return `${vehicleNum}号車`
+}
 
 const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 

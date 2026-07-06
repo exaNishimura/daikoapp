@@ -9,9 +9,11 @@ import AddIcon from '@mui/icons-material/Add'
 import SaveIcon from '@mui/icons-material/Save'
 import CloseIcon from '@mui/icons-material/Close'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
+import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
 import {
   EMPTY_RECEIVABLE_FORM,
+  parseVehicleNumForSave,
   toBillingMonthFromWorkDate,
   validateReceivableForm,
 } from '@/lib/billing/receivableForm'
@@ -66,6 +68,7 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
       company_id: form.company_id,
       work_date: form.work_date,
       billing_month: toBillingMonthFromWorkDate(form.work_date),
+      vehicle_num: parseVehicleNumForSave(form.vehicle_num),
       departure: form.departure?.trim() || null,
       destination: form.destination?.trim() || null,
       amount: Number(form.amount) || 0,
@@ -139,11 +142,17 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
             </Typography>
           )}
         </Box>
+        <Box sx={{ gridColumn: 'span 2' }}>
+          <VehicleNumSelect
+            value={form.vehicle_num}
+            onChange={(vehicle_num) => setForm({ ...form, vehicle_num })}
+          />
+        </Box>
         <AmountInput
           value={form.amount}
           onChange={(v) => setForm({ ...form, amount: v })}
           label="金額"
-          sx={{ gridColumn: 'span 4' }}
+          sx={{ gridColumn: 'span 2' }}
         />
         <TextField
           label="出発"

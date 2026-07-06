@@ -128,6 +128,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
     try {
       const receivableResult = await replaceReceivablesMutation.mutateAsync({
         workDate,
+        carNum,
         lines: form.receivables,
       })
 
