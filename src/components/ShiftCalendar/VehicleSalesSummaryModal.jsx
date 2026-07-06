@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -13,9 +14,15 @@ import TableCell from '@mui/material/TableCell'
 import TableRow from '@mui/material/TableRow'
 import { useDailySaleByDate } from '@/hooks/billing/useDailySales'
 import { useReceivablesByWorkDate } from '@/hooks/billing/useReceivables'
+import { useCompanies } from '@/hooks/billing/useCompanies'
 import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
 import { filterReceivablesByVehicle } from '@/lib/billing/shiftReceivables'
 import { getStaffHoursLabelsByCar } from '@/lib/billing/shiftStaffHours'
+import {
+  buildCompanyLookup,
+  enrichReceivablesWithCompanies,
+  getReceivableDisplayName,
+} from '@/lib/billing/receivableForm'
 
 function formatWorkDateLabel(workDate, dow) {
   if (!workDate) return ''
@@ -34,15 +41,6 @@ function formatYen(value) {
 function formatDistance(value) {
   if (value == null || value === '') return '—'
   return `${Number(value).toLocaleString('ja-JP')} km`
-}
-
-function getReceivableCompanyName(row) {
-  return (
-    row.companies?.invoice_display_name ||
-    row.companies?.name ||
-    row.note?.trim() ||
-    '（請求先未選択）'
-  )
 }
 
 function SummaryRow({ label, value, valueSx }) {
@@ -69,10 +67,20 @@ export function VehicleSalesSummaryModal({
 }) {
   const saleQuery = useDailySaleByDate(open ? workDate : null)
   const receivablesQuery = useReceivablesByWorkDate(open ? workDate : null)
+  const companiesQuery = useCompanies()
 
-  const loading = saleQuery.isLoading || receivablesQuery.isLoading
+  const companyLookup = useMemo(
+    () => buildCompanyLookup(companiesQuery.data ?? []),
+    [companiesQuery.data]
+  )
+
+  const loading =
+    saleQuery.isLoading || receivablesQuery.isLoading || companiesQuery.isLoading
   const salesRow = saleQuery.data ?? null
-  const receivables = filterReceivablesByVehicle(receivablesQuery.data ?? [], carNum)
+  const receivables = filterReceivablesByVehicle(
+    enrichReceivablesWithCompanies(receivablesQuery.data ?? [], companiesQuery.data ?? []),
+    carNum
+  )
   const staffLabels = getStaffHoursLabelsByCar(dayShifts, employees, carNum)
 
   const vehicleKeys = carNum ? getVehicleFieldKeys(carNum) : null
@@ -137,7 +145,9 @@ export function VehicleSalesSummaryModal({
                 <TableBody>
                   {receivables.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell sx={{ pl: 0, py: 0.75 }}>{getReceivableCompanyName(row)}</TableCell>
+                      <TableCell sx={{ pl: 0, py: 0.75 }}>
+                        {getReceivableDisplayName(row, companyLookup)}
+                      </TableCell>
                       <TableCell
                         align="right"
                         sx={{ pr: 0, py: 0.75, fontVariantNumeric: 'tabular-nums' }}

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   EMPTY_RECEIVABLE_FORM,
+  buildCompanyLookup,
+  enrichReceivablesWithCompanies,
+  getReceivableDisplayName,
   toBillingMonthFromWorkDate,
   validateReceivableForm,
 } from './receivableForm'
@@ -106,5 +109,35 @@ describe('validateReceivableForm', () => {
   it('accepts amount = 0 (free / cancelled jobs)', () => {
     const result = validateReceivableForm({ ...baseForm, amount: 0 }, {})
     expect(result.errors.amount).toBeUndefined()
+  })
+})
+
+describe('enrichReceivablesWithCompanies', () => {
+  it('JOIN が空でも company_id から companies を補完する', () => {
+    const rows = [{ id: 1, company_id: 3, companies: null, amount: 5000 }]
+    const companies = [{ id: 3, name: '鈴友', invoice_display_name: '株式会社 鈴友' }]
+    const enriched = enrichReceivablesWithCompanies(rows, companies)
+    expect(enriched[0].companies).toEqual(companies[0])
+  })
+})
+
+describe('getReceivableDisplayName', () => {
+  const lookup = buildCompanyLookup([
+    { id: 3, name: '鈴友', invoice_display_name: '株式会社 鈴友' },
+  ])
+
+  it('JOIN 済みの請求先名を優先する', () => {
+    expect(
+      getReceivableDisplayName(
+        { companies: { name: 'A', invoice_display_name: '株式会社 A' } },
+        lookup
+      )
+    ).toBe('株式会社 A')
+  })
+
+  it('JOIN が無くても lookup で名前を解決する', () => {
+    expect(getReceivableDisplayName({ company_id: 3, companies: null }, lookup)).toBe(
+      '株式会社 鈴友'
+    )
   })
 })

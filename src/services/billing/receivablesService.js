@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { buildShiftReceivableInsertPayloads } from '@/lib/billing/shiftReceivables'
+import { enrichReceivablesWithCompanies } from '@/lib/billing/receivableForm'
 
 /**
  * 売掛 (accounts_receivable) の CRUD と集計取得。
@@ -149,13 +150,32 @@ export async function deleteReceivable(id) {
 export async function getReceivablesByWorkDate(workDate) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { data, error } = await supabase
+    const { data: rows, error } = await supabase
       .from('accounts_receivable')
       .select('*, companies(id, name, invoice_display_name), invoices(id, paid_at)')
       .eq('work_date', workDate)
       .order('id', { ascending: true })
     if (error) throw error
-    return { data: data || [], error: null }
+
+    const companyIds = [
+      ...new Set((rows ?? []).map((row) => row.company_id).filter((id) => id != null)),
+    ]
+
+    let companies = []
+    if (companyIds.length > 0) {
+      const { data: companyRows, error: companyError } = await supabase
+        .from('companies')
+        .select('id, name, invoice_display_name')
+        .in('id', companyIds)
+      if (companyError) {
+        console.error('Error fetching companies for receivables:', companyError)
+      } else {
+        companies = companyRows ?? []
+      }
+    }
+
+    const data = enrichReceivablesWithCompanies(rows ?? [], companies)
+    return { data, error: null }
   } catch (error) {
     console.error('Error fetching receivables by work_date:', error)
     return { data: null, error }

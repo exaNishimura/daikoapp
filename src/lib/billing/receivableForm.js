@@ -38,6 +38,47 @@ export function formatVehicleNumLabel(vehicleNum) {
   return `${vehicleNum}号車`
 }
 
+/** company.id → 行 の Map */
+export function buildCompanyLookup(companies = []) {
+  const map = new Map()
+  for (const company of companies) {
+    if (company?.id != null) map.set(company.id, company)
+  }
+  return map
+}
+
+/**
+ * JOIN 失敗時などに companies を補完する（シフト表の anon アクセス向け）
+ */
+export function enrichReceivablesWithCompanies(rows = [], companies = []) {
+  const lookup = buildCompanyLookup(companies)
+  if (lookup.size === 0) return rows
+
+  return rows.map((row) => {
+    if (row.company_id == null) return row
+    if (row.companies?.name || row.companies?.invoice_display_name) return row
+    const company = lookup.get(row.company_id)
+    return company ? { ...row, companies: company } : row
+  })
+}
+
+/** 売掛行の請求先表示名 */
+export function getReceivableDisplayName(row, companyLookup = null) {
+  const joinedName = row?.companies?.invoice_display_name || row?.companies?.name
+  if (joinedName) return joinedName
+
+  const companyId = row?.company_id
+  if (companyId != null) {
+    const fromLookup = companyLookup?.get(companyId)
+    if (fromLookup) return fromLookup.invoice_display_name || fromLookup.name
+  }
+
+  const note = row?.note?.trim()
+  if (note) return note
+
+  return '（請求先未選択）'
+}
+
 const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 
 /**
