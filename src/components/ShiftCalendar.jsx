@@ -609,9 +609,18 @@ function DayBlock({
     <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`} data-date={dayData.date}>
       <div className="day-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-          <div className="day-date">
-            {dateFormatted}
-            <span className="day-dow">({dayData.dow})</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="day-date">
+              {dateFormatted}
+              <span className="day-dow">({dayData.dow})</span>
+            </div>
+            {dayData.status && (
+              <div
+                className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}
+              >
+                {dayData.status}
+              </div>
+            )}
           </div>
           {displayTarget !== null && (
             <>
@@ -623,15 +632,6 @@ function DayBlock({
                 {targetPct}%
               </div>
             </>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {dayData.status && (
-            <div
-              className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}
-            >
-              {dayData.status}
-            </div>
           )}
         </div>
       </div>
