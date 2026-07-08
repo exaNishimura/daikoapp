@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { getMinBusinessDateTime } from '@/utils/businessDayUtils'
-import { setupPlacesAutocomplete } from '@/lib/places'
+import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import { useOrderForm } from '@/hooks/useOrderForm'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
@@ -35,59 +35,22 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     reset,
   } = useOrderForm({ onSuccess: onOrderCreated })
 
-  const pickupAddressAutocompleteRef = useRef(null)
-  const dropoffAddressAutocompleteRef = useRef(null)
-  const waypointAutocompleteRefs = useRef({})
-
   // モーダルが開かれたタイミングでフォームをリセット
   useEffect(() => {
     if (open) {
       reset()
-      waypointAutocompleteRefs.current = {}
     }
   }, [open, reset])
 
-  // 出発地・目的地の Autocomplete
-  useEffect(() => {
-    if (!open) return
+  const handlePickupAddressChange = (address) => {
+    updateField('pickup_address', address)
+    setErrors((prev) => (prev.pickup_address ? { ...prev, pickup_address: null } : prev))
+  }
 
-    const cleanupPickup = setupPlacesAutocomplete(
-      () => pickupAddressAutocompleteRef.current,
-      (formattedAddress) => {
-        updateField('pickup_address', formattedAddress)
-        setErrors((prev) => ({ ...prev, pickup_address: null }))
-      }
-    )
-    const cleanupDropoff = setupPlacesAutocomplete(
-      () => dropoffAddressAutocompleteRef.current,
-      (formattedAddress) => {
-        updateField('dropoff_address', formattedAddress)
-        setErrors((prev) => ({ ...prev, dropoff_address: null }))
-      }
-    )
-
-    return () => {
-      cleanupPickup()
-      cleanupDropoff()
-    }
-  }, [open, updateField, setErrors])
-
-  // 経由地の Autocomplete（経由地数が変わるたびに再構築）
-  useEffect(() => {
-    if (!open) return
-
-    const cleanups = Object.keys(waypointAutocompleteRefs.current).map((indexStr) => {
-      const waypointIndex = parseInt(indexStr, 10)
-      return setupPlacesAutocomplete(
-        () => waypointAutocompleteRefs.current[indexStr],
-        (formattedAddress) => updateWaypoint(waypointIndex, formattedAddress)
-      )
-    })
-
-    return () => {
-      cleanups.forEach((fn) => fn())
-    }
-  }, [open, formData.waypoints.length, updateWaypoint])
+  const handleDropoffAddressChange = (address) => {
+    updateField('dropoff_address', address)
+    setErrors((prev) => (prev.dropoff_address ? { ...prev, dropoff_address: null } : prev))
+  }
 
   return (
     <Dialog
@@ -163,29 +126,23 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             fullWidth
           />
 
-          <TextField
+          <PlacesAutocompleteField
             label="出発地"
             name="pickup_address"
             value={formData.pickup_address}
-            onChange={handleChange}
-            inputRef={pickupAddressAutocompleteRef}
-            error={!!errors.pickup_address}
-            helperText={errors.pickup_address}
+            onChange={handlePickupAddressChange}
+            error={errors.pickup_address}
             placeholder="例: 三重県鈴鹿市..."
-            fullWidth
             required
           />
 
-          <TextField
+          <PlacesAutocompleteField
             label="目的地"
             name="dropoff_address"
             value={formData.dropoff_address}
-            onChange={handleChange}
-            inputRef={dropoffAddressAutocompleteRef}
-            error={!!errors.dropoff_address}
-            helperText={errors.dropoff_address}
+            onChange={handleDropoffAddressChange}
+            error={errors.dropoff_address}
             placeholder="例: 三重県鈴鹿市..."
-            fullWidth
             required
           />
 
@@ -207,33 +164,17 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             </Box>
             <Stack spacing={1.5}>
               {formData.waypoints.map((waypoint, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                  <TextField
-                    label={`経由地 ${index + 1}`}
-                    value={waypoint}
-                    onChange={(e) => updateWaypoint(index, e.target.value)}
-                    inputRef={(ref) => {
-                      if (ref) {
-                        waypointAutocompleteRefs.current[index] = ref
-                      } else {
-                        delete waypointAutocompleteRefs.current[index]
-                      }
-                    }}
-                    placeholder="例: 三重県鈴鹿市..."
-                    fullWidth
-                    size="small"
-                  />
+                <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flex: 1 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <PlacesAutocompleteField
+                      label={`経由地 ${index + 1}`}
+                      value={waypoint}
+                      onChange={(address) => updateWaypoint(index, address)}
+                      placeholder="例: 三重県鈴鹿市..."
+                    />
+                  </Box>
                   <IconButton
-                    onClick={() => {
-                      // Autocomplete のリスナーを先に外しておく（メモリリーク防止）
-                      const ref = waypointAutocompleteRefs.current[index]
-                      if (ref?._autocomplete && window.google?.maps?.event) {
-                        window.google.maps.event.clearInstanceListeners(ref._autocomplete)
-                        delete ref._autocomplete
-                      }
-                      delete waypointAutocompleteRefs.current[index]
-                      removeWaypoint(index)
-                    }}
+                    onClick={() => removeWaypoint(index)}
                     sx={{ mt: 0.5 }}
                     color="error"
                   >

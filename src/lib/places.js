@@ -1,8 +1,11 @@
 /**
- * Google Places Autocomplete のセットアップ用ユーティリティ
+ * Google Places Autocomplete のセットアップ用ユーティリティ（新 Web Component 版）
  *
- * フォーム上の <input> に Autocomplete を取り付ける処理は本来同じだが
- * pickup / dropoff / waypoint で 3 回コピペされていたため共通化。
+ * 旧 `google.maps.places.Autocomplete`（input 後付け型・非推奨）から
+ * 新 `google.maps.places.PlaceAutocompleteElement`（Web Component）へ移行。
+ *
+ * 新要素は自前の input と候補ドロップダウンを持ち、位置管理も内部で行うため
+ * モーダル内スクロールにドロップダウンが追従しない問題が構造的に解消される。
  */
 
 // 三重県の bounds（県外候補をなるべく除外する）
@@ -10,157 +13,121 @@ const MIE_BOUNDS_SW = { lat: 33.7, lng: 135.8 } // 南牟婁郡
 const MIE_BOUNDS_NE = { lat: 35.2, lng: 136.9 } // 桑名市周辺
 
 /**
- * Google Places API がブラウザに読み込まれているか
+ * locationRestriction 用の LatLngBoundsLiteral を返す（strictBounds 相当）
+ * @returns {google.maps.LatLngBoundsLiteral}
  */
-export function isGooglePlacesReady() {
+export function getMieLocationRestriction() {
+  return {
+    south: MIE_BOUNDS_SW.lat,
+    west: MIE_BOUNDS_SW.lng,
+    north: MIE_BOUNDS_NE.lat,
+    east: MIE_BOUNDS_NE.lng,
+  }
+}
+
+/**
+ * Google Maps JS API（importLibrary）がブラウザに用意されているか
+ */
+function isGoogleMapsBootstrapReady() {
   return Boolean(
     typeof window !== 'undefined' &&
-    window.google &&
-    window.google.maps &&
-    window.google.maps.places
+      window.google &&
+      window.google.maps &&
+      typeof window.google.maps.importLibrary === 'function'
   )
 }
 
 /**
- * Material-UI の TextField の inputRef は時々 input 以外（コンテナ）を返すので
- * 必要に応じて子の input を辿って取り出す。
- * @param {HTMLElement|HTMLInputElement|null} ref
- * @returns {HTMLInputElement|null}
+ * places ライブラリを読み込む。main.jsx でスクリプト注入済みだが、
+ * モーダル open 直後などまだ bootstrap が終わっていない可能性に備えてポーリングで待つ。
+ *
+ * @param {Object} [options]
+ * @param {number} [options.timeoutMs=10000] - 諦めるまでの最大待機ミリ秒
+ * @param {number} [options.pollIntervalMs=100] - ポーリング間隔
+ * @returns {Promise<google.maps.PlacesLibrary|null>}
  */
-export function resolveInputElement(ref) {
-  if (!ref) return null
-  if (ref instanceof HTMLInputElement) return ref
-  const container = typeof ref.closest === 'function' ? ref.closest('.MuiInputBase-root') : null
-  if (container) {
-    const input = container.querySelector('input')
-    if (input instanceof HTMLInputElement) return input
-  }
-  if (typeof ref.querySelector === 'function') {
-    const input = ref.querySelector('input')
-    if (input instanceof HTMLInputElement) return input
-  }
-  return null
+export function importPlacesLibrary({ timeoutMs = 10000, pollIntervalMs = 100 } = {}) {
+  return new Promise((resolve) => {
+    const started = Date.now()
+
+    const tryImport = () => {
+      if (isGoogleMapsBootstrapReady()) {
+        window.google.maps
+          .importLibrary('places')
+          .then((lib) => resolve(lib))
+          .catch(() => resolve(null))
+        return
+      }
+      if (Date.now() - started >= timeoutMs) {
+        resolve(null)
+        return
+      }
+      setTimeout(tryImport, pollIntervalMs)
+    }
+
+    tryImport()
+  })
 }
 
 /**
- * `.pac-container` の z-index を Dialog 内でも見えるように調整するスタイルを
- * 一度だけ <head> に注入する
+ * `PlaceAutocompleteElement` をダークテーマに寄せるスタイルを一度だけ <head> に注入する。
+ *
+ * MUI OutlinedInput（暗色）に見た目を近づける。候補リストは color-scheme: dark で
+ * ブラウザ／要素側にダーク描画を促しつつ、::part で細部を調整。
  */
-export function injectPacContainerStyle() {
+export function injectPlaceAutocompleteStyle() {
   if (typeof document === 'undefined') return
-  if (document.getElementById('pac-container-style')) return
+  if (document.getElementById('place-autocomplete-style-v3')) return
 
   const style = document.createElement('style')
-  style.id = 'pac-container-style'
+  style.id = 'place-autocomplete-style-v3'
   style.textContent = `
-    .pac-container {
-      z-index: 1400 !important;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    gmp-place-autocomplete {
+      width: 100%;
+      /* UA のダークスキーム（黒描画）を無効化。背景・文字色は下で明示する */
+      color-scheme: light;
+      /* 要素ホストの背景を透明にし、下の MUI Paper(#2a2a2a) を透けさせる */
+      background-color: transparent;
+      font-family: inherit;
     }
-    .pac-item {
-      cursor: pointer;
-      padding: 8px;
+    gmp-place-autocomplete::part(input) {
+      box-sizing: border-box;
+      width: 100%;
+      background-color: transparent;
+      color: rgba(255, 255, 255, 0.87);
+      border: 1px solid rgba(255, 255, 255, 0.23);
+      border-radius: 8px;
+      padding: 16.5px 14px;
+      font-size: 1rem;
+      line-height: 1.4375em;
+      font-family: inherit;
     }
-    .pac-item:hover {
-      background-color: #f5f5f5;
+    gmp-place-autocomplete::part(input):hover {
+      border-color: rgba(255, 255, 255, 0.87);
     }
-    .pac-item-selected {
-      background-color: #e3f2fd;
+    gmp-place-autocomplete::part(input):focus {
+      border-color: #646cff;
+      outline: 1px solid #646cff;
+      outline-offset: -1px;
+    }
+    /* 候補ドロップダウンのコンテナ（ここも既定だと黒くなる） */
+    gmp-place-autocomplete::part(prediction-list) {
+      background-color: #2a2a2a;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    gmp-place-autocomplete::part(prediction-item) {
+      background-color: #2a2a2a;
+      color: rgba(255, 255, 255, 0.87);
+    }
+    gmp-place-autocomplete::part(prediction-item-selected) {
+      background-color: #3a3a3a;
+    }
+    gmp-place-autocomplete::part(prediction-item-main-text) {
+      color: rgba(255, 255, 255, 0.92);
+    }
+    gmp-place-autocomplete::part(prediction-item-secondary-text) {
+      color: rgba(255, 255, 255, 0.6);
     }
   `
   document.head.appendChild(style)
-}
-
-/**
- * 1 つの input 要素に Places Autocomplete を取り付ける
- *
- * @param {HTMLInputElement} inputElement - 取り付け先の input
- * @param {(formattedAddress: string, place: google.maps.places.PlaceResult) => void} onPlaceChanged
- * @returns {() => void} cleanup 関数（イベントリスナー解除）
- */
-export function attachPlacesAutocomplete(inputElement, onPlaceChanged) {
-  if (!isGooglePlacesReady() || !(inputElement instanceof HTMLInputElement)) {
-    return () => {}
-  }
-
-  const { Autocomplete } = window.google.maps.places
-
-  // 既存があればクリーンアップ
-  if (inputElement._autocomplete) {
-    window.google.maps.event.clearInstanceListeners(inputElement._autocomplete)
-    delete inputElement._autocomplete
-  }
-
-  const bounds = new window.google.maps.LatLngBounds(
-    new window.google.maps.LatLng(MIE_BOUNDS_SW.lat, MIE_BOUNDS_SW.lng),
-    new window.google.maps.LatLng(MIE_BOUNDS_NE.lat, MIE_BOUNDS_NE.lng)
-  )
-
-  const autocomplete = new Autocomplete(inputElement, {
-    componentRestrictions: { country: 'jp' },
-    fields: ['formatted_address'],
-    language: 'ja',
-    bounds,
-    strictBounds: true,
-  })
-  inputElement._autocomplete = autocomplete
-
-  injectPacContainerStyle()
-
-  const listener = autocomplete.addListener('place_changed', () => {
-    const place = autocomplete.getPlace()
-    if (place && place.formatted_address) {
-      onPlaceChanged(place.formatted_address, place)
-    }
-  })
-
-  return () => {
-    if (listener && typeof listener.remove === 'function') {
-      listener.remove()
-    }
-    if (inputElement._autocomplete) {
-      window.google.maps.event.clearInstanceListeners(inputElement._autocomplete)
-      delete inputElement._autocomplete
-    }
-  }
-}
-
-/**
- * Google Places API が準備できるまで待ってから取り付け、戻り値は cleanup 関数
- *
- * @param {() => HTMLInputElement|null} getInputElement - 遅延取得（モーダル open 直後に DOM が無い可能性に備える）
- * @param {(formattedAddress: string, place: google.maps.places.PlaceResult) => void} onPlaceChanged
- * @param {Object} [options]
- * @param {number} [options.initialDelayMs=500] - 初期化までの待機ミリ秒
- * @param {number} [options.pollIntervalMs=100] - Google API ロード待ちのポーリング間隔
- * @returns {() => void} cleanup 関数
- */
-export function setupPlacesAutocomplete(getInputElement, onPlaceChanged, options = {}) {
-  const { initialDelayMs = 500, pollIntervalMs = 100 } = options
-  let cancelled = false
-  let cleanup = () => {}
-  let pollTimer = null
-
-  const tryInit = () => {
-    if (cancelled) return
-    if (!isGooglePlacesReady()) {
-      pollTimer = setTimeout(tryInit, pollIntervalMs)
-      return
-    }
-    const input = resolveInputElement(getInputElement())
-    if (!input) {
-      // input が無い（モーダルが閉じた等）→ 諦める
-      return
-    }
-    cleanup = attachPlacesAutocomplete(input, onPlaceChanged)
-  }
-
-  const initialTimer = setTimeout(tryInit, initialDelayMs)
-
-  return () => {
-    cancelled = true
-    clearTimeout(initialTimer)
-    if (pollTimer) clearTimeout(pollTimer)
-    cleanup()
-  }
 }
