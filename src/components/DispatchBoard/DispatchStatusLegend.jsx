@@ -2,10 +2,16 @@ import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 
 const LEGEND_ITEMS = [
-  { label: '仮配置', color: '#ffa500', textColor: '#000' },
-  { label: '確定', color: '#4caf50', textColor: '#fff' },
-  { label: '送客中', color: '#9c27b0', textColor: '#fff' },
-  { label: '競合', color: '#ff4444', textColor: '#fff' },
+  {
+    label: '配置不可',
+    color: '#eef1f5',
+    textColor: '#6b7280',
+    border: '1px dashed #c4cad2',
+  },
+  { label: '仮配置', color: '#fef0d5', textColor: '#8a5a00', border: '1px solid #f2c777' },
+  { label: '確定', color: '#16a34a', textColor: '#fff' },
+  { label: '送客中', color: '#7c3aed', textColor: '#fff' },
+  { label: '競合', color: '#dc2626', textColor: '#fff' },
 ]
 
 /**
@@ -39,6 +45,7 @@ export function DispatchStatusLegend() {
             fontWeight: 600,
             bgcolor: item.color,
             color: item.textColor,
+            border: item.border ?? 'none',
             '& .MuiChip-label': { px: 0.75, py: 0 },
           }}
         />

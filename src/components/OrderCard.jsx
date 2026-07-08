@@ -105,9 +105,18 @@ export function OrderCard({ order, isSelected, onClick }) {
       {...listeners}
       onClick={handleClick}
       sx={{
-        backgroundColor: '#2a2a2a',
-        border: isSelected ? '2px solid #646cff' : '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 1,
+        backgroundColor: 'background.paper',
+        border: isSelected ? '1px solid' : '1px solid',
+        borderColor: isSelected ? 'primary.main' : 'divider',
+        borderLeft: isSelected ? '4px solid' : '4px solid',
+        borderLeftColor: isSelected ? 'primary.main' : 'divider',
+        borderRadius: 0,
+        boxShadow: '0 1px 2px rgba(16, 24, 40, 0.06)',
+        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          boxShadow: '0 4px 12px rgba(16, 24, 40, 0.1)',
+        },
         '&:active': {
           cursor: 'grabbing',
         },
@@ -136,7 +145,7 @@ export function OrderCard({ order, isSelected, onClick }) {
           <Typography
             variant="caption"
             sx={{
-              color: 'rgba(255, 255, 255, 0.85)',
+              color: 'text.primary',
               fontWeight: 600,
               fontSize: '0.7rem',
               flexShrink: 0,
@@ -147,7 +156,7 @@ export function OrderCard({ order, isSelected, onClick }) {
           <Typography
             variant="caption"
             sx={{
-              color: 'rgba(255, 255, 255, 0.5)',
+              color: 'text.secondary',
               fontSize: '0.65rem',
               flexShrink: 0,
             }}
@@ -158,7 +167,7 @@ export function OrderCard({ order, isSelected, onClick }) {
             <Typography
               variant="caption"
               sx={{
-                color: 'rgba(255, 255, 255, 0.5)',
+                color: 'text.secondary',
                 fontSize: '0.65rem',
                 flexShrink: 0,
               }}
@@ -180,7 +189,7 @@ export function OrderCard({ order, isSelected, onClick }) {
         <Typography
           variant="caption"
           sx={{
-            color: 'rgba(255, 255, 255, 0.9)',
+            color: 'text.primary',
             fontSize: '0.7rem',
             lineHeight: 1.3,
             overflow: 'hidden',

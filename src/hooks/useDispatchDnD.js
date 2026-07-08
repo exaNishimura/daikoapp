@@ -49,18 +49,22 @@ export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, set
   const dragContextRef = useRef(null)
   const slotsRef = useRef(slots)
   const ordersRef = useRef(orders)
+  const operationStatusesRef = useRef(operationStatuses)
 
   slotsRef.current = slots
   ordersRef.current = orders
+  operationStatusesRef.current = operationStatuses
 
   const buildDragPreview = (vehicleId, rawTopPx) => {
     const ctx = dragContextRef.current
     if (!ctx) {
+      const top = rowIndexToPixels(snapToRowIndex(pixelsToRowIndex(rawTopPx)))
       return {
         vehicleId,
-        top: rowIndexToPixels(snapToRowIndex(pixelsToRowIndex(rawTopPx))),
+        top,
         height: 20,
         snapGuide: null,
+        isPlacementAllowed: true,
       }
     }
 
@@ -73,11 +77,20 @@ export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, set
       excludeSlotId: ctx.excludeSlotId,
     })
 
+    const snappedRowIndex = snapToRowIndex(pixelsToRowIndex(preview.top))
+    const now = new Date()
+    let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    if (now.getHours() < 6) businessDay.setDate(businessDay.getDate() - 1)
+    const dropStart = rowIndexToDate(snappedRowIndex, businessDay)
+    const statuses = operationStatusesRef.current[vehicleId] || []
+    const isPlacementAllowed = isVehicleOperational(vehicleId, dropStart, statuses)
+
     return {
       vehicleId,
       top: preview.top,
       height: preview.height,
       snapGuide: preview.snapGuide,
+      isPlacementAllowed,
     }
   }
 

@@ -15,6 +15,7 @@ export function OrderCardList({
   onExpandedChange,
   defaultExpanded = false,
   expandedMaxHeight = 'calc(100vh / 3)',
+  fillHeight = false,
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded)
 
@@ -42,9 +43,13 @@ export function OrderCardList({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        flexShrink: 0,
+        ...(fillHeight
+          ? { flex: 1, minHeight: 0, height: '100%' }
+          : { flexShrink: 0 }),
         ...(expanded
-          ? { height: expandedMaxHeight, maxHeight: expandedMaxHeight }
+          ? fillHeight
+            ? { flex: 1, minHeight: 0, height: '100%' }
+            : { height: expandedMaxHeight, maxHeight: expandedMaxHeight }
           : { height: 'auto' }),
       }}
     >

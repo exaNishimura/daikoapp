@@ -1,69 +1,70 @@
 .slot-component {
+  --slot-accent: var(--dsp-primary);
+  --slot-fill: var(--dsp-surface);
   position: absolute;
-  left: 2px;
-  right: 2px;
+  left: 3px;
+  right: 3px;
   min-height: 20px; /* 最小15分 = 20px */
-  background-color: hsl(var(--card));
-  border: 2px solid hsl(var(--primary));
-  border-radius: 4px;
-  padding: 0.5rem;
+  background-color: var(--slot-fill);
+  border: 1px solid var(--dsp-border);
+  border-left: 4px solid var(--slot-accent);
+  border-radius: 0;
+  padding: 3px 6px;
   cursor: pointer;
   transition:
-    box-shadow 0.2s,
-    opacity 0.2s,
-    border-color 0.2s;
+    box-shadow 0.15s ease,
+    transform 0.15s ease,
+    opacity 0.2s;
   z-index: 1;
   overflow: visible; /* conflict-warningが切れないように */
   display: flex;
   flex-direction: column;
-  color: rgba(255, 255, 255, 0.9);
-  box-sizing: border-box; /* paddingを含めた高さ計算 */
+  color: var(--dsp-text);
+  box-sizing: border-box;
+  box-shadow: var(--dsp-shadow-sm);
 }
 
 .slot-component:hover {
   z-index: 2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--dsp-shadow-md);
 }
 
 .slot-component.tentative {
-  border-color: #ffa500;
-  background-color: hsl(45 100% 20% / 0.3);
+  --slot-accent: var(--dsp-tentative);
+  --slot-fill: var(--dsp-tentative-bg);
 }
 
 .slot-component.confirmed {
-  border-color: #4caf50;
-  background-color: hsl(142 71% 20% / 0.3);
+  --slot-accent: var(--dsp-confirmed);
+  --slot-fill: var(--dsp-confirmed-bg);
 }
 
-.slot-component.arrived {
-  border-color: #2196f3;
-  background-color: hsl(210 100% 20% / 0.3);
-}
-
+.slot-component.arrived,
 .slot-component.picking_up {
-  border-color: #2196f3;
-  background-color: hsl(210 100% 20% / 0.3);
+  --slot-accent: var(--dsp-arrived);
+  --slot-fill: var(--dsp-arrived-bg);
 }
 
 .slot-component.in_transit {
-  border-color: #9c27b0;
-  background-color: hsl(280 100% 20% / 0.3);
+  --slot-accent: var(--dsp-transit);
+  --slot-fill: var(--dsp-transit-bg);
 }
 
 .slot-component.completed {
-  border-color: #4caf50;
-  background-color: hsl(142 71% 20% / 0.3);
-  opacity: 0.5;
+  --slot-accent: var(--dsp-confirmed);
+  --slot-fill: var(--dsp-confirmed-bg);
+  opacity: 0.55;
 }
 
 .slot-component.conflict {
-  border-color: hsl(var(--destructive));
-  background-color: hsl(var(--destructive) / 0.2);
-  animation: conflict-pulse 1s infinite;
+  --slot-accent: var(--dsp-danger);
+  --slot-fill: var(--dsp-danger-bg);
+  border-color: var(--dsp-danger);
+  animation: conflict-pulse 1.2s infinite;
 }
 
 .slot-component.selected {
-  outline: 2px solid #646cff;
+  outline: 2px solid var(--dsp-primary);
   outline-offset: 1px;
   z-index: 3;
 }
@@ -71,15 +72,16 @@
 .slot-component.dragging {
   opacity: 0.7;
   cursor: grabbing;
+  box-shadow: var(--dsp-shadow-md);
 }
 
 @keyframes conflict-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(255, 68, 68, 0);
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0);
   }
 }
 
@@ -87,100 +89,77 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.25rem;
+  gap: 4px;
+  margin-bottom: 2px;
 }
 
 .status-badge {
-  padding: 0.125rem 0.375rem;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #fff;
+  background-color: var(--slot-accent);
 }
 
 .status-badge.tentative {
-  background-color: #ffa500;
-  color: #000;
-}
-
-.status-badge.confirmed {
-  background-color: #4caf50;
-  color: #fff;
-}
-
-.status-badge.arrived {
-  background-color: #2196f3;
-  color: #fff;
-}
-
-.status-badge.picking_up {
-  background-color: #2196f3;
-  color: #fff;
-}
-
-.status-badge.in_transit {
-  background-color: #9c27b0;
-  color: #fff;
-}
-
-.status-badge.completed {
-  background-color: #4caf50;
-  color: #fff;
+  color: #3d2c00;
 }
 
 .slot-time {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.68rem;
+  color: var(--dsp-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .slot-body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .slot-route {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   overflow: hidden;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.9);
-  /* マーキーが滲み出ないように左右を少し透明グラデでマスク */
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 12px,
-    #000 calc(100% - 12px),
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 12px,
-    #000 calc(100% - 12px),
-    transparent 100%
-  );
+  color: var(--dsp-text);
+  /* マーキーが滲み出ないように右端をフェード */
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 14px), transparent 100%);
 }
 
 .slot-route-track {
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  /* duration は親要素の --marquee-duration で上書きされる（テキスト長に応じて 3〜18 秒） */
+  will-change: transform;
+}
+
+/* 2周目のコピーは通常時は隠す（hover 時のみマーキー表示） */
+.slot-route-content {
+  display: inline-block;
+  padding-right: 3rem;
+}
+
+.slot-route-content + .slot-route-content {
+  display: none;
+}
+
+/* hover / ドラッグ中のみマーキーを流す */
+.slot-component:hover .slot-route-track {
   animation-name: slot-route-marquee;
   animation-duration: var(--marquee-duration, 8s);
   animation-timing-function: linear;
   animation-iteration-count: infinite;
-  will-change: transform;
 }
 
-.slot-route-content {
+.slot-component:hover .slot-route-content + .slot-route-content {
   display: inline-block;
-  /* 1 周ぶんのコンテンツ間に余白を入れて視認性を確保（短いテキストでも空白が見える） */
-  padding-right: 4rem;
-}
-
-.slot-component:hover .slot-route-track,
-.slot-component.dragging .slot-route-track {
-  animation-play-state: paused;
 }
 
 @keyframes slot-route-marquee {
@@ -195,7 +174,7 @@
 .slot-icons {
   display: flex;
   gap: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   margin-top: 0.125rem;
 }
 
@@ -204,9 +183,13 @@
     animation: none;
   }
 
-  .slot-route-track {
+  .slot-component:hover .slot-route-track {
     animation: none !important;
     transform: none !important;
+  }
+
+  .slot-component:hover .slot-route-content + .slot-route-content {
+    display: none;
   }
 }
 
@@ -214,16 +197,16 @@
   position: absolute;
   top: -6px;
   right: -6px;
-  background-color: hsl(var(--destructive));
-  color: hsl(var(--destructive-foreground));
+  background-color: var(--dsp-danger);
+  color: #fff;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: bold;
-  z-index: 10; /* 他の要素の上に表示 */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* 視認性向上 */
+  z-index: 10;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.3);
 }

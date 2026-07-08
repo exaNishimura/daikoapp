@@ -18,7 +18,6 @@ export function DispatchHeader({
   businessDayText,
   earliestAvailableTime,
   vehicles,
-  pendingCount = 0,
   conflictCount = 0,
   onOpenSettings,
   onOpenOrderForm,
@@ -80,7 +79,6 @@ export function DispatchHeader({
               color: 'text.secondary',
               fontSize: '0.7rem',
               whiteSpace: 'nowrap',
-              display: { xs: 'none', sm: 'inline' },
             }}
           >
             受付:
@@ -99,19 +97,6 @@ export function DispatchHeader({
           >
             {earliestAvailableTime}
           </Typography>
-          {pendingCount > 0 && (
-            <Chip
-              label={isMobile ? `未${pendingCount}` : `未確定 ${pendingCount}件`}
-              size="small"
-              color="warning"
-              sx={{
-                height: { xs: 18, sm: 20 },
-                fontSize: '0.65rem',
-                fontWeight: 600,
-                '& .MuiChip-label': { px: 0.75 },
-              }}
-            />
-          )}
           {conflictCount > 0 && (
             <Chip
               label={isMobile ? `競合${conflictCount}` : `競合 ${conflictCount}件`}

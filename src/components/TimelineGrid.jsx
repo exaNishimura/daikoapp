@@ -1,8 +1,7 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SlotComponent } from './SlotComponent'
-import { useState, useEffect, useRef } from 'react'
-import { rowIndexToDate } from '@/utils/rowUtils'
-import { isVehicleOperational } from '@/utils/operationStatusUtils'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { isVehicleOperational, buildTimelinePlacementBands } from '@/utils/operationStatusUtils'
 import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUtils'
 import IconButton from '@mui/material/IconButton'
 import OpenInFullIcon from '@mui/icons-material/OpenInFull'
@@ -24,7 +23,7 @@ export function TimelineGrid({
 }) {
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [expandedVehicles, setExpandedVehicles] = useState(new Set())
+  const [focusedVehicleId, setFocusedVehicleId] = useState(null)
   const hasAutoScrolledRef = useRef(false)
   const headerScrollRef = useRef(null)
   const bodyScrollRef = useRef(null)
@@ -89,8 +88,15 @@ export function TimelineGrid({
     }
   }, [vehicles])
 
-  const getVehicleColumnWidth = (isExpanded) =>
-    isExpanded ? 'min(60vw, 420px)' : 'min(40vw, 300px)'
+  const defaultVehicleColumnWidth = 'min(40vw, 300px)'
+
+  const displayVehicles = useMemo(
+    () =>
+      focusedVehicleId
+        ? vehicles.filter((vehicle) => vehicle.id === focusedVehicleId)
+        : vehicles,
+    [vehicles, focusedVehicleId]
+  )
 
   // 時間軸の生成（18:00〜翌06:00、15分刻み）
   // 営業時間は18:00〜翌06:00なので、06:00は含まない（06:00は営業時間外）
@@ -189,38 +195,28 @@ export function TimelineGrid({
     return slots.filter((slot) => slot.vehicle_id === vehicleId)
   }
 
-  // 号車列の拡大/縮小を切り替える関数
-  const toggleVehicleExpand = (vehicleId) => {
-    setExpandedVehicles((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(vehicleId)) {
-        newSet.delete(vehicleId)
-      } else {
-        newSet.add(vehicleId)
-      }
-      return newSet
-    })
+  const toggleVehicleFocus = (vehicleId) => {
+    setFocusedVehicleId((prev) => (prev === vehicleId ? null : vehicleId))
   }
 
   return (
-    <div className="timeline-grid">
+    <div className={`timeline-grid${focusedVehicleId ? ' timeline-grid--vehicle-focused' : ''}`}>
       <div className="timeline-header-wrapper" ref={headerScrollRef}>
         <div className="timeline-header">
           <div className="time-axis-label">時間</div>
-          <div className="vehicles-header">
-            {vehicles.map((vehicle) => {
+          <div className={`vehicles-header${focusedVehicleId ? ' vehicles-header--focused' : ''}`}>
+            {displayVehicles.map((vehicle) => {
               // 稼働状況を判定（現在時刻で判定）
               const statuses = operationStatuses[vehicle.id] || []
               const now = new Date()
               const isOperational = isVehicleOperational(vehicle.id, now, statuses)
-              const isExpanded = expandedVehicles.has(vehicle.id)
-              const vehicleHeaderWidth = getVehicleColumnWidth(isExpanded)
+              const isFocused = focusedVehicleId === vehicle.id
 
               return (
                 <div
                   key={vehicle.id}
-                  className="vehicle-header-label"
-                  style={{ width: vehicleHeaderWidth }}
+                  className={`vehicle-header-label${isFocused ? ' vehicle-header-label--focused' : ''}`}
+                  style={isFocused ? undefined : { width: defaultVehicleColumnWidth }}
                 >
                   <div
                     style={{
@@ -230,38 +226,29 @@ export function TimelineGrid({
                       gap: '4px',
                     }}
                   >
+                    <span
+                      className={`vehicle-status-dot${isOperational ? ' vehicle-status-dot--on' : ''}`}
+                      title={isOperational ? '稼働中' : '非稼働中'}
+                      aria-label={isOperational ? '稼働中' : '非稼働中'}
+                    />
                     <span>{vehicle.name}</span>
-                    {!isOperational && (
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: '#999',
-                          flexShrink: 0,
-                        }}
-                        title="非稼働中"
-                        aria-label="非稼働中"
-                      />
-                    )}
-                    <Tooltip title={isExpanded ? '列を縮小' : '列を拡大'}>
+                    <Tooltip title={isFocused ? '全号車表示に戻す' : 'この号車を全幅表示'}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation()
-                          toggleVehicleExpand(vehicle.id)
+                          toggleVehicleFocus(vehicle.id)
                         }}
-                        aria-label={isExpanded ? '号車列を縮小' : '号車列を拡大'}
+                        aria-label={isFocused ? '全号車表示に戻す' : '号車列を全幅表示'}
                         sx={{
-                          color: 'rgba(255, 255, 255, 0.7)',
+                          color: 'text.secondary',
                           p: 0.25,
                           '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            backgroundColor: 'action.hover',
                           },
                         }}
                       >
-                        {isExpanded ? (
+                        {isFocused ? (
                           <CloseFullscreenIcon fontSize="small" />
                         ) : (
                           <OpenInFullIcon fontSize="small" />
@@ -310,10 +297,9 @@ export function TimelineGrid({
             </div>
 
             {/* 車両列 */}
-            <div className="vehicles-columns">
-              {vehicles.map((vehicle) => {
-                const isExpanded = expandedVehicles.has(vehicle.id)
-                const vehicleColumnWidth = getVehicleColumnWidth(isExpanded)
+            <div className={`vehicles-columns${focusedVehicleId ? ' vehicles-columns--focused' : ''}`}>
+              {displayVehicles.map((vehicle) => {
+                const isFocused = focusedVehicleId === vehicle.id
 
                 return (
                   <VehicleColumn
@@ -333,7 +319,8 @@ export function TimelineGrid({
                     selectedOrderId={selectedOrderId}
                     onSlotSelect={onOrderSelect}
                     operationStatuses={operationStatuses[vehicle.id] || []}
-                    columnWidth={vehicleColumnWidth}
+                    columnWidth={isFocused ? '100%' : defaultVehicleColumnWidth}
+                    isFocused={isFocused}
                   />
                 )
               })}
@@ -370,33 +357,13 @@ function VehicleColumn({
   selectedOrderId,
   operationStatuses = [],
   columnWidth = 'min(40vw, 300px)',
+  isFocused = false,
 }) {
-  // 営業日の基準日を計算
-  const now = new Date()
-  const localHours = now.getHours()
-  let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const { blockedBands, shiftStartTime } = useMemo(
+    () => buildTimelinePlacementBands(operationStatuses),
+    [operationStatuses]
+  )
 
-  if (localHours < 6) {
-    // 06:00未満の場合は前日の営業日として扱う
-    businessDay.setDate(businessDay.getDate() - 1)
-  }
-
-  // 各行（15分刻み）の稼働状況を判定
-  const getOperationalStatusForRow = (rowIndex) => {
-    // rowIndexが有効な範囲（0-47）内かチェック
-    if (rowIndex < 0 || rowIndex > 47) {
-      // 範囲外の場合はデフォルトで稼働（エラーを避けるため）
-      return true
-    }
-    try {
-      const rowDate = rowIndexToDate(rowIndex, businessDay)
-      return isVehicleOperational(vehicle.id, rowDate, operationStatuses)
-    } catch (error) {
-      // エラーが発生した場合はデフォルトで稼働
-      console.warn('Error checking operational status for row:', rowIndex, error)
-      return true
-    }
-  }
   const { setNodeRef, isOver } = useDroppable({
     id: `vehicle-${vehicle.id}`,
     data: {
@@ -405,45 +372,53 @@ function VehicleColumn({
     },
   })
 
-  // 同じ車両列内での移動の場合はハイライトしない
   const shouldHighlight = isOver && draggingSlotVehicleId !== vehicle.id
+  const isDragPreviewInvalid =
+    dragOverPosition &&
+    dragOverPosition.vehicleId === vehicle.id &&
+    dragOverPosition.isPlacementAllowed === false
+
+  const renderBand = (band, className, options = {}) => {
+    const heightPx = (band.endRow - band.startRow) * 20
+    if (heightPx <= 0) return null
+
+    return (
+      <div
+        key={`${className}-${band.startRow}-${band.endRow}`}
+        className={className}
+        style={{
+          top: `${band.startRow * 20}px`,
+          height: `${heightPx}px`,
+        }}
+        title={options.title}
+        aria-hidden={options.ariaHidden ?? true}
+      />
+    )
+  }
 
   return (
     <div
       ref={setNodeRef}
       data-vehicle-id={vehicle.id}
-      className={`vehicle-column ${shouldHighlight ? 'drag-over' : ''}`}
+      className={`vehicle-column ${isFocused ? 'vehicle-column--focused' : ''} ${shouldHighlight ? 'drag-over' : ''} ${
+        isDragPreviewInvalid ? 'drag-over-invalid' : ''
+      }`}
       style={{ height: `${totalHeight}px`, width: columnWidth }}
     >
-      {/* 時間行の区切り線と非稼働時間帯の表示 */}
-      {timeSlots.map((ts, index) => {
-        const isOperational = getOperationalStatusForRow(index)
-        return (
-          <div key={index}>
-            <div className="time-cell-divider" style={{ top: `${index * 20}px` }} />
-            {!isOperational && (
-              <div
-                className="non-operational-time"
-                style={{
-                  position: 'absolute',
-                  top: `${index * 20}px`,
-                  left: 0,
-                  right: 0,
-                  height: '20px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                  backgroundImage:
-                    'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0, 0, 0, 0.1) 4px, rgba(0, 0, 0, 0.1) 8px)',
-                  pointerEvents: 'none',
-                  zIndex: 1,
-                }}
-                title="非稼働時間帯"
-              />
-            )}
-          </div>
-        )
-      })}
+      {timeSlots.map((ts, index) => (
+        <div
+          key={`divider-${index}`}
+          className={`time-cell-divider${ts.minute === 0 ? ' time-cell-divider--hour' : ''}`}
+          style={{ top: `${index * 20}px` }}
+        />
+      ))}
 
-      {/* ドロップ予定位置のプレビュー */}
+      {blockedBands.map((band) =>
+        renderBand(band, 'placement-blocked-band', {
+          title: shiftStartTime ? `配置不可（出勤 ${shiftStartTime} 以降に配置可）` : '配置不可',
+        })
+      )}
+
       {dragOverPosition && dragOverPosition.top >= 0 && (
         <div
           className={`drop-preview-card${
@@ -452,7 +427,7 @@ function VehicleColumn({
               : dragOverPosition.snapGuide === 'bottom'
                 ? ' drop-preview-card--snap-bottom'
                 : ''
-          }`}
+          }${dragOverPosition.isPlacementAllowed === false ? ' drop-preview-card--invalid' : ''}`}
           style={{
             top: `${dragOverPosition.top}px`,
             height: `${dragOverPosition.height ?? 20}px`,
@@ -460,7 +435,6 @@ function VehicleColumn({
         />
       )}
 
-      {/* スロット */}
       {slots.map((slot) => {
         const order = orders.find((o) => o.id === slot.order_id)
         if (!order) return null

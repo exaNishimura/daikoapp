@@ -85,6 +85,55 @@ export function buildOperationalWindowsFromStatuses(dayStatuses) {
   return windows
 }
 
+const TIMELINE_ROW_COUNT = 48
+
+/**
+ * タイムライン上の配置可/不可帯を構築する
+ * @returns {{ placementBands: Array<{ startRow: number, endRow: number }>, blockedBands: Array<{ startRow: number, endRow: number }>, shiftStartTime: string|null }}
+ */
+export function buildTimelinePlacementBands(dayStatuses, totalRows = TIMELINE_ROW_COUNT) {
+  const hasDayOff = dayStatuses?.some((status) => status.type === 'DAY_OFF')
+  const placementBands = buildOperationalWindowsFromStatuses(dayStatuses || [])
+  const shiftStartTime =
+    dayStatuses?.find((status) => status.type === 'START' && status.time)?.time ?? null
+
+  if (placementBands.length === 0) {
+    if (hasDayOff) {
+      return {
+        placementBands: [],
+        blockedBands: [{ startRow: 0, endRow: totalRows }],
+        shiftStartTime,
+      }
+    }
+    return {
+      placementBands: [{ startRow: 0, endRow: totalRows }],
+      blockedBands: [],
+      shiftStartTime,
+    }
+  }
+
+  const blockedBands = []
+  let cursor = 0
+  const sortedPlacement = [...placementBands].sort((a, b) => a.startRow - b.startRow)
+
+  for (const band of sortedPlacement) {
+    if (cursor < band.startRow) {
+      blockedBands.push({ startRow: cursor, endRow: band.startRow })
+    }
+    cursor = Math.max(cursor, band.endRow)
+  }
+
+  if (cursor < totalRows) {
+    blockedBands.push({ startRow: cursor, endRow: totalRows })
+  }
+
+  return {
+    placementBands: sortedPlacement,
+    blockedBands,
+    shiftStartTime,
+  }
+}
+
 /**
  * 指定時刻で車両が稼働中かどうかを判定
  */

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildOperationStatusesFromShifts } from './shiftOperationUtils'
 import {
   buildOperationalWindowsFromStatuses,
+  buildTimelinePlacementBands,
   getEarliestOperationalStartTime,
   isVehicleOperational,
 } from './operationStatusUtils'
@@ -66,6 +67,19 @@ describe('isVehicleOperational with shift-based statuses', () => {
     const earliest = getEarliestOperationalStartTime(statuses, reference)
     expect(earliest?.getHours()).toBe(20)
     expect(earliest?.getMinutes()).toBe(0)
+  })
+})
+
+describe('buildTimelinePlacementBands', () => {
+  it('出勤前を配置不可帯として返す', () => {
+    const bands = buildTimelinePlacementBands([
+      { type: 'DAY_OFF', time: null },
+      { type: 'START', time: '20:00' },
+    ])
+
+    expect(bands.shiftStartTime).toBe('20:00')
+    expect(bands.blockedBands).toEqual([{ startRow: 0, endRow: 8 }])
+    expect(bands.placementBands).toEqual([{ startRow: 8, endRow: 48 }])
   })
 })
 
