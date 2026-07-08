@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { buildOperationStatusesFromShifts } from '@/utils/shiftOperationUtils'
 
 /**
  * 指定車両・指定日の稼働状況を取得
@@ -258,134 +259,24 @@ export async function syncOperationStatusFromShifts(vehicles, date, shifts) {
         continue
       }
 
-      // シフトがある場合、startとendを分析してSTOP/STARTを設定
-      // 営業時間は18:00-06:00（翌日）
-      // シフトのstartとendは既に営業時間内（18:00-06:00）の時間帯になっていると仮定
-
-      // シフトのstartとendを時刻（分）に変換してソート
-      const shiftTimes = vehicleShifts
-        .filter((shift) => shift.start && shift.end)
-        .map((shift) => {
-          const [startHour, startMin] = shift.start.split(':').map(Number)
-          const [endHour, endMin] = shift.end.split(':').map(Number)
-          // 時刻を分に変換（endが06:00以前の場合は翌日として扱う）
-          let startMinutes = startHour * 60 + startMin
-          let endMinutes = endHour * 60 + endMin
-
-          // 営業時間は18:00-06:00（翌日）なので、endが06:00以前の場合は翌日として扱う
-          if (endMinutes < 6 * 60 && startMinutes >= 18 * 60) {
-            endMinutes += 24 * 60 // 翌日の時刻として扱う
-          }
-
-          return {
-            start: startMinutes,
-            end: endMinutes,
-          }
-        })
-        .sort((a, b) => a.start - b.start)
-
-      // 営業時間の開始（18:00 = 1080分）と終了（翌日の06:00 = 1440分）
-      const businessStart = 18 * 60 // 1080分
-      const businessEnd = 24 * 60 + 6 * 60 // 1440分（翌日の06:00）
-
-      if (shiftTimes.length === 0) {
-        // シフトのstart/endがない場合はDAY_OFF（その日は稼働しない）
-        const { error: dayOffError } = await setVehicleOperationStatus(vehicle.id, {
-          type: 'DAY_OFF',
+      // シフトがある場合、出勤・退勤時刻から稼働帯を生成
+      const statusPlan = buildOperationStatusesFromShifts(vehicleShifts)
+      for (const status of statusPlan) {
+        const { error: statusError } = await setVehicleOperationStatus(vehicle.id, {
+          type: status.type,
           date: dateStr,
-          time: null,
+          time: status.time,
         })
-        if (dayOffError) {
+        if (statusError) {
           if (import.meta.env.DEV) {
-            console.error(`Error setting DAY_OFF for vehicle ${vehicle.id}:`, dayOffError)
+            console.error(`Error setting ${status.type} for vehicle ${vehicle.id}:`, statusError)
           }
         } else {
-          results.push({ vehicleId: vehicle.id, type: 'DAY_OFF' })
-        }
-      } else {
-        // 最初のシフトの開始時刻が18:00より後なら、18:00からSTART
-        const firstShiftStart = shiftTimes[0].start
-        if (firstShiftStart > businessStart) {
-          const startTime = '18:00'
-          const { error: startError } = await setVehicleOperationStatus(vehicle.id, {
-            type: 'START',
-            date: dateStr,
-            time: startTime,
+          results.push({
+            vehicleId: vehicle.id,
+            type: status.type,
+            time: status.time,
           })
-          if (startError) {
-            if (import.meta.env.DEV) {
-              console.error(`Error setting START for vehicle ${vehicle.id}:`, startError)
-            }
-          } else {
-            results.push({ vehicleId: vehicle.id, type: 'START', time: startTime })
-          }
-        }
-
-        // 最後のシフトの終了時刻が06:00より前なら、その時刻でSTOP
-        const lastShiftEnd = shiftTimes[shiftTimes.length - 1].end
-        // endが1440分（24:00）を超える場合は翌日の時刻として扱う
-        const actualEnd = lastShiftEnd >= 24 * 60 ? lastShiftEnd - 24 * 60 : lastShiftEnd
-        if (actualEnd < 6 * 60) {
-          const stopHour = Math.floor(actualEnd / 60)
-          const stopMin = actualEnd % 60
-          const stopTime = `${stopHour.toString().padStart(2, '0')}:${stopMin.toString().padStart(2, '0')}`
-          const { error: stopError } = await setVehicleOperationStatus(vehicle.id, {
-            type: 'STOP',
-            date: dateStr,
-            time: stopTime,
-          })
-          if (stopError) {
-            if (import.meta.env.DEV) {
-              console.error(`Error setting STOP for vehicle ${vehicle.id}:`, stopError)
-            }
-          } else {
-            results.push({ vehicleId: vehicle.id, type: 'STOP', time: stopTime })
-          }
-        }
-
-        // シフト間の隙間を検出してSTOP/STARTを設定
-        for (let i = 0; i < shiftTimes.length - 1; i++) {
-          const currentEnd = shiftTimes[i].end
-          const nextStart = shiftTimes[i + 1].start
-
-          // シフト間に隙間がある場合（15分以上の隙間）
-          if (nextStart - currentEnd >= 15) {
-            // 前のシフトの終了時刻でSTOP
-            const stopMinutes = currentEnd >= 24 * 60 ? currentEnd - 24 * 60 : currentEnd
-            const stopHour = Math.floor(stopMinutes / 60)
-            const stopMin = stopMinutes % 60
-            const stopTime = `${stopHour.toString().padStart(2, '0')}:${stopMin.toString().padStart(2, '0')}`
-            const { error: stopError } = await setVehicleOperationStatus(vehicle.id, {
-              type: 'STOP',
-              date: dateStr,
-              time: stopTime,
-            })
-            if (stopError) {
-              if (import.meta.env.DEV) {
-                console.error(`Error setting STOP for vehicle ${vehicle.id}:`, stopError)
-              }
-            } else {
-              results.push({ vehicleId: vehicle.id, type: 'STOP', time: stopTime })
-            }
-
-            // 次のシフトの開始時刻でSTART
-            const startMinutes = nextStart >= 24 * 60 ? nextStart - 24 * 60 : nextStart
-            const startHour = Math.floor(startMinutes / 60)
-            const startMin = startMinutes % 60
-            const startTime = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`
-            const { error: startError } = await setVehicleOperationStatus(vehicle.id, {
-              type: 'START',
-              date: dateStr,
-              time: startTime,
-            })
-            if (startError) {
-              if (import.meta.env.DEV) {
-                console.error(`Error setting START for vehicle ${vehicle.id}:`, startError)
-              }
-            } else {
-              results.push({ vehicleId: vehicle.id, type: 'START', time: startTime })
-            }
-          }
         }
       }
     }

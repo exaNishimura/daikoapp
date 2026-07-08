@@ -10,7 +10,7 @@ import {
   minutesToRows,
   snapToRowIndex,
 } from './rowUtils'
-import { isVehicleOperational } from './operationStatusUtils'
+import { isVehicleOperational, getEarliestOperationalStartTime } from './operationStatusUtils'
 
 /**
  * 車両のスロットリストから最短の空き時間を見つける（行番号ベース）
@@ -178,10 +178,15 @@ export function findEarliestAvailableSlotAcrossVehicles(
   let earliestRowIndex = null
 
   for (const vehicle of vehicles) {
-    // 稼働状況チェック
     const statuses = operationStatusesMap[vehicle.id] || []
-    if (!isVehicleOperational(vehicle.id, orderStartTime, statuses)) {
-      // 非稼働車両はスキップ
+
+    const earliestOperationalStart = getEarliestOperationalStartTime(statuses, orderStartTime)
+    const effectiveOrderStartTime =
+      earliestOperationalStart && earliestOperationalStart > orderStartTime
+        ? earliestOperationalStart
+        : orderStartTime
+
+    if (!isVehicleOperational(vehicle.id, effectiveOrderStartTime, statuses)) {
       continue
     }
 
@@ -192,7 +197,7 @@ export function findEarliestAvailableSlotAcrossVehicles(
 
     const startAt = findEarliestAvailableSlot(
       vehicleSlots,
-      orderStartTime,
+      effectiveOrderStartTime,
       duration,
       preferExactTime
     )

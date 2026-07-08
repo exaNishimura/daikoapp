@@ -11,8 +11,20 @@ import {
   rowIndexToPixels,
   pixelsToRowIndex,
 } from '@/utils/rowUtils'
-import { isVehicleOperational } from '@/utils/operationStatusUtils'
+import { isVehicleOperational, getEarliestOperationalStartTime } from '@/utils/operationStatusUtils'
 import { getOrderDurationPixels, resolveSlotDropPreview } from '@/lib/slotSnapUtils'
+
+function getOperationalPlacementMessage(statuses, targetTime) {
+  const earliest = getEarliestOperationalStartTime(statuses, targetTime)
+  if (earliest) {
+    const timeLabel = earliest.toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    return `この号車の出勤時刻（${timeLabel}）より前には配置できません。`
+  }
+  return 'この時間帯は車両が稼働していないため配置できません。'
+}
 
 function calculateTimelineY(clientY) {
   const timelineBody = document.querySelector('.timeline-content-wrapper')
@@ -275,7 +287,7 @@ export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, set
 
       const statuses = operationStatuses[newVehicleId] || []
       if (!isVehicleOperational(newVehicleId, startAt, statuses)) {
-        showToast('この時間帯は車両が稼働していないため配置できません。', 'warning')
+        showToast(getOperationalPlacementMessage(statuses, startAt), 'warning')
         clearDragContext()
         return
       }
@@ -327,7 +339,7 @@ export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, set
 
       const statuses = operationStatuses[targetVehicleId] || []
       if (!isVehicleOperational(targetVehicleId, newStartAt, statuses)) {
-        showToast('この時間帯は車両が稼働していないため配置できません。', 'warning')
+        showToast(getOperationalPlacementMessage(statuses, newStartAt), 'warning')
         clearDragContext()
         return
       }
