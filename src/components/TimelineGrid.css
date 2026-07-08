@@ -1,4 +1,5 @@
 .timeline-grid {
+  --time-axis-width: min(20vw, 120px);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -11,31 +12,41 @@
   top: 0;
   z-index: 10;
   background-color: transparent;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   overflow-x: auto;
   overflow-y: hidden;
   width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
 .timeline-header {
   display: flex;
   width: 100%;
   min-width: fit-content;
+  min-height: 32px;
 }
 
 .time-axis-label {
-  width: 20vw;
-
+  width: var(--time-axis-width);
   background-color: #2a2a2a;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   box-sizing: border-box;
+  padding: 4px 8px;
+}
+
+@media (min-width: 600px) {
+  .time-axis-label {
+    font-size: 0.8125rem;
+    padding: 6px 12px;
+  }
 }
 
 .vehicles-header {
@@ -51,7 +62,7 @@
   background-color: #2a2a2a;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
@@ -59,6 +70,14 @@
   text-align: center;
   flex-shrink: 0;
   box-sizing: border-box;
+  padding: 4px 8px;
+}
+
+@media (min-width: 600px) {
+  .vehicle-header-label {
+    font-size: 0.8125rem;
+    padding: 6px 12px;
+  }
 }
 
 .timeline-body {
@@ -83,10 +102,12 @@
   flex: 1;
   width: 100%;
   background-color: #1a1a1a;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
 .time-axis-column {
-  width: 20vw;
+  width: var(--time-axis-width);
   position: sticky;
   left: 0;
   z-index: 5;
@@ -112,7 +133,7 @@
 .time-marker-row span {
   display: inline-block;
   text-align: right;
-  font-variant-numeric: tabular-nums; /* 数字の幅を統一 */
+  font-variant-numeric: tabular-nums;
 }
 
 .time-marker-row .time-hour {
@@ -122,7 +143,7 @@
 
 .time-marker-row .time-minute {
   min-width: 2em;
-  padding-left: 0.5rem; /* インデント */
+  padding-left: 0.5rem;
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -159,11 +180,12 @@
 
 .current-time-line {
   position: absolute;
-  left: 60px; /* 時間軸列の幅分 */
+  top: 0;
+  left: var(--time-axis-width);
   right: 0;
   height: 2px;
   background-color: hsl(var(--destructive));
-  z-index: 0; /* 依頼カードの下に表示 */
+  z-index: 0;
   pointer-events: none;
   box-shadow: 0 0 4px hsl(var(--destructive));
 }
@@ -180,12 +202,33 @@
   border-bottom: 5px solid transparent;
 }
 
-/* ドロップ予定位置のハイライト（行全体） */
+.drop-preview-card {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background-color: rgba(100, 108, 255, 0.12);
+  border: 2px dashed rgba(100, 108, 255, 0.55);
+  border-radius: 4px;
+  z-index: 15;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.drop-preview-card--snap-top {
+  border-top: 3px solid #646cff;
+  box-shadow: inset 0 3px 0 0 #646cff;
+}
+
+.drop-preview-card--snap-bottom {
+  border-bottom: 3px solid #646cff;
+  box-shadow: inset 0 -3px 0 0 #646cff;
+}
+
 .drop-preview-row {
   position: absolute;
   left: 0;
   right: 0;
-  background-color: rgba(100, 108, 255, 0.15); /* Primary color with transparency */
+  background-color: rgba(100, 108, 255, 0.15);
   border-top: 2px solid hsl(var(--primary));
   border-bottom: 2px solid hsl(var(--primary));
   z-index: 15;
@@ -203,33 +246,35 @@
   }
 }
 
-/* 非稼働時間帯のスタイル */
 .non-operational-time {
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.04);
   background-image: repeating-linear-gradient(
     45deg,
     transparent,
     transparent 4px,
-    rgba(0, 0, 0, 0.1) 4px,
-    rgba(0, 0, 0, 0.1) 8px
+    rgba(255, 255, 255, 0.08) 4px,
+    rgba(255, 255, 255, 0.08) 8px
   );
   pointer-events: none;
   z-index: 1;
 }
 
-/* PC向け: 水平スクロールバーを非表示 */
-@media (min-width: 768px) {
-  .timeline-header-wrapper,
-  .timeline-content-wrapper {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+@media (prefers-reduced-motion: reduce) {
+  .drop-preview-row {
+    animation: none;
+    opacity: 0.85;
   }
+}
 
-  .timeline-header-wrapper::-webkit-scrollbar,
-  .timeline-content-wrapper::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-    width: 0;
-    height: 0;
-  }
+.timeline-header-wrapper::-webkit-scrollbar,
+.timeline-content-wrapper::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.timeline-header-wrapper::-webkit-scrollbar-thumb,
+.timeline-content-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
 }

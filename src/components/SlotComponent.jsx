@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { dateToRowIndex, rowIndexToPixels, minutesToRows, rowsToMinutes } from '@/utils/rowUtils'
+import { dateToRowIndex, rowIndexToPixels, minutesToRows } from '@/utils/rowUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
 import './SlotComponent.css'
 import Dialog from '@mui/material/Dialog'
@@ -11,9 +11,8 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
-import Divider from '@mui/material/Divider'
 
-export function SlotComponent({ slot, order, isConflict, onClick }) {
+export function SlotComponent({ slot, order, isConflict, isSelected, conflictTooltip, onClick }) {
   const [showInfoDialog, setShowInfoDialog] = useState(false)
   const longPressTimer = useRef(null)
   const longPressStartTime = useRef(null)
@@ -103,7 +102,7 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
   }
 
   // 長押し開始
-  const handleLongPressStart = (e) => {
+  const handleLongPressStart = () => {
     // ドラッグ可能な場合は長押しを無効化（ドラッグと競合するため）
     if (isDraggable) return
 
@@ -114,7 +113,7 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
   }
 
   // 長押し終了
-  const handleLongPressEnd = (e) => {
+  const handleLongPressEnd = () => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
@@ -140,7 +139,7 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
         ...style,
         top: `${top}px`,
         height: `${finalHeight}px`,
-        cursor: isDraggable ? (isDragging ? 'grabbing' : 'grab') : 'default',
+        cursor: isDraggable ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
         touchAction: isDraggable ? 'none' : 'auto',
         userSelect: isDraggable ? 'none' : 'auto',
       }}
@@ -148,13 +147,22 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
       {...(isDraggable ? attributes : {})}
       className={`slot-component ${(order?.status || slot.status).toLowerCase()} ${
         isConflict ? 'conflict' : ''
-      } ${isDragging ? 'dragging' : ''}`}
+      } ${isDragging ? 'dragging' : ''} ${isSelected ? 'selected' : ''}`}
       onClick={handleClick}
       onTouchStart={handleLongPressStart}
       onTouchEnd={handleLongPressEnd}
       onMouseDown={handleLongPressStart}
       onMouseUp={handleLongPressEnd}
       onMouseLeave={handleLongPressEnd}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && onClick) {
+          e.preventDefault()
+          onClick(e)
+        }
+      }}
+      aria-label={`${order.pickup_address}から${order.dropoff_address}、${formatTime(startDate)}から${formatTime(endDate)}`}
     >
       <div className="slot-header">
         <span className={`status-badge ${(order?.status || slot.status).toLowerCase()}`}>
@@ -195,11 +203,23 @@ export function SlotComponent({ slot, order, isConflict, onClick }) {
             </span>
           </div>
         </div>
-        {/* アイコンは非表示（長押しで情報を表示） */}
+        {(order.contact_phone || order.parking_note) && (
+          <div className="slot-icons" aria-hidden="true">
+            {order.contact_phone && <span title="電話番号あり">📞</span>}
+            {order.parking_note && <span title="駐車メモあり">📝</span>}
+          </div>
+        )}
       </div>
-      {isConflict && <div className="conflict-warning">⚠</div>}
+      {isConflict && (
+        <div
+          className="conflict-warning"
+          aria-label="時間が重複しています"
+          title={conflictTooltip || '時間が重複しています'}
+        >
+          ⚠
+        </div>
+      )}
 
-      {/* 情報ダイアログ */}
       <Dialog open={showInfoDialog} onClose={handleCloseInfoDialog} maxWidth="sm" fullWidth>
         <DialogTitle>依頼詳細情報</DialogTitle>
         <DialogContent>

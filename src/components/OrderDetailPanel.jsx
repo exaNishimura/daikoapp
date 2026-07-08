@@ -1,10 +1,13 @@
+import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
 import CloseIcon from '@mui/icons-material/Close'
 import { useOrderDetail } from '@/hooks/useOrderDetail'
+import { getOrderConflictMessages } from '@/lib/slotConflictUtils'
 import { OrderInfoSection } from './OrderDetailPanel/OrderInfoSection'
 import { OrderRouteSection } from './OrderDetailPanel/OrderRouteSection'
 import { OrderContactSection } from './OrderDetailPanel/OrderContactSection'
@@ -18,6 +21,11 @@ export function OrderDetailPanel({
   vehicles = [],
   slots = [],
 }) {
+  const conflictMessages = useMemo(
+    () => getOrderConflictMessages(order.id, slots, vehicles),
+    [order.id, slots, vehicles]
+  )
+
   const {
     relatedVehicle,
     statusLabel,
@@ -42,7 +50,6 @@ export function OrderDetailPanel({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* ヘッダー */}
       <Paper
         elevation={0}
         sx={{
@@ -61,14 +68,25 @@ export function OrderDetailPanel({
         <Typography variant="h6" sx={{ fontWeight: 600 }}>
           依頼詳細
         </Typography>
-        <IconButton size="small" onClick={onClose}>
+        <IconButton size="small" onClick={onClose} aria-label="詳細パネルを閉じる">
           <CloseIcon />
         </IconButton>
       </Paper>
 
-      {/* コンテンツ */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
         <Stack spacing={3.5}>
+          {conflictMessages.length > 0 && (
+            <Alert severity="error" role="alert">
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                時間が重複しています
+              </Typography>
+              {conflictMessages.map((message) => (
+                <Typography key={message} variant="body2">
+                  {message}
+                </Typography>
+              ))}
+            </Alert>
+          )}
           <OrderInfoSection order={order} statusLabel={statusLabel} statusColor={statusColor} />
           <OrderRouteSection
             editing={editing}
@@ -96,6 +114,7 @@ export function OrderDetailPanel({
         editing={editing}
         loading={loading}
         advanceStatus={advanceStatus}
+        hasConflict={conflictMessages.length > 0}
         onSave={handleSave}
         onCancelEdit={() => setEditing(false)}
         onStartEdit={() => setEditing(true)}

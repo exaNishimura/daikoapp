@@ -1,12 +1,23 @@
 import { useDraggable } from '@dnd-kit/core'
 import { shortenAddress } from '@/utils/addressUtils'
 import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import CardHeader from '@mui/material/CardHeader'
 import Chip from '@mui/material/Chip'
 import Box from '@mui/material/Box'
-import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+
+function formatRouteSummary(order) {
+  const pickup = shortenAddress(order.pickup_address, 14)
+  const dropoff = shortenAddress(order.dropoff_address, 14)
+  const waypoints = order.waypoints || []
+
+  if (waypoints.length === 0) {
+    return `${pickup} → ${dropoff}`
+  }
+  if (waypoints.length === 1) {
+    return `${pickup} → ${shortenAddress(waypoints[0], 10)} → ${dropoff}`
+  }
+  return `${pickup} → 経由${waypoints.length} → ${dropoff}`
+}
 
 export function OrderCard({ order, isSelected, onClick }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -23,14 +34,12 @@ export function OrderCard({ order, isSelected, onClick }) {
       }
     : undefined
 
-  // ドラッグ中はクリックイベントを無視
   const handleClick = (e) => {
     if (!isDragging && onClick) {
       onClick(e)
     }
   }
 
-  // 予約種別の表示
   const orderTypeText =
     order.order_type === 'NOW'
       ? '今すぐ'
@@ -41,10 +50,8 @@ export function OrderCard({ order, isSelected, onClick }) {
           })
         : '日時指定'
 
-  // 所要時間の表示
   const totalDuration = (order.base_duration_min || 30) + (order.buffer_min || 0)
 
-  // 車情報の表示
   const carInfo = []
   if (order.car_plate) {
     carInfo.push(order.car_plate.slice(-4))
@@ -81,16 +88,16 @@ export function OrderCard({ order, isSelected, onClick }) {
                   ? '送客完了'
                   : '確定'
 
+  const routeSummary = formatRouteSummary(order)
+
   return (
     <Card
       ref={setNodeRef}
       data-order-id={order.id}
       style={{
         ...style,
-        marginBottom: '8px',
         cursor: isDragging ? 'grabbing' : 'grab',
         opacity: isDragging ? 0.5 : order.status === 'COMPLETED' ? 0.5 : 1,
-        border: isSelected ? '2px solid #646cff' : 'none',
         touchAction: 'none',
         userSelect: 'none',
       }}
@@ -99,73 +106,92 @@ export function OrderCard({ order, isSelected, onClick }) {
       onClick={handleClick}
       sx={{
         backgroundColor: '#2a2a2a',
+        border: isSelected ? '2px solid #646cff' : '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 1,
         '&:active': {
           cursor: 'grabbing',
         },
       }}
     >
-      <CardHeader
-        sx={{ px: 2, py: 1.5, pb: 1 }}
-        title={
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Chip label={statusLabel} color={statusColor} size="small" />
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-              {orderTypeText}
-            </Typography>
-          </Box>
-        }
-      />
-      <CardContent sx={{ px: 2, py: 1.5, pt: 0 }}>
-        <Stack spacing={1}>
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: 'rgba(255, 255, 255, 0.9)' }}>
-              {shortenAddress(order.pickup_address)}
-            </Typography>
-            {order.waypoints && order.waypoints.length > 0 && (
-              <>
-                {order.waypoints.map((wp, idx) => (
-                  <Box key={idx}>
-                    <Typography
-                      variant="body2"
-                      sx={{ my: 0.25, color: 'rgba(255, 255, 255, 0.6)' }}
-                    >
-                      ↓
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#646cff' }}>
-                      {shortenAddress(wp)} (経由地{idx + 1})
-                    </Typography>
-                  </Box>
-                ))}
-              </>
-            )}
-            <Typography variant="body2" sx={{ my: 0.25, color: 'rgba(255, 255, 255, 0.6)' }}>
-              ↓
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: 'rgba(255, 255, 255, 0.9)' }}>
-              {shortenAddress(order.dropoff_address)}
-            </Typography>
-          </Box>
-          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-            所要時間: {totalDuration}分
+      <Box sx={{ px: 1, py: 0.75, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            minWidth: 0,
+          }}
+        >
+          <Chip
+            label={statusLabel}
+            color={statusColor}
+            size="small"
+            sx={{
+              height: 18,
+              flexShrink: 0,
+              fontSize: '0.65rem',
+              '& .MuiChip-label': { px: 0.75, py: 0 },
+            }}
+          />
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'rgba(255, 255, 255, 0.85)',
+              fontWeight: 600,
+              fontSize: '0.7rem',
+              flexShrink: 0,
+            }}
+          >
+            {orderTypeText}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '0.65rem',
+              flexShrink: 0,
+            }}
+          >
+            {totalDuration}分
           </Typography>
           {carInfo.length > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                {carInfo.join(' ')}
-              </Typography>
-              {order.parking_note && (
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                  title="メモあり"
-                >
-                  📝
-                </Typography>
-              )}
-            </Box>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '0.65rem',
+                flexShrink: 0,
+              }}
+            >
+              {carInfo.join(' ')}
+            </Typography>
           )}
-        </Stack>
-      </CardContent>
+          {order.parking_note && (
+            <Typography
+              component="span"
+              variant="caption"
+              sx={{ fontSize: '0.7rem', flexShrink: 0, ml: 'auto' }}
+              title="メモあり"
+            >
+              📝
+            </Typography>
+          )}
+        </Box>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontSize: '0.7rem',
+            lineHeight: 1.3,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+          title={routeSummary}
+        >
+          {routeSummary}
+        </Typography>
+      </Box>
     </Card>
   )
 }

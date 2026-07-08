@@ -1,9 +1,9 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SlotComponent } from './SlotComponent'
-import { checkSlotConflict } from '@/services/conflictDetectionService'
 import { useState, useEffect, useRef } from 'react'
-import { dateToRowIndex, rowIndexToPixels, rowIndexToDate } from '@/utils/rowUtils'
+import { rowIndexToDate } from '@/utils/rowUtils'
 import { isVehicleOperational } from '@/utils/operationStatusUtils'
+import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUtils'
 import IconButton from '@mui/material/IconButton'
 import OpenInFullIcon from '@mui/icons-material/OpenInFull'
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen'
@@ -16,6 +16,7 @@ export function TimelineGrid({
   slots: propsSlots,
   dragOverPosition,
   draggingSlotVehicleId,
+  selectedOrderId,
   onOrderSelect,
   onOrderUpdate,
   onSlotsUpdate,
@@ -23,7 +24,8 @@ export function TimelineGrid({
 }) {
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [expandedVehicles, setExpandedVehicles] = useState(new Set()) // 拡大されている号車列のIDセット
+  const [expandedVehicles, setExpandedVehicles] = useState(new Set())
+  const hasAutoScrolledRef = useRef(false)
   const headerScrollRef = useRef(null)
   const bodyScrollRef = useRef(null)
   const timelineBodyRef = useRef(null) // タイムラインボディのref
@@ -44,7 +46,10 @@ export function TimelineGrid({
   // 競合検出
   useEffect(() => {
     if (slots.length > 0) {
-      detectConflicts(slots)
+      const { conflictIds } = detectAllConflicts(slots)
+      setConflicts(conflictIds)
+    } else {
+      setConflicts(new Set())
     }
   }, [slots])
 
@@ -84,18 +89,8 @@ export function TimelineGrid({
     }
   }, [vehicles])
 
-  const detectConflicts = (slotList) => {
-    const conflictIds = new Set()
-    for (let i = 0; i < slotList.length; i++) {
-      for (let j = i + 1; j < slotList.length; j++) {
-        if (checkSlotConflict(slotList[i], slotList[j])) {
-          conflictIds.add(slotList[i].id)
-          conflictIds.add(slotList[j].id)
-        }
-      }
-    }
-    setConflicts(conflictIds)
-  }
+  const getVehicleColumnWidth = (isExpanded) =>
+    isExpanded ? 'min(60vw, 420px)' : 'min(40vw, 300px)'
 
   // 時間軸の生成（18:00〜翌06:00、15分刻み）
   // 営業時間は18:00〜翌06:00なので、06:00は含まない（06:00は営業時間外）
@@ -171,25 +166,23 @@ export function TimelineGrid({
 
   // 現在時刻の位置まで自動スクロール（初回表示時のみ）
   useEffect(() => {
-    // timeline-bodyまたはtimeline-content-wrapperのどちらかがスクロールコンテナ
     const scrollContainer = timelineBodyRef.current || bodyScrollRef.current
 
-    if (currentTimePosition !== null && scrollContainer) {
-      // DOMが完全にレンダリングされるまで少し待つ
-      const timeoutId = setTimeout(() => {
-        if (!scrollContainer) return
-
-        // 現在時刻の位置を中央付近に表示するようにスクロール
-        const containerHeight = scrollContainer.clientHeight
-        const scrollPosition = currentTimePosition - containerHeight / 2
-
-        // スクロール位置を設定（負の値にならないように）
-        scrollContainer.scrollTop = Math.max(0, scrollPosition)
-      }, 200) // 200ms待ってからスクロール
-
-      return () => clearTimeout(timeoutId)
+    if (hasAutoScrolledRef.current || currentTimePosition === null || !scrollContainer) {
+      return
     }
-  }, [currentTimePosition, vehicles.length]) // vehicles.lengthが変わったときも再スクロール
+
+    const timeoutId = setTimeout(() => {
+      if (!scrollContainer || hasAutoScrolledRef.current) return
+
+      const containerHeight = scrollContainer.clientHeight
+      const scrollPosition = currentTimePosition - containerHeight / 2
+      scrollContainer.scrollTop = Math.max(0, scrollPosition)
+      hasAutoScrolledRef.current = true
+    }, 200)
+
+    return () => clearTimeout(timeoutId)
+  }, [currentTimePosition])
 
   // 車両ごとのスロットを取得
   const getSlotsForVehicle = (vehicleId) => {
@@ -213,9 +206,7 @@ export function TimelineGrid({
     <div className="timeline-grid">
       <div className="timeline-header-wrapper" ref={headerScrollRef}>
         <div className="timeline-header">
-          <div className="time-axis-label" style={{ padding: '12px 16px' }}>
-            時間
-          </div>
+          <div className="time-axis-label">時間</div>
           <div className="vehicles-header">
             {vehicles.map((vehicle) => {
               // 稼働状況を判定（現在時刻で判定）
@@ -223,20 +214,20 @@ export function TimelineGrid({
               const now = new Date()
               const isOperational = isVehicleOperational(vehicle.id, now, statuses)
               const isExpanded = expandedVehicles.has(vehicle.id)
-              const vehicleHeaderWidth = isExpanded ? '60vw' : '40vw'
+              const vehicleHeaderWidth = getVehicleColumnWidth(isExpanded)
 
               return (
                 <div
                   key={vehicle.id}
                   className="vehicle-header-label"
-                  style={{ padding: '12px 16px', width: vehicleHeaderWidth }}
+                  style={{ width: vehicleHeaderWidth }}
                 >
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '8px',
+                      gap: '4px',
                     }}
                   >
                     <span>{vehicle.name}</span>
@@ -251,19 +242,20 @@ export function TimelineGrid({
                           flexShrink: 0,
                         }}
                         title="非稼働中"
+                        aria-label="非稼働中"
                       />
                     )}
-                    {/* 拡大/縮小ボタン */}
-                    <Tooltip title={isExpanded ? '縮小' : '拡大'}>
+                    <Tooltip title={isExpanded ? '列を縮小' : '列を拡大'}>
                       <IconButton
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation()
                           toggleVehicleExpand(vehicle.id)
                         }}
+                        aria-label={isExpanded ? '号車列を縮小' : '号車列を拡大'}
                         sx={{
                           color: 'rgba(255, 255, 255, 0.7)',
-                          padding: '4px',
+                          p: 0.25,
                           '&:hover': {
                             backgroundColor: 'rgba(255, 255, 255, 0.1)',
                           },
@@ -321,7 +313,7 @@ export function TimelineGrid({
             <div className="vehicles-columns">
               {vehicles.map((vehicle) => {
                 const isExpanded = expandedVehicles.has(vehicle.id)
-                const vehicleColumnWidth = isExpanded ? '60vw' : '40vw'
+                const vehicleColumnWidth = getVehicleColumnWidth(isExpanded)
 
                 return (
                   <VehicleColumn
@@ -330,12 +322,15 @@ export function TimelineGrid({
                     slots={getSlotsForVehicle(vehicle.id)}
                     conflicts={conflicts}
                     orders={orders}
+                    allSlots={slots}
+                    vehicles={vehicles}
                     timeSlots={timeSlots}
                     totalHeight={totalHeight}
                     dragOverPosition={
                       dragOverPosition?.vehicleId === vehicle.id ? dragOverPosition : null
                     }
                     draggingSlotVehicleId={draggingSlotVehicleId}
+                    selectedOrderId={selectedOrderId}
                     onSlotSelect={onOrderSelect}
                     operationStatuses={operationStatuses[vehicle.id] || []}
                     columnWidth={vehicleColumnWidth}
@@ -349,31 +344,9 @@ export function TimelineGrid({
               <div
                 className="current-time-line"
                 style={{
-                  position: 'absolute',
                   top: `${currentTimePosition}px`,
-                  left: '60px',
-                  right: 0,
-                  height: '2px',
-                  backgroundColor: '#ff4444',
-                  zIndex: 0 /* 依頼カードの下に表示 */,
-                  pointerEvents: 'none',
-                  boxShadow: '0 0 4px rgba(255, 68, 68, 0.8)',
                 }}
-              >
-                {/* 左側の三角マーカー */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: '-8px',
-                    top: '-4px',
-                    width: 0,
-                    height: 0,
-                    borderLeft: '8px solid #ff4444',
-                    borderTop: '5px solid transparent',
-                    borderBottom: '5px solid transparent',
-                  }}
-                />
-              </div>
+              />
             )}
           </div>
         )}
@@ -387,13 +360,16 @@ function VehicleColumn({
   slots,
   conflicts,
   orders,
+  allSlots,
+  vehicles,
   timeSlots,
   totalHeight,
   dragOverPosition,
   onSlotSelect,
   draggingSlotVehicleId,
+  selectedOrderId,
   operationStatuses = [],
-  columnWidth = '40vw',
+  columnWidth = 'min(40vw, 300px)',
 }) {
   // 営業日の基準日を計算
   const now = new Date()
@@ -467,13 +443,19 @@ function VehicleColumn({
         )
       })}
 
-      {/* ドロップ予定位置のハイライト（行全体） */}
+      {/* ドロップ予定位置のプレビュー */}
       {dragOverPosition && dragOverPosition.top >= 0 && (
         <div
-          className="drop-preview-row"
+          className={`drop-preview-card${
+            dragOverPosition.snapGuide === 'top'
+              ? ' drop-preview-card--snap-top'
+              : dragOverPosition.snapGuide === 'bottom'
+                ? ' drop-preview-card--snap-bottom'
+                : ''
+          }`}
           style={{
             top: `${dragOverPosition.top}px`,
-            height: '20px', // 15分 = 20px
+            height: `${dragOverPosition.height ?? 20}px`,
           }}
         />
       )}
@@ -489,6 +471,10 @@ function VehicleColumn({
             slot={slot}
             order={order}
             isConflict={conflicts.has(slot.id)}
+            isSelected={selectedOrderId === order.id}
+            conflictTooltip={
+              conflicts.has(slot.id) ? getSlotConflictTooltip(slot.id, allSlots, vehicles) : ''
+            }
             onClick={() => onSlotSelect(order)}
           />
         )

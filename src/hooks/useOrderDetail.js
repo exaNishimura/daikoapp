@@ -19,6 +19,8 @@ import {
   revertOrderStatus,
 } from '@/lib/orderActions'
 import { useUpdateOrder, useCancelOrder } from '@/hooks/useOrders'
+import { useToast } from '@/contexts/ToastContext'
+import { getOrderConflictMessages } from '@/lib/slotConflictUtils'
 
 const buildInitialFormData = (order) => ({
   pickup_address: order.pickup_address,
@@ -41,6 +43,7 @@ const buildInitialFormData = (order) => ({
  * - mutation hooks 経由で更新するため、依頼一覧などのキャッシュも自動的に invalidate される
  */
 export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onDelete, onClose }) {
+  const { showToast } = useToast()
   const relatedVehicle = useMemo(() => {
     if (slots.length === 0) return null
     return vehicles.find((v) => v.id === slots[0].vehicle_id) || null
@@ -137,7 +140,7 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
       setEditing(false)
     } catch (error) {
       console.error('Error updating order:', error)
-      alert('更新に失敗しました')
+      showToast('更新に失敗しました', 'error')
     } finally {
       setLoading(false)
     }
@@ -163,13 +166,18 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
         typeof cause === 'string' && /API|REQUEST|RESULT|LIMIT|key/.test(cause)
           ? formatRouteCalculationError(cause)
           : `ルート再計算に失敗しました: ${error.message || error}`
-      alert(message)
+      showToast(message, 'error')
     } finally {
       setRecalculating(false)
     }
   }, [order, formData, relatedVehicle, actionDeps, onUpdate])
 
   const handleConfirm = useCallback(async () => {
+    const conflictMessages = getOrderConflictMessages(order.id, slots, vehicles)
+    if (conflictMessages.length > 0) {
+      showToast(conflictMessages[0], 'error')
+      return
+    }
     if (!confirm('この依頼を確定しますか？')) return
     setLoading(true)
     try {
@@ -180,19 +188,19 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
         deps: actionDeps,
       })
       onUpdate?.(updatedOrder)
-      alert('確定しました')
+      showToast('確定しました', 'success')
     } catch (error) {
       console.error('Error confirming slot:', error)
-      alert(`確定に失敗しました: ${error.message || error}`)
+      showToast(`確定に失敗しました: ${error.message || error}`, 'error')
     } finally {
       setLoading(false)
     }
-  }, [order, vehicles, slots, actionDeps, onUpdate])
+  }, [order, vehicles, slots, actionDeps, onUpdate, showToast])
 
   const handleRevertStatus = useCallback(async () => {
     const previousStatus = getRevertStatus(order.status)
     if (!previousStatus) {
-      alert('戻すことができないステータスです')
+      showToast('戻すことができないステータスです', 'warning')
       return
     }
     if (!confirm(`${STATUS_LABELS[previousStatus]}に戻しますか？`)) return
@@ -201,10 +209,10 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
     try {
       const updatedOrder = await revertOrderStatus({ order, deps: actionDeps })
       onUpdate?.(updatedOrder)
-      alert('ステータスを戻しました')
+      showToast('ステータスを戻しました', 'success')
     } catch (error) {
       console.error('Error reverting status:', error)
-      alert(`ステータスの戻しに失敗しました: ${error.message || error}`)
+      showToast(`ステータスの戻しに失敗しました: ${error.message || error}`, 'error')
     } finally {
       setLoading(false)
     }
@@ -225,7 +233,7 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
       if (import.meta.env.DEV) {
         console.error('Error cancelling order:', error)
       }
-      alert(`キャンセルに失敗しました: ${error.message || error}`)
+      showToast(`キャンセルに失敗しました: ${error.message || error}`, 'error')
     } finally {
       setLoading(false)
     }
@@ -243,7 +251,7 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
       onUpdate?.(updatedOrder)
     } catch (error) {
       console.error('Error updating status:', error)
-      alert('ステータス更新に失敗しました')
+      showToast('ステータス更新に失敗しました', 'error')
     } finally {
       setLoading(false)
     }

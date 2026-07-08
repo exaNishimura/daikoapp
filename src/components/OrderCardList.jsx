@@ -8,8 +8,15 @@ import Chip from '@mui/material/Chip'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 
-export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpandedChange }) {
-  const [expanded, setExpanded] = useState(false) // デフォルトで折りたたみ
+export function OrderCardList({
+  orders,
+  onOrderSelect,
+  selectedOrderId,
+  onExpandedChange,
+  defaultExpanded = false,
+  expandedMaxHeight = 'calc(100vh / 3)',
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
 
   const handleToggle = () => {
     const newExpanded = !expanded
@@ -30,26 +37,45 @@ export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpand
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        flexShrink: 0,
+        ...(expanded
+          ? { height: expandedMaxHeight, maxHeight: expandedMaxHeight }
+          : { height: 'auto' }),
+      }}
+    >
       {/* ヘッダー */}
       <Paper
         elevation={0}
+        square
         sx={{
-          p: 1.25, // 10px (MUIのデフォルトは8px単位なので、1.25 = 10px)
-          borderBottom: 1,
+          px: 1,
+          py: 0.5,
+          minHeight: 36,
+          borderBottom: expanded ? 1 : 0,
+          borderTop: 1,
           borderColor: 'divider',
           bgcolor: 'background.paper',
           cursor: 'pointer',
           flexShrink: 0,
+          borderRadius: 0,
           '&:hover': {
             bgcolor: 'action.hover',
           },
         }}
         onClick={handleToggle}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0 }}>
+            <Typography
+              variant="caption"
+              component="span"
+              sx={{ fontWeight: 600, fontSize: '0.75rem', lineHeight: 1.2 }}
+            >
               未確定依頼
             </Typography>
             <Chip
@@ -57,9 +83,10 @@ export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpand
               size="small"
               color="primary"
               sx={{
-                height: '24px',
-                fontSize: '0.75rem',
+                height: 18,
+                fontSize: '0.65rem',
                 fontWeight: 600,
+                '& .MuiChip-label': { px: 0.75, py: 0 },
               }}
             />
           </Box>
@@ -69,9 +96,15 @@ export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpand
               e.stopPropagation()
               handleToggle()
             }}
-            sx={{ ml: 1 }}
+            sx={{ ml: 0.5, p: 0.25 }}
+            aria-label={expanded ? '未確定依頼一覧を閉じる' : '未確定依頼一覧を開く'}
+            aria-expanded={expanded}
           >
-            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            {expanded ? (
+              <ExpandLessIcon sx={{ fontSize: 20 }} />
+            ) : (
+              <ExpandMoreIcon sx={{ fontSize: 20 }} />
+            )}
           </IconButton>
         </Box>
       </Paper>
@@ -82,7 +115,7 @@ export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpand
           sx={{
             flex: 1,
             overflow: 'auto',
-            p: 2.5,
+            p: { xs: 0.75, sm: 1 },
             minHeight: 0,
           }}
         >
@@ -100,7 +133,7 @@ export function OrderCardList({ orders, onOrderSelect, selectedOrderId, onExpand
               </Typography>
             </Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               {unassignedOrders.map((order) => (
                 <OrderCard
                   key={order.id}

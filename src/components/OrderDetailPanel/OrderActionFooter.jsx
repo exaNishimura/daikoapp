@@ -14,6 +14,7 @@ export function OrderActionFooter({
   editing,
   loading,
   advanceStatus,
+  hasConflict = false,
   onSave,
   onCancelEdit,
   onStartEdit,
@@ -45,7 +46,7 @@ export function OrderActionFooter({
               disabled={loading}
               fullWidth
             >
-              {loading ? '保存中...' : '保存'}
+              {loading ? '保存中…' : '保存'}
             </Button>
           </>
         ) : (
@@ -58,8 +59,9 @@ export function OrderActionFooter({
                 variant="contained"
                 color="success"
                 onClick={onConfirm}
-                disabled={loading}
+                disabled={loading || hasConflict}
                 fullWidth
+                title={hasConflict ? '時間の重複を解消してから確定してください' : undefined}
               >
                 確定
               </Button>

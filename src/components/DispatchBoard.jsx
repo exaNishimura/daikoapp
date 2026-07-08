@@ -1,25 +1,35 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { TimelineGrid } from './TimelineGrid'
 import { OrderDetailPanel } from './OrderDetailPanel'
 import { OrderFormModal } from './OrderFormModal'
+import { OrderCardList } from './OrderCardList'
 import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { DispatchHeader } from './DispatchBoard/DispatchHeader'
+import { DispatchStatusLegend } from './DispatchBoard/DispatchStatusLegend'
 import { VehicleSelectDialog } from './DispatchBoard/VehicleSelectDialog'
 import { useDispatchData } from '@/hooks/useDispatchData'
 import { useDispatchDnD } from '@/hooks/useDispatchDnD'
+import { useToast } from '@/contexts/ToastContext'
 import { getOrderById } from '@/services/orderService'
 import { createSlot } from '@/services/slotService'
 import { findAutoPlacementSlot } from '@/lib/orderPlacement'
+import { detectAllConflicts } from '@/lib/slotConflictUtils'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
 import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import RefreshIcon from '@mui/icons-material/Refresh'
 
 export function DispatchBoard() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const { showToast } = useToast()
+
   const {
     orders,
     vehicles,
@@ -42,6 +52,13 @@ export function DispatchBoard() {
   const [isVehicleSelectDialogOpen, setIsVehicleSelectDialogOpen] = useState(false)
   const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null)
 
+  const pendingCount = useMemo(
+    () => orders.filter((o) => o.status === 'UNASSIGNED' || o.status === 'TENTATIVE').length,
+    [orders]
+  )
+
+  const conflictCount = useMemo(() => detectAllConflicts(slots).conflictIds.size, [slots])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -55,7 +72,7 @@ export function DispatchBoard() {
     handleDragOver,
     handleDragEnd,
     handleDragCancel,
-  } = useDispatchDnD({ vehicles, slots, operationStatuses, setSlots, setOrders })
+  } = useDispatchDnD({ vehicles, slots, orders, operationStatuses, setSlots, setOrders })
 
   const handleOrderCreated = async (newOrder) => {
     setOrders((prev) => [newOrder, ...prev])
@@ -64,11 +81,10 @@ export function DispatchBoard() {
     // すべての依頼を即座にタイムラインに自動配置
     if (vehicles.length > 0) {
       try {
-        // 最新の依頼データを取得（base_duration_minとbuffer_minが正しく設定されているか確認）
         const { data: latestOrder, error: orderError } = await getOrderById(newOrder.id)
         if (orderError) {
           console.error('Error fetching latest order for auto-placement:', orderError)
-          alert('依頼データの取得に失敗しました')
+          showToast('依頼データの取得に失敗しました。未確定一覧から手動配置してください。', 'error')
           return
         }
 
@@ -80,7 +96,6 @@ export function DispatchBoard() {
         })
 
         if (availableSlot) {
-          // スロットを作成
           const endAt = new Date(availableSlot.startAt)
           endAt.setMinutes(endAt.getMinutes() + totalDuration)
 
@@ -96,11 +111,9 @@ export function DispatchBoard() {
             if (import.meta.env.DEV) {
               console.error('Error auto-placing order:', error)
             }
-            alert('自動配置に失敗しました')
+            showToast('自動配置に失敗しました。未確定一覧から手動配置してください。', 'error')
           } else if (slot) {
-            // スロットを即座に追加（タイムラインにすぐ表示）
             setSlots((prev) => {
-              // 既に同じIDのスロットが存在する場合は更新、存在しない場合は追加
               const existingIndex = prev.findIndex((s) => s.id === slot.id)
               if (existingIndex >= 0) {
                 const updated = [...prev]
@@ -110,22 +123,22 @@ export function DispatchBoard() {
               return [...prev, slot]
             })
 
-            // 依頼を更新（base_duration_min / buffer_min 反映済みの最新版で）
-            // ※以前は 1 秒後に loadSlots で再フェッチしていたが、
-            //  createSlot の戻り値で十分なため二重描画を避けるべく削除した。
-            //  他端末との整合性は Realtime 購読で別途解決する。
             if (latestOrder) {
               handleOrderUpdate(latestOrder)
             }
+            showToast('依頼をタイムラインに仮配置しました', 'success')
           }
         } else {
-          alert('配置可能な時間が見つかりませんでした。')
+          showToast(
+            '配置可能な時間が見つかりませんでした。未確定一覧から手動で配置してください。',
+            'warning'
+          )
         }
-      } catch (error) {
+      } catch (autoPlaceError) {
         if (import.meta.env.DEV) {
-          console.error('Error in auto-placement:', error)
+          console.error('Error in auto-placement:', autoPlaceError)
         }
-        alert('自動配置中にエラーが発生しました')
+        showToast('自動配置中にエラーが発生しました。未確定一覧を確認してください。', 'error')
       }
     }
   }
@@ -138,12 +151,10 @@ export function DispatchBoard() {
     setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)))
     if (selectedOrder?.id === updatedOrder.id) {
       setSelectedOrder(updatedOrder)
-      // キャンセルされた場合はパネルを閉じる
       if (updatedOrder.status === 'CANCELLED') {
         setSelectedOrder(null)
       }
     }
-    // キャンセルまたはスロット関連の変更があった場合はスロットを再読み込み
     if (
       updatedOrder.status === 'CANCELLED' ||
       updatedOrder.status === 'TENTATIVE' ||
@@ -160,12 +171,13 @@ export function DispatchBoard() {
     if (selectedOrder?.id === orderId) {
       setSelectedOrder(null)
     }
-    // スロットも再読み込み（削除された依頼に関連するスロットが削除されている可能性があるため）
     if (vehicles.length > 0) {
       await loadSlots(vehicles)
       await loadOperationStatuses(vehicles)
     }
   }
+
+  const detailDrawerWidth = isMobile ? '100%' : 384
 
   if (loading) {
     return (
@@ -182,7 +194,7 @@ export function DispatchBoard() {
       >
         <CircularProgress />
         <Typography variant="body1" color="text.secondary">
-          読み込み中...
+          読み込み中…
         </Typography>
       </Box>
     )
@@ -209,6 +221,8 @@ export function DispatchBoard() {
           businessDayText={businessDayText}
           earliestAvailableTime={earliestAvailableTime}
           vehicles={vehicles}
+          pendingCount={pendingCount}
+          conflictCount={conflictCount}
           onOpenSettings={() => {
             if (vehicles.length === 0) return
             if (vehicles.length === 1) {
@@ -221,7 +235,8 @@ export function DispatchBoard() {
           onOpenOrderForm={() => setIsModalOpen(true)}
         />
 
-        {/* エラーメッセージ */}
+        {vehicles.length > 0 && <DispatchStatusLegend />}
+
         {error && (
           <Alert
             severity="error"
@@ -236,14 +251,36 @@ export function DispatchBoard() {
           </Alert>
         )}
 
-        {/* メインコンテンツ */}
         <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-          {/* タイムライン */}
+          {!isMobile && vehicles.length > 0 && (
+            <Box
+              sx={{
+                width: 280,
+                flexShrink: 0,
+                borderRight: 1,
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                alignSelf: 'flex-start',
+              }}
+            >
+              <OrderCardList
+                orders={orders}
+                onOrderSelect={handleOrderSelect}
+                selectedOrderId={selectedOrder?.id}
+                defaultExpanded
+              />
+            </Box>
+          )}
+
           <Box
             component="main"
             sx={{
               flexGrow: 1,
               bgcolor: 'background.default',
+              minWidth: 0,
             }}
           >
             {vehicles.length === 0 ? (
@@ -272,6 +309,7 @@ export function DispatchBoard() {
                 operationStatuses={operationStatuses}
                 dragOverPosition={dragOverPosition}
                 draggingSlotVehicleId={draggingSlotVehicleId}
+                selectedOrderId={selectedOrder?.id}
                 onOrderSelect={handleOrderSelect}
                 onOrderUpdate={handleOrderUpdate}
                 onSlotsUpdate={loadSlots}
@@ -279,22 +317,23 @@ export function DispatchBoard() {
             )}
           </Box>
 
-          {/* 右サイドバー: 依頼詳細 */}
           {selectedOrder && (
             <Drawer
               anchor="right"
               open={!!selectedOrder}
-              variant="persistent"
+              variant={isMobile ? 'temporary' : 'persistent'}
+              onClose={() => setSelectedOrder(null)}
+              ModalProps={{ keepMounted: true }}
               sx={{
-                width: 384,
+                width: detailDrawerWidth,
                 flexShrink: 0,
-                zIndex: (theme) => theme.zIndex.drawer + 10,
+                zIndex: (t) => t.zIndex.drawer + 10,
                 '& .MuiDrawer-paper': {
-                  width: 384,
+                  width: detailDrawerWidth,
                   boxSizing: 'border-box',
                   borderLeft: 1,
                   borderColor: 'divider',
-                  zIndex: (theme) => theme.zIndex.drawer + 10,
+                  zIndex: (t) => t.zIndex.drawer + 10,
                 },
               }}
             >
@@ -310,7 +349,25 @@ export function DispatchBoard() {
           )}
         </Box>
 
-        {/* モーダル */}
+        {isMobile && vehicles.length > 0 && pendingCount > 0 && (
+          <Box
+            sx={{
+              flexShrink: 0,
+              borderTop: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              overflow: 'hidden',
+            }}
+          >
+            <OrderCardList
+              orders={orders}
+              onOrderSelect={handleOrderSelect}
+              selectedOrderId={selectedOrder?.id}
+              defaultExpanded
+            />
+          </Box>
+        )}
+
         <OrderFormModal
           open={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -333,7 +390,6 @@ export function DispatchBoard() {
             setSelectedVehicleForStatus(null)
           }}
           onStatusUpdated={() => {
-            // 稼働状況が更新されたら再読み込み
             if (vehicles.length > 0) {
               loadOperationStatuses(vehicles)
             }
