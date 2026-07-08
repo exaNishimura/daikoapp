@@ -127,12 +127,24 @@ export function sumStaffHours(staffHours) {
   )
 }
 
+function hasShiftTimeChanged(row, dayShifts = []) {
+  const original = (dayShifts ?? []).find((shift) => shift.id === row.shiftId)
+  if (!original) return true
+  const nextStart = normalizeTimeForSave(row.start)
+  const nextEnd = normalizeTimeForSave(row.end)
+  return (
+    nextStart !== normalizeTimeForInput(original.start) ||
+    nextEnd !== normalizeTimeForInput(original.end)
+  )
+}
+
 /**
- * 保存用: シフト start/end 更新ペイロード
+ * 保存用: シフト start/end 更新ペイロード（変更があった行のみ）
  */
-export function buildShiftUpdatePayloads(shiftTimeUpdates = []) {
+export function buildShiftUpdatePayloads(shiftTimeUpdates = [], dayShifts = []) {
   return (shiftTimeUpdates ?? [])
     .filter((row) => row?.shiftId && row.start && row.end)
+    .filter((row) => hasShiftTimeChanged(row, dayShifts))
     .map((row) => ({
       id: row.shiftId,
       shiftData: {

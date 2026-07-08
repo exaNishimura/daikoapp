@@ -90,9 +90,20 @@ export async function upsertDailySale(payload) {
       .from('daily_sales')
       .upsert(safe, { onConflict: 'work_date' })
       .select()
-      .single()
     if (error) throw error
-    return { data, error: null }
+
+    let row = data?.[0] ?? null
+    if (!row && safe.work_date) {
+      const refetch = await getDailySalesByDate(safe.work_date)
+      if (refetch.error) throw refetch.error
+      row = refetch.data
+    }
+    if (!row) {
+      throw new Error(
+        '売上の保存後にデータを取得できませんでした。DBの権限設定（daily_sales の anon 書き込み）を確認してください'
+      )
+    }
+    return { data: row, error: null }
   } catch (error) {
     console.error('Error upserting daily_sales:', error)
     return { data: null, error }

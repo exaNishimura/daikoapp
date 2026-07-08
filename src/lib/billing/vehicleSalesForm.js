@@ -61,7 +61,7 @@ export function buildVehicleSalesSavePayload({
   dailyPayload.expense_amount = parseInt0OrZero(form.expense_amount)
   dailyPayload.receivable_total = parseInt0OrZero(receivableTotal)
 
-  const shiftUpdates = buildShiftUpdatePayloads(form.shiftTimes)
+  const shiftUpdates = buildShiftUpdatePayloads(form.shiftTimes, dayShifts)
 
   const dayStaffHoursRows = computeDayStaffHoursRows({
     dayShifts,

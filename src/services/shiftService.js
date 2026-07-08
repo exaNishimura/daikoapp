@@ -74,10 +74,14 @@ export async function updateShift(id, shiftData) {
       .update(shiftData)
       .eq('id', id)
       .select()
-      .single()
 
     if (error) throw error
-    return { data, error: null }
+    if (!data?.length) {
+      throw new Error(
+        'シフトの更新に失敗しました（権限不足または対象シフトが見つかりません）'
+      )
+    }
+    return { data: data[0], error: null }
   } catch (error) {
     console.error('Error updating shift:', error)
     return { data: null, error }

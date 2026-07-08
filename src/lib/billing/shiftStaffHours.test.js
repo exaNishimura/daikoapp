@@ -123,6 +123,32 @@ describe('buildShiftUpdatePayloads', () => {
       { id: 's1', shiftData: { start: '20:00', end: '00:30' } },
     ])
   })
+
+  it('開始・終了が既存シフトと同じ行は更新対象に含めない', () => {
+    const dayShifts = [{ id: 's1', start: '20:00:00', end: '00:30:00' }]
+    const payloads = buildShiftUpdatePayloads(
+      [{ shiftId: 's1', start: '20:00', end: '00:30' }],
+      dayShifts
+    )
+    expect(payloads).toEqual([])
+  })
+
+  it('開始・終了のいずれかが変わった行のみ更新する', () => {
+    const dayShifts = [
+      { id: 's1', start: '20:00:00', end: '00:30:00' },
+      { id: 's2', start: '21:00:00', end: '01:00:00' },
+    ]
+    const payloads = buildShiftUpdatePayloads(
+      [
+        { shiftId: 's1', start: '20:00', end: '00:30' },
+        { shiftId: 's2', start: '21:30', end: '01:00' },
+      ],
+      dayShifts
+    )
+    expect(payloads).toEqual([
+      { id: 's2', shiftData: { start: '21:30', end: '01:00' } },
+    ])
+  })
 })
 
 describe('computeDayStaffHoursRows', () => {
