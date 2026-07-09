@@ -1,8 +1,9 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SlotComponent } from './SlotComponent'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { isVehicleOperational, buildTimelinePlacementBands } from '@/utils/operationStatusUtils'
+import { isVehicleOperational, buildTimelinePlacementBands, getOperationalVehicles } from '@/utils/operationStatusUtils'
 import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUtils'
+import { TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
 import IconButton from '@mui/material/IconButton'
 import OpenInFullIcon from '@mui/icons-material/OpenInFull'
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen'
@@ -24,6 +25,8 @@ export function TimelineGrid({
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [focusedVehicleId, setFocusedVehicleId] = useState(null)
+  const userOverrideFocusRef = useRef(false)
+  const prevSoleOperationalIdRef = useRef(null)
   const hasAutoScrolledRef = useRef(false)
   const headerScrollRef = useRef(null)
   const bodyScrollRef = useRef(null)
@@ -90,6 +93,33 @@ export function TimelineGrid({
 
   const defaultVehicleColumnWidth = 'min(40vw, 300px)'
 
+  const operationalVehicles = useMemo(
+    () => getOperationalVehicles(vehicles, currentTime, operationStatuses),
+    [vehicles, currentTime, operationStatuses]
+  )
+
+  const soleOperationalVehicleId =
+    operationalVehicles.length === 1 ? operationalVehicles[0].id : null
+
+  // 稼働中が1台だけのときはデフォルトでその列を全幅表示
+  useEffect(() => {
+    if (soleOperationalVehicleId) {
+      if (prevSoleOperationalIdRef.current !== soleOperationalVehicleId) {
+        userOverrideFocusRef.current = false
+        prevSoleOperationalIdRef.current = soleOperationalVehicleId
+      }
+      if (!userOverrideFocusRef.current) {
+        setFocusedVehicleId(soleOperationalVehicleId)
+      }
+      return
+    }
+
+    prevSoleOperationalIdRef.current = null
+    if (!userOverrideFocusRef.current) {
+      setFocusedVehicleId(null)
+    }
+  }, [soleOperationalVehicleId])
+
   const displayVehicles = useMemo(
     () =>
       focusedVehicleId
@@ -119,7 +149,7 @@ export function TimelineGrid({
   }
 
   const timeSlots = generateTimeSlots()
-  const totalHeight = timeSlots.length * 20 // 15分 = 20px
+  const totalHeight = timeSlots.length * TIMELINE_ROW_HEIGHT_PX
 
   // 現在時刻の位置を計算（営業時間内の場合のみ、1分単位で正確に計算）
   const getCurrentTimePosition = () => {
@@ -152,11 +182,10 @@ export function TimelineGrid({
 
       // 秒も考慮（1分 = 20/15 = 4/3 px、1秒 = (4/3)/60 px）
       const totalSeconds = minutesFromStart * 60 + seconds
-      const pixelsPerSecond = 20 / 15 / 60 // 1秒あたりのピクセル数
+      const pixelsPerSecond = TIMELINE_ROW_HEIGHT_PX / 15 / 60 // 1秒あたりのピクセル数
       const position = totalSeconds * pixelsPerSecond
 
       // タイムラインの範囲内かチェック（0〜totalHeight）
-      // totalHeight = 48行 * 20px = 960px
       if (position < 0 || position > totalHeight) {
         return null
       }
@@ -196,11 +225,15 @@ export function TimelineGrid({
   }
 
   const toggleVehicleFocus = (vehicleId) => {
+    userOverrideFocusRef.current = true
     setFocusedVehicleId((prev) => (prev === vehicleId ? null : vehicleId))
   }
 
   return (
-    <div className={`timeline-grid${focusedVehicleId ? ' timeline-grid--vehicle-focused' : ''}`}>
+    <div
+      className={`timeline-grid${focusedVehicleId ? ' timeline-grid--vehicle-focused' : ''}`}
+      style={{ '--timeline-row-height': `${TIMELINE_ROW_HEIGHT_PX}px` }}
+    >
       <div className="timeline-header-wrapper" ref={headerScrollRef}>
         <div className="timeline-header">
           <div className="time-axis-label">時間</div>
@@ -278,7 +311,7 @@ export function TimelineGrid({
                   ts.minute === 0 || ts.minute === 15 || ts.minute === 30 || ts.minute === 45
                 const isHourMark = ts.minute === 0
                 return (
-                  <div key={index} className="time-marker-row" style={{ height: '20px' }}>
+                  <div key={index} className="time-marker-row">
                     {showMarker && (
                       <span className={isHourMark ? 'time-hour' : 'time-minute'}>
                         {isHourMark ? (
@@ -379,7 +412,7 @@ function VehicleColumn({
     dragOverPosition.isPlacementAllowed === false
 
   const renderBand = (band, className, options = {}) => {
-    const heightPx = (band.endRow - band.startRow) * 20
+    const heightPx = (band.endRow - band.startRow) * TIMELINE_ROW_HEIGHT_PX
     if (heightPx <= 0) return null
 
     return (
@@ -387,7 +420,7 @@ function VehicleColumn({
         key={`${className}-${band.startRow}-${band.endRow}`}
         className={className}
         style={{
-          top: `${band.startRow * 20}px`,
+          top: `${band.startRow * TIMELINE_ROW_HEIGHT_PX}px`,
           height: `${heightPx}px`,
         }}
         title={options.title}
@@ -409,7 +442,7 @@ function VehicleColumn({
         <div
           key={`divider-${index}`}
           className={`time-cell-divider${ts.minute === 0 ? ' time-cell-divider--hour' : ''}`}
-          style={{ top: `${index * 20}px` }}
+          style={{ top: `${index * TIMELINE_ROW_HEIGHT_PX}px` }}
         />
       ))}
 
@@ -430,7 +463,7 @@ function VehicleColumn({
           }${dragOverPosition.isPlacementAllowed === false ? ' drop-preview-card--invalid' : ''}`}
           style={{
             top: `${dragOverPosition.top}px`,
-            height: `${dragOverPosition.height ?? 20}px`,
+            height: `${dragOverPosition.height ?? TIMELINE_ROW_HEIGHT_PX}px`,
           }}
         />
       )}

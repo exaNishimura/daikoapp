@@ -1,5 +1,6 @@
 .timeline-grid {
   --time-axis-width: 52px;
+  --timeline-row-height: 48px; /* rowUtils.TIMELINE_ROW_HEIGHT_PX と同期 */
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -158,12 +159,12 @@
   align-items: center;
   justify-content: flex-end;
   padding: 0 4px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--dsp-text-muted);
   border-bottom: 1px solid var(--dsp-grid-line);
   box-sizing: border-box;
-  height: 20px;
-  min-height: 20px;
+  height: var(--timeline-row-height);
+  min-height: var(--timeline-row-height);
 }
 
 .time-marker-row span {
@@ -258,8 +259,9 @@
   pointer-events: none;
 }
 
-.placement-blocked-band[style*='height: 20px']::after,
-.placement-blocked-band[style*='height: 40px']::after {
+/* 1〜2行分の狭いバンドではラベルを非表示 */
+.placement-blocked-band[style*='height: 48px']::after,
+.placement-blocked-band[style*='height: 96px']::after {
   content: none;
 }
 
@@ -272,7 +274,7 @@
   pointer-events: none;
 }
 
-/* 毎正時（15分×4=80px）ごとに少し濃い線でリズムを付ける */
+/* 毎正時（15分×4行）ごとに少し濃い線でリズムを付ける */
 .time-cell-divider.time-cell-divider--hour {
   background-color: var(--dsp-grid-line-hour);
 }

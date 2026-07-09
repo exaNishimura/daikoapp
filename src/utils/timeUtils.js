@@ -2,6 +2,8 @@
  * 時間計算ユーティリティ
  */
 
+import { TIMELINE_ROW_HEIGHT_PX } from './rowUtils'
+
 /**
  * 15分刻みでスナップ
  */
@@ -87,17 +89,17 @@ export function businessMinutesToDate(businessMinutes, baseDate) {
 }
 
 /**
- * 時間→px変換（15分 = 20px）
+ * 時間→px変換（15分 = TIMELINE_ROW_HEIGHT_PX）
  */
 export function minutesToPixels(minutes) {
-  return (minutes / 15) * 20
+  return (minutes / 15) * TIMELINE_ROW_HEIGHT_PX
 }
 
 /**
- * px→時間変換（20px = 15分）
+ * px→時間変換
  */
 export function pixelsToMinutes(pixels) {
-  return (pixels / 20) * 15
+  return (pixels / TIMELINE_ROW_HEIGHT_PX) * 15
 }
 
 /**

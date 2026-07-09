@@ -4,6 +4,12 @@
  * 各行は0〜47のインデックスで管理
  */
 
+/** 15分1行の高さ（px）。約3時間=12行が1画面に収まるスケール */
+export const TIMELINE_ROW_HEIGHT_PX = 48
+
+/** 全営業時間（12時間・48行）のタイムライン高さ */
+export const TIMELINE_TOTAL_HEIGHT_PX = 48 * TIMELINE_ROW_HEIGHT_PX
+
 /**
  * 時刻を行番号に変換
  * @param {number} hour - 時間（0-23）
@@ -110,7 +116,7 @@ export function rowIndexToDate(rowIndex, baseDate) {
  * @returns {number} ピクセル位置（0-940）
  */
 export function rowIndexToPixels(rowIndex) {
-  return rowIndex * 20 // 15分 = 20px
+  return rowIndex * TIMELINE_ROW_HEIGHT_PX
 }
 
 /**
@@ -119,7 +125,7 @@ export function rowIndexToPixels(rowIndex) {
  * @returns {number} 行番号（0-47）
  */
 export function pixelsToRowIndex(pixels) {
-  return Math.floor(pixels / 20) // 15分 = 20px
+  return Math.floor(pixels / TIMELINE_ROW_HEIGHT_PX)
 }
 
 /**

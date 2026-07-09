@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { dateToRowIndex, rowIndexToPixels, minutesToRows } from '@/utils/rowUtils'
+import { dateToRowIndex, rowIndexToPixels, minutesToRows, TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
 import './SlotComponent.css'
 import Dialog from '@mui/material/Dialog'
@@ -61,8 +61,8 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
   // 高さを計算（行数からピクセルに変換）
   const height = rowIndexToPixels(rowsToUse)
 
-  // 最小高さを確保（1行 = 20px）
-  const minHeight = 20
+  // 最小高さを確保（1行 = TIMELINE_ROW_HEIGHT_PX）
+  const minHeight = TIMELINE_ROW_HEIGHT_PX
   const finalHeight = Math.max(height, minHeight)
 
   // 時刻表示

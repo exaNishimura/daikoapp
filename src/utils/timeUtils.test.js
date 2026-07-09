@@ -34,13 +34,13 @@ describe('timeToMinutes / minutesToTime', () => {
 })
 
 describe('minutesToPixels / pixelsToMinutes', () => {
-  it('15分 = 20px の換算が成立', () => {
-    expect(minutesToPixels(15)).toBe(20)
-    expect(pixelsToMinutes(20)).toBe(15)
+  it('15分 = 48px の換算が成立', () => {
+    expect(minutesToPixels(15)).toBe(48)
+    expect(pixelsToMinutes(48)).toBe(15)
   })
-  it('1時間 = 80px', () => {
-    expect(minutesToPixels(60)).toBe(80)
-    expect(pixelsToMinutes(80)).toBe(60)
+  it('1時間 = 192px', () => {
+    expect(minutesToPixels(60)).toBe(192)
+    expect(pixelsToMinutes(192)).toBe(60)
   })
   it('逆変換で元に戻る', () => {
     expect(pixelsToMinutes(minutesToPixels(45))).toBe(45)

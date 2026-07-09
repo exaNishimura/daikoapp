@@ -4,12 +4,12 @@
   position: absolute;
   left: 3px;
   right: 3px;
-  min-height: 20px; /* 最小15分 = 20px */
+  min-height: var(--timeline-row-height, 48px); /* 最小15分 = 1行 */
   background-color: var(--slot-fill);
   border: 1px solid var(--dsp-border);
   border-left: 4px solid var(--slot-accent);
   border-radius: 0;
-  padding: 3px 6px;
+  padding: 5px 8px;
   cursor: pointer;
   transition:
     box-shadow 0.15s ease,
@@ -94,9 +94,9 @@
 }
 
 .status-badge {
-  padding: 0 5px;
+  padding: 1px 6px;
   border-radius: 4px;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 700;
   line-height: 1.5;
   letter-spacing: 0.02em;
@@ -110,7 +110,7 @@
 }
 
 .slot-time {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   color: var(--dsp-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -124,7 +124,7 @@
 }
 
 .slot-pickup-location {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--dsp-text);
   overflow: hidden;
@@ -133,7 +133,7 @@
 }
 
 .slot-route {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   overflow: hidden;
   white-space: nowrap;
   color: var(--dsp-text);

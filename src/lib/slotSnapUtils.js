@@ -5,12 +5,14 @@ import {
   pixelsToRowIndex,
   snapToRowIndex,
   minutesToRows,
+  TIMELINE_ROW_HEIGHT_PX,
+  TIMELINE_TOTAL_HEIGHT_PX,
 } from '@/utils/rowUtils'
 
 /** スナップ判定のしきい値（px） */
-export const SLOT_SNAP_THRESHOLD_PX = 12
+export const SLOT_SNAP_THRESHOLD_PX = 16
 
-const TIMELINE_HEIGHT_PX = 48 * 20
+const TIMELINE_HEIGHT_PX = TIMELINE_TOTAL_HEIGHT_PX
 
 /**
  * 依頼のタイムライン上の高さ（px）を返す。
@@ -18,7 +20,7 @@ const TIMELINE_HEIGHT_PX = 48 * 20
 export function getOrderDurationPixels(order) {
   const minutes = (order.base_duration_min || 30) + (order.buffer_min || 0)
   const rows = minutesToRows(minutes)
-  return Math.max(rowIndexToPixels(rows), 20)
+  return Math.max(rowIndexToPixels(rows), TIMELINE_ROW_HEIGHT_PX)
 }
 
 /**
@@ -31,7 +33,7 @@ export function getSlotBoundsPx(slot, order) {
   const requiredRows = minutesToRows((order.base_duration_min || 30) + (order.buffer_min || 0))
   const rows = Math.max(actualRows, requiredRows)
   const top = rowIndexToPixels(startRow)
-  const height = Math.max(rowIndexToPixels(rows), 20)
+  const height = Math.max(rowIndexToPixels(rows), TIMELINE_ROW_HEIGHT_PX)
   return { top, height, bottom: top + height }
 }
 
@@ -49,7 +51,7 @@ export function resolveSlotDropPreview({
   excludeSlotId = null,
   snapThresholdPx = SLOT_SNAP_THRESHOLD_PX,
 }) {
-  const height = Math.max(dragHeightPx, 20)
+  const height = Math.max(dragHeightPx, TIMELINE_ROW_HEIGHT_PX)
   const rowSnappedTop = rowIndexToPixels(snapToRowIndex(pixelsToRowIndex(rawTopPx)))
 
   const peers = vehicleSlots
