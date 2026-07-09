@@ -30,6 +30,7 @@ import {
 import { useCompanies } from '@/hooks/billing/useCompanies'
 import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesEditor'
 import { useUpdateShiftsBulk } from '@/hooks/useShifts'
+import { useAuth } from '@/contexts/AuthContext'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { sumShiftTimesHours } from '@/lib/billing/shiftStaffHours'
 import { sumReceivableAmounts, isShiftEditableReceivable } from '@/lib/billing/shiftReceivables'
@@ -65,9 +66,21 @@ function ShiftTimeField({ label, value, onChange, disabled, fullWidth = false })
   )
 }
 
-export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], employees = [], onClose }) {
+export function VehicleSalesModal({
+  open,
+  workDate,
+  carNum,
+  dayShifts = [],
+  employees = [],
+  isDayClosed = false,
+  isAdmin = false,
+  onClose,
+}) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const { isAuthenticated } = useAuth()
+  const adminCanEdit = isAdmin || isAuthenticated
+  const isLocked = isDayClosed && !adminCanEdit
   const [form, setForm] = useState(EMPTY_FORM)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -139,6 +152,10 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
 
   const handleSave = async () => {
     if (!workDate || !carNum) return
+    if (isLocked) {
+      setError('この日は締め済みのため保存できません')
+      return
+    }
     setError(null)
     setSuccess(null)
 
@@ -200,6 +217,8 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
       })()
     : ''
 
+  const formDisabled = loading || isLocked
+
   return (
     <Dialog
       open={open}
@@ -225,6 +244,13 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
           </Stack>
         ) : (
           <Stack spacing={2.5} sx={{ pt: 1 }}>
+            {isDayClosed && (
+              <Alert severity={adminCanEdit ? 'info' : 'warning'}>
+                {adminCanEdit
+                  ? '締め済みです。ログイン中のため管理者として編集できます。'
+                  : '締め済みのため編集できません。'}
+              </Alert>
+            )}
             {error && <Alert severity="error">{error}</Alert>}
             {success && <Alert severity="success">{success}</Alert>}
 
@@ -238,7 +264,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               onChange={(e) => setForm((prev) => ({ ...prev, distance_km: e.target.value }))}
               inputProps={{ step: 0.1, min: 0 }}
               fullWidth
-              disabled={loading}
+              disabled={formDisabled}
               size="small"
             />
             <TextField
@@ -248,7 +274,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               onChange={(e) => setForm((prev) => ({ ...prev, fuel_yen: e.target.value }))}
               inputProps={{ step: 1, min: 0 }}
               fullWidth
-              disabled={loading}
+              disabled={formDisabled}
               size="small"
             />
             <TextField
@@ -259,7 +285,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               inputProps={{ step: 1, min: 0 }}
               fullWidth
               required
-              disabled={loading}
+              disabled={formDisabled}
               size="small"
             />
 
@@ -307,7 +333,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
                         onChange={(e) =>
                           handleShiftTimeChange(row.shiftId, 'start', e.target.value)
                         }
-                        disabled={loading}
+                        disabled={formDisabled}
                         fullWidth
                       />
                       <ShiftTimeField
@@ -316,7 +342,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
                         onChange={(e) =>
                           handleShiftTimeChange(row.shiftId, 'end', e.target.value)
                         }
-                        disabled={loading}
+                        disabled={formDisabled}
                         fullWidth
                       />
                     </Stack>
@@ -344,7 +370,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
                           onChange={(e) =>
                             handleShiftTimeChange(row.shiftId, 'start', e.target.value)
                           }
-                          disabled={loading}
+                          disabled={formDisabled}
                         />
                       </TableCell>
                       <TableCell>
@@ -353,7 +379,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
                           onChange={(e) =>
                             handleShiftTimeChange(row.shiftId, 'end', e.target.value)
                           }
-                          disabled={loading}
+                          disabled={formDisabled}
                         />
                       </TableCell>
                     </TableRow>
@@ -375,7 +401,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               value={form.expense_note}
               onChange={(e) => setForm((prev) => ({ ...prev, expense_note: e.target.value }))}
               fullWidth
-              disabled={loading}
+              disabled={formDisabled}
               size="small"
             />
             <TextField
@@ -385,7 +411,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
               onChange={(e) => setForm((prev) => ({ ...prev, expense_amount: e.target.value }))}
               inputProps={{ step: 1, min: 0 }}
               fullWidth
-              disabled={loading}
+              disabled={formDisabled}
               size="small"
             />
 
@@ -397,7 +423,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
             <ReceivableLinesEditor
               lines={form.receivables}
               onChange={(receivables) => setForm((prev) => ({ ...prev, receivables }))}
-              disabled={loading}
+              disabled={formDisabled}
               companies={companiesQuery.data ?? []}
             />
             <Typography variant="caption" color="text.secondary" display="block">
@@ -430,7 +456,7 @@ export function VehicleSalesModal({ open, workDate, carNum, dayShifts = [], empl
         <Button onClick={handleClose} disabled={saving} fullWidth={isMobile}>
           閉じる
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={loading} fullWidth={isMobile}>
+        <Button variant="contained" onClick={handleSave} disabled={formDisabled} fullWidth={isMobile}>
           保存
         </Button>
       </DialogActions>

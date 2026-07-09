@@ -87,6 +87,10 @@ export const queryKeys = {
     byMonth: (year, month) => ['dailySales', 'byMonth', year, month],
     byDate: (date) => ['dailySales', 'byDate', date],
   },
+  dailyClosures: {
+    all: ['dailyClosures'],
+    month: (year, month) => ['dailyClosures', 'month', year, month],
+  },
   staffSales: {
     all: ['staffSales'],
     byMonth: (year, month) => ['staffSales', 'byMonth', year, month],

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useShiftsByMonth } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
 import { useDailySales } from '@/hooks/billing/useDailySales'
+import { useClosuresByDate } from '@/hooks/billing/useDailyClosures'
 import { getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
 import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
 import { VehicleSalesModal } from '@/components/ShiftCalendar/VehicleSalesModal'
@@ -103,10 +104,12 @@ export function ShiftCalendar() {
   const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
   const employeesQuery = useEmployees()
   const dailySalesQuery = useDailySales(selectedYear, selectedMonth)
+  const closuresQuery = useClosuresByDate(selectedYear, selectedMonth)
 
   const shifts = shiftsQuery.data ?? []
   const employees = employeesQuery.data ?? []
   const loading = shiftsQuery.isLoading || employeesQuery.isLoading
+  const closuresByDate = closuresQuery.closuresByDate
 
   // 月が変わったらスクロールフラグをリセット
   useEffect(() => {
@@ -503,6 +506,8 @@ export function ShiftCalendar() {
                 employees={employees}
                 colorByName={colorByName}
                 salesByDate={salesByDate}
+                isDayClosed={Boolean(closuresByDate[date])}
+                isAdmin={isAuthenticated}
                 onOpenVehicleSales={(carNum) =>
                   setVehicleSalesTarget({ date, carNum })
                 }
@@ -523,6 +528,10 @@ export function ShiftCalendar() {
           vehicleSalesTarget?.date ? (groupedData[vehicleSalesTarget.date]?.shifts ?? []) : []
         }
         employees={employees}
+        isDayClosed={
+          vehicleSalesTarget?.date ? Boolean(closuresByDate[vehicleSalesTarget.date]) : false
+        }
+        isAdmin={isAuthenticated}
         onClose={() => setVehicleSalesTarget(null)}
       />
 
@@ -549,6 +558,8 @@ function DayBlock({
   employees,
   colorByName,
   salesByDate,
+  isDayClosed = false,
+  isAdmin = false,
   onOpenVehicleSales,
   onOpenVehicleSummary,
 }) {
@@ -557,6 +568,7 @@ function DayBlock({
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
 
   const salesRow = salesByDate[toWorkDateKey(dayData.date)] ?? null
+  const isClosed = isDayClosed || Boolean(salesRow?.closed_at)
   const displayTarget = roundTargetDisplayAmount(
     computeDayTargetAmount({
       shifts: dayData.shifts,
@@ -579,6 +591,9 @@ function DayBlock({
               {dateFormatted}
               <span className="day-dow">({dayData.dow})</span>
             </div>
+            {isClosed && (
+              <div className="status-label closed-day">締め済</div>
+            )}
             {dayData.status && (
               <div
                 className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}
@@ -614,6 +629,8 @@ function DayBlock({
                 colorByName={colorByName}
                 employees={employees}
                 salesRow={salesRow}
+                isClosed={isClosed}
+                isAdmin={isAdmin}
                 onOpenVehicleSales={onOpenVehicleSales}
                 onOpenVehicleSummary={onOpenVehicleSummary}
               />
@@ -693,6 +710,8 @@ function CarBlock({
   colorByName,
   employees,
   salesRow,
+  isClosed = false,
+  isAdmin = false,
   onOpenVehicleSales,
   onOpenVehicleSummary,
 }) {
@@ -701,6 +720,7 @@ function CarBlock({
   const salesKeys = getVehicleFieldKeys(carNum)
   const salesAmount = salesKeys ? salesRow?.[salesKeys.sales] : null
   const hasSales = salesAmount != null && Number(salesAmount) > 0
+  const salesLocked = isClosed && !isAdmin
 
   return (
     <div className="car-block">
@@ -712,7 +732,8 @@ function CarBlock({
           className="car-sales-btn"
           onClick={() => onOpenVehicleSales?.(carNum)}
         >
-          売上入力{hasSales ? ` ¥${Number(salesAmount).toLocaleString('ja-JP')}` : ''}
+          {salesLocked ? '締め済' : '売上入力'}
+          {hasSales ? ` ¥${Number(salesAmount).toLocaleString('ja-JP')}` : ''}
         </Button>
         <Button
           size="small"

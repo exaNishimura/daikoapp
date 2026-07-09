@@ -1,0 +1,2 @@
+[functions.daily-close]
+verify_jwt = false

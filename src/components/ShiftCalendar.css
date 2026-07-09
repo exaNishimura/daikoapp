@@ -330,6 +330,11 @@
   color: #666;
 }
 
+.status-label.closed-day {
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
 .status-label.closed {
   background: #ffcccc;
   color: #cc0000;
