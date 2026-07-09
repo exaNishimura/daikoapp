@@ -18,11 +18,6 @@ function parseInt0OrZero(v) {
   return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0
 }
 
-function nullableText(v) {
-  if (v == null || v === '') return null
-  return String(v)
-}
-
 /**
  * モーダル初期フォーム
  */
@@ -37,8 +32,6 @@ export function readVehicleSalesForm({
   return {
     ...readVehicleFormFromRow(dailyRow, carNum),
     shiftTimes: buildShiftTimeRows(dayShifts, employees, carNum),
-    expense_note: dailyRow?.expense_note ?? '',
-    expense_amount: dailyRow?.expense_amount ?? '',
     receivables: toShiftReceivableFormLines(receivableRows, carNum),
   }
 }
@@ -57,8 +50,6 @@ export function buildVehicleSalesSavePayload({
   receivableTotal = 0,
 }) {
   const dailyPayload = buildDailySalesUpsertPayload(workDate, existingRow, carNum, form)
-  dailyPayload.expense_note = nullableText(form.expense_note)
-  dailyPayload.expense_amount = parseInt0OrZero(form.expense_amount)
   dailyPayload.receivable_total = parseInt0OrZero(receivableTotal)
 
   const shiftUpdates = buildShiftUpdatePayloads(form.shiftTimes, dayShifts)

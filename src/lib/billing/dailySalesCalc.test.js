@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcDailyDerived, calcMonthlySalesSummary, computeCashFromShiftSales, getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from './dailySalesCalc'
+import { calcDailyDerived, calcMonthlySalesSummary, computeCashForVehicle, computeCashFromShiftSales, getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from './dailySalesCalc'
 
 describe('calcDailyDerived', () => {
   it('returns zero-filled derived values for null/empty row', () => {
@@ -55,7 +55,8 @@ describe('calcDailyDerived', () => {
       vehicle2_sales: 3000,
       vehicle1_fuel_yen: 1000,
       vehicle2_fuel_yen: 500,
-      expense_amount: 2000,
+      vehicle1_expense_amount: 1500,
+      vehicle2_expense_amount: 500,
       labor_cost: 1500,
     })
     expect(result.total_sales).toBe(8000)
@@ -67,7 +68,7 @@ describe('calcDailyDerived', () => {
     const result = calcDailyDerived({
       vehicle1_sales: null,
       vehicle1_fuel_yen: null,
-      expense_amount: 500,
+      vehicle1_expense_amount: 500,
       labor_cost: null,
     })
     expect(result.total_sales).toBe(0)
@@ -77,12 +78,26 @@ describe('calcDailyDerived', () => {
 })
 
 describe('computeCashFromShiftSales', () => {
-  it('総売上 - 経費 - 売掛で現金を算出する', () => {
+  it('総売上 - 経費 - 燃料代 - 売掛で現金を算出する', () => {
     expect(
       computeCashFromShiftSales({
         vehicle1_sales: 50000,
         vehicle2_sales: 30000,
-        expense_amount: 5000,
+        vehicle1_fuel_yen: 3000,
+        vehicle2_fuel_yen: 2000,
+        vehicle1_expense_amount: 3000,
+        vehicle2_expense_amount: 2000,
+        receivable_total: 12000,
+      })
+    ).toBe(58000)
+  })
+
+  it('燃料代が未入力のときは0として扱う', () => {
+    expect(
+      computeCashFromShiftSales({
+        vehicle1_sales: 50000,
+        vehicle2_sales: 30000,
+        vehicle1_expense_amount: 5000,
         receivable_total: 12000,
       })
     ).toBe(63000)
@@ -93,10 +108,44 @@ describe('computeCashFromShiftSales', () => {
       computeCashFromShiftSales({
         vehicle1_sales: 10000,
         vehicle2_sales: 0,
-        expense_amount: 8000,
+        vehicle1_expense_amount: 8000,
         receivable_total: 5000,
       })
     ).toBe(0)
+  })
+})
+
+describe('computeCashForVehicle', () => {
+  it('1台のみ稼働時は号車の売上 - 燃料 - 売掛 - 経費で算出する', () => {
+    expect(
+      computeCashForVehicle(
+        {
+          vehicle1_sales: 41000,
+          vehicle2_sales: 0,
+          vehicle1_fuel_yen: 3000,
+          vehicle2_fuel_yen: 0,
+          vehicle1_expense_amount: 0,
+        },
+        '1',
+        6500
+      )
+    ).toBe(31500)
+  })
+
+  it('2台稼働時は号車ごとの売上・燃料・経費・売掛で算出する', () => {
+    const row = {
+      vehicle1_sales: 50000,
+      vehicle2_sales: 30000,
+      vehicle1_fuel_yen: 3000,
+      vehicle2_fuel_yen: 2000,
+      vehicle1_expense_amount: 5000,
+      vehicle2_expense_amount: 3000,
+    }
+    expect(computeCashForVehicle(row, '1', 12000)).toBe(30000)
+    expect(computeCashForVehicle(row, '2', 5000)).toBe(20000)
+    expect(
+      computeCashForVehicle(row, '1', 12000) + computeCashForVehicle(row, '2', 5000)
+    ).toBe(computeCashFromShiftSales({ ...row, receivable_total: 17000 }))
   })
 })
 
@@ -133,7 +182,8 @@ describe('calcMonthlySalesSummary', () => {
       vehicle2_fuel_yen: 500,
       receivable_total: 3000,
       cash: 14000,
-      expense_amount: 800,
+      vehicle1_expense_amount: 500,
+      vehicle2_expense_amount: 300,
       labor_cost: 5000,
     },
     {
@@ -144,7 +194,7 @@ describe('calcMonthlySalesSummary', () => {
       vehicle2_fuel_yen: null,
       receivable_total: 0,
       cash: 8000,
-      expense_amount: 200,
+      vehicle1_expense_amount: 200,
       labor_cost: 2000,
     },
   ]

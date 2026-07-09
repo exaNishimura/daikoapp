@@ -16,8 +16,9 @@ import { useDailySaleByDate } from '@/hooks/billing/useDailySales'
 import { useReceivablesByWorkDate } from '@/hooks/billing/useReceivables'
 import { useCompanies } from '@/hooks/billing/useCompanies'
 import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
-import { filterReceivablesByVehicle } from '@/lib/billing/shiftReceivables'
+import { filterReceivablesByVehicle, sumReceivableAmounts } from '@/lib/billing/shiftReceivables'
 import { getStaffHoursLabelsByCar } from '@/lib/billing/shiftStaffHours'
+import { computeCashForVehicle } from '@/lib/billing/dailySalesCalc'
 import {
   buildCompanyLookup,
   enrichReceivablesWithCompanies,
@@ -85,11 +86,17 @@ export function VehicleSalesSummaryModal({
 
   const vehicleKeys = carNum ? getVehicleFieldKeys(carNum) : null
   const distance = vehicleKeys ? salesRow?.[vehicleKeys.distance_km] : null
+  const fuel = vehicleKeys ? salesRow?.[vehicleKeys.fuel_yen] : null
   const sales = vehicleKeys ? salesRow?.[vehicleKeys.sales] : null
 
-  const expenseAmount = Number(salesRow?.expense_amount) || 0
-  const expenseNote = salesRow?.expense_note?.trim() || ''
+  const expenseAmount = vehicleKeys ? Number(salesRow?.[vehicleKeys.expense_amount]) || 0 : 0
+  const expenseNote = vehicleKeys ? salesRow?.[vehicleKeys.expense_note]?.trim() || '' : ''
   const hasExpense = expenseAmount > 0 || expenseNote !== ''
+
+  const vehicleCash = useMemo(() => {
+    if (!salesRow || !carNum) return null
+    return computeCashForVehicle(salesRow, carNum, sumReceivableAmounts(receivables))
+  }, [salesRow, carNum, receivables])
 
   const dateLabel = formatWorkDateLabel(workDate, dow)
 
@@ -108,6 +115,7 @@ export function VehicleSalesSummaryModal({
                 <SummaryRow label="日付" value={dateLabel} />
                 <SummaryRow label="号車" value={carNum ? `${carNum}号車` : '—'} />
                 <SummaryRow label="走行距離" value={formatDistance(distance)} />
+                <SummaryRow label="燃料代" value={formatYen(fuel)} />
                 <SummaryRow label="売上" value={formatYen(sales)} />
               </TableBody>
             </Table>
@@ -183,7 +191,7 @@ export function VehicleSalesSummaryModal({
               <TableBody>
                 <SummaryRow
                   label="現金"
-                  value={formatYen(salesRow?.cash)}
+                  value={formatYen(vehicleCash)}
                   valueSx={{ fontWeight: 600 }}
                 />
               </TableBody>

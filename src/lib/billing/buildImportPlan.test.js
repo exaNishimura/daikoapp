@@ -90,7 +90,7 @@ describe('buildImportPlan', () => {
       vehicle2_sales: 20000,
       total_hours: 14,
       receivable_total: 10000,
-      expense_amount: 0,
+      vehicle1_expense_amount: 0,
       labor_cost: 4000,
       cash: 40000,
     })

@@ -93,8 +93,10 @@ const EDITABLE_FIELDS = [
   { key: 'vehicle2_fuel_yen', label: '燃料(2号車)', unit: '¥', type: 'number', step: 1 },
   { key: 'vehicle1_sales', label: '売上(1号車)', unit: '¥', type: 'number', step: 1 },
   { key: 'vehicle2_sales', label: '売上(2号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'expense_note', label: '経費内容', type: 'text' },
-  { key: 'expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1 },
+  { key: 'vehicle1_expense_note', label: '経費内容(1号車)', type: 'text' },
+  { key: 'vehicle1_expense_amount', label: '経費額(1号車)', unit: '¥', type: 'number', step: 1 },
+  { key: 'vehicle2_expense_note', label: '経費内容(2号車)', type: 'text' },
+  { key: 'vehicle2_expense_amount', label: '経費額(2号車)', unit: '¥', type: 'number', step: 1 },
   { key: 'labor_cost', label: '人件費', unit: '¥', type: 'number', step: 1 },
   { key: 'cash', label: '現金', unit: '¥', type: 'number', step: 1 },
 ]
@@ -167,8 +169,10 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
       vehicle2_fuel_yen: parseInt0(merged.vehicle2_fuel_yen),
       vehicle1_sales: parseInt0(merged.vehicle1_sales) ?? 0,
       vehicle2_sales: parseInt0(merged.vehicle2_sales) ?? 0,
-      expense_note: merged.expense_note ?? null,
-      expense_amount: parseInt0(merged.expense_amount) ?? 0,
+      vehicle1_expense_note: merged.vehicle1_expense_note ?? null,
+      vehicle2_expense_note: merged.vehicle2_expense_note ?? null,
+      vehicle1_expense_amount: parseInt0(merged.vehicle1_expense_amount) ?? 0,
+      vehicle2_expense_amount: parseInt0(merged.vehicle2_expense_amount) ?? 0,
       labor_cost: parseInt0(merged.labor_cost) ?? 0,
       cash: parseInt0(merged.cash) ?? 0,
     }
@@ -265,7 +269,8 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
               vehicle2_sales: parseInt0(merged.vehicle2_sales),
               vehicle1_fuel_yen: parseInt0(merged.vehicle1_fuel_yen),
               vehicle2_fuel_yen: parseInt0(merged.vehicle2_fuel_yen),
-              expense_amount: parseInt0(merged.expense_amount),
+              vehicle1_expense_amount: parseInt0(merged.vehicle1_expense_amount),
+              vehicle2_expense_amount: parseInt0(merged.vehicle2_expense_amount),
               labor_cost: parseInt0(merged.labor_cost),
             })
             const receivableSummary = receivableByDate.get(workDate)

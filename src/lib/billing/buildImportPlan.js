@@ -52,8 +52,10 @@ export function buildImportPlan(parsed, { companyMap = {}, duplicates = new Set(
     vehicle2_sales: r.vehicle2Sales ?? 0,
     total_hours: r.totalHours ?? 0,
     receivable_total: r.receivableTotal ?? 0,
-    expense_note: nullable(r.expenseNote),
-    expense_amount: r.expenseAmount ?? 0,
+    vehicle1_expense_note: nullable(r.expenseNote),
+    vehicle1_expense_amount: r.expenseAmount ?? 0,
+    vehicle2_expense_note: null,
+    vehicle2_expense_amount: 0,
     labor_cost: r.laborCost ?? 0,
     cash: r.cash ?? 0,
   }))

@@ -9,6 +9,8 @@
  * 旧 staff_rates × daily_staff_sales ベースの payroll 計算は廃止。
  */
 
+import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
+
 function n(v) {
   const x = Number(v)
   return Number.isFinite(x) ? x : 0
@@ -49,6 +51,22 @@ export function getDailyTotalSales(row) {
 }
 
 /**
+ * 日次の経費合計（号車別経費の合算）
+ */
+export function getExpenseTotal(row) {
+  if (row == null) return 0
+  return n(row.vehicle1_expense_amount) + n(row.vehicle2_expense_amount)
+}
+
+/**
+ * 号車別の経費額
+ */
+export function getExpenseForVehicle(row, carNum) {
+  const fields = getVehicleFieldKeys(carNum)
+  if (!fields || row == null) return 0
+  return n(row[fields.expense_amount])
+}
+/**
  * 1 行分の派生値を計算する。
  *
  * @param {Object|null} row daily_sales 行
@@ -60,17 +78,38 @@ export function calcDailyDerived(row) {
   }
   const total_sales = getDailyTotalSales(row)
   const fuel_total = n(row.vehicle1_fuel_yen) + n(row.vehicle2_fuel_yen)
-  const profit =
-    total_sales - n(row.expense_amount) - fuel_total - n(row.labor_cost)
+  const expense_total = getExpenseTotal(row)
+  const profit = total_sales - expense_total - fuel_total - n(row.labor_cost)
   return { total_sales, fuel_total, profit }
 }
 
 /**
- * シフト表入力ベースの現金 = 総売上 - 経費 - 未収（売掛）
+ * シフト表入力ベースの現金 = 総売上 - 経費 - 燃料代 - 未収（売掛）
  */
 export function computeCashFromShiftSales(row) {
   const total_sales = n(row?.vehicle1_sales) + n(row?.vehicle2_sales)
-  const cash = total_sales - n(row?.expense_amount) - n(row?.receivable_total)
+  const fuel_total = n(row?.vehicle1_fuel_yen) + n(row?.vehicle2_fuel_yen)
+  const cash = total_sales - getExpenseTotal(row) - fuel_total - n(row?.receivable_total)
+  return Math.max(0, Math.trunc(cash))
+}
+
+/**
+ * 号車別の現金（集計結果表示用）。
+ * 号車売上 - 号車燃料代 - 号車経費 - 号車売掛
+ *
+ * @param {Object|null} row daily_sales 行
+ * @param {string|number} carNum 号車番号
+ * @param {number} [receivableTotal=0] 当該号車の売掛合計
+ */
+export function computeCashForVehicle(row, carNum, receivableTotal = 0) {
+  const fields = getVehicleFieldKeys(carNum)
+  if (!fields || row == null) return 0
+
+  const vehicle_sales = n(row[fields.sales])
+  const vehicle_fuel = n(row[fields.fuel_yen])
+  const vehicle_expense = n(row[fields.expense_amount])
+
+  const cash = vehicle_sales - vehicle_fuel - vehicle_expense - n(receivableTotal)
   return Math.max(0, Math.trunc(cash))
 }
 
@@ -96,7 +135,7 @@ export function calcMonthlySalesSummary(dailySales = [], fixedExpenses = []) {
     fuel_total += d.fuel_total
     receivable_total += n(row.receivable_total)
     cash_total += n(row.cash)
-    expense_total += n(row.expense_amount)
+    expense_total += getExpenseTotal(row)
     labor_cost_total += n(row.labor_cost)
   }
 

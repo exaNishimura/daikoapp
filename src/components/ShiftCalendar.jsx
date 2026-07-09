@@ -637,21 +637,23 @@ function DayBlock({
       </div>
 
       {!dayData.status && (
-        <div className="timeline-container" style={{ width: TIMELINE_WIDTH + 'px' }}>
-          <TimeAxis />
-          {[...new Set(dayData.shifts.map((s) => s.car))].sort().map((carNum) => (
-            <CarBlock
-              key={carNum}
-              carNum={carNum}
-              shifts={dayData.shifts}
-              visibleEmployeeIds={visibleEmployeeIds}
-              colorByName={colorByName}
-              employees={employees}
-              salesRow={salesRow}
-              onOpenVehicleSales={onOpenVehicleSales}
-              onOpenVehicleSummary={onOpenVehicleSummary}
-            />
-          ))}
+        <div className="day-timeline-scroll">
+          <div className="timeline-container" style={{ width: TIMELINE_WIDTH + 'px' }}>
+            <TimeAxis />
+            {[...new Set(dayData.shifts.map((s) => s.car))].sort().map((carNum) => (
+              <CarBlock
+                key={carNum}
+                carNum={carNum}
+                shifts={dayData.shifts}
+                visibleEmployeeIds={visibleEmployeeIds}
+                colorByName={colorByName}
+                employees={employees}
+                salesRow={salesRow}
+                onOpenVehicleSales={onOpenVehicleSales}
+                onOpenVehicleSummary={onOpenVehicleSummary}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
