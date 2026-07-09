@@ -32,7 +32,7 @@ export async function estimateDuration(
   try {
     // プロキシ経由でAPIを呼び出す（CORSエラーを回避）
     // APIキーはクエリパラメータとして含める（プロキシで転送される）
-    let url = `/api/google-maps/directions/json?origin=${encodeURIComponent(pickupAddress)}&destination=${encodeURIComponent(dropoffAddress)}&key=${GOOGLE_MAPS_API_KEY}&language=ja`
+    let url = `/api/google-maps/directions/json?origin=${encodeURIComponent(pickupAddress)}&destination=${encodeURIComponent(dropoffAddress)}&language=ja`
 
     // 経由地がある場合は追加
     if (waypoints && waypoints.length > 0) {
@@ -115,7 +115,7 @@ export async function estimateDuration(
     let returnTripMinutes = 0
     if (waitingLocationAddress && waitingLocationAddress.trim().length > 0) {
       try {
-        const returnUrl = `/api/google-maps/directions/json?origin=${encodeURIComponent(dropoffAddress)}&destination=${encodeURIComponent(waitingLocationAddress.trim())}&key=${GOOGLE_MAPS_API_KEY}&language=ja`
+        const returnUrl = `/api/google-maps/directions/json?origin=${encodeURIComponent(dropoffAddress)}&destination=${encodeURIComponent(waitingLocationAddress.trim())}&language=ja`
 
         if (import.meta.env.DEV) {
           console.log('Fetching return route:', {

@@ -7,6 +7,7 @@ import IconButton from '@mui/material/IconButton'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import RouteIcon from '@mui/icons-material/Route'
+import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import { getAddressFromCity } from '@/utils/addressUtils'
 
 const sectionTitleSx = {
@@ -90,6 +91,9 @@ function MapEmbed({ order }) {
 }
 
 function RouteEditFields({ formData, handleChange, setFormData }) {
+  const updateField = (name, value) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
   const updateWaypoint = (index, value) => {
     const next = [...formData.waypoints]
     next[index] = value
@@ -108,14 +112,20 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
   return (
     <>
       <TextField
+        label="お迎え場所"
+        name="pickup_location"
+        value={formData.pickup_location}
+        onChange={handleChange}
+        placeholder="例: モンガータ"
+        fullWidth
+      />
+      <PlacesAutocompleteField
         label="出発地"
         name="pickup_address"
         value={formData.pickup_address}
-        onChange={handleChange}
-        multiline
-        rows={2}
-        fullWidth
-        inputProps={{ 'data-1p-ignore': true }}
+        onChange={(address) => updateField('pickup_address', address)}
+        placeholder="例: 三重県鈴鹿市..."
+        required
       />
       <Box>
         <Box
@@ -133,19 +143,17 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
             追加
           </Button>
         </Box>
-        <Stack spacing={1}>
+        <Stack spacing={1.5}>
           {formData.waypoints.map((waypoint, index) => (
             <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <TextField
-                label={`経由地 ${index + 1}`}
-                value={waypoint}
-                onChange={(e) => updateWaypoint(index, e.target.value)}
-                multiline
-                rows={2}
-                placeholder="例: 三重県鈴鹿市..."
-                fullWidth
-                size="small"
-              />
+              <Box sx={{ flex: 1 }}>
+                <PlacesAutocompleteField
+                  label={`経由地 ${index + 1}`}
+                  value={waypoint}
+                  onChange={(address) => updateWaypoint(index, address)}
+                  placeholder="例: 三重県鈴鹿市..."
+                />
+              </Box>
               <IconButton
                 onClick={() => removeWaypoint(index)}
                 sx={{ mt: 0.5 }}
@@ -167,15 +175,13 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
           )}
         </Stack>
       </Box>
-      <TextField
+      <PlacesAutocompleteField
         label="目的地"
         name="dropoff_address"
         value={formData.dropoff_address}
-        onChange={handleChange}
-        multiline
-        rows={2}
-        fullWidth
-        inputProps={{ 'data-1p-ignore': true }}
+        onChange={(address) => updateField('dropoff_address', address)}
+        placeholder="例: 三重県鈴鹿市..."
+        required
       />
     </>
   )
@@ -189,6 +195,14 @@ function RouteViewFields({
 }) {
   return (
     <>
+      {order.pickup_location && (
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+            お迎え場所
+          </Typography>
+          <Typography variant="body2">{order.pickup_location}</Typography>
+        </Box>
+      )}
       <Box>
         <Typography variant="caption" color="text.secondary" sx={labelSx}>
           出発地

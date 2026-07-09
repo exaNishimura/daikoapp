@@ -162,7 +162,11 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
           onClick(e)
         }
       }}
-      aria-label={`${order.pickup_address}から${order.dropoff_address}、${formatTime(startDate)}から${formatTime(endDate)}`}
+      aria-label={
+        order.pickup_location
+          ? `${order.pickup_location}、${order.pickup_address}から${order.dropoff_address}、${formatTime(startDate)}から${formatTime(endDate)}`
+          : `${order.pickup_address}から${order.dropoff_address}、${formatTime(startDate)}から${formatTime(endDate)}`
+      }
     >
       <div className="slot-header">
         <span className={`status-badge ${(order?.status || slot.status).toLowerCase()}`}>
@@ -191,6 +195,11 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
         </span>
       </div>
       <div className="slot-body">
+        {order.pickup_location && (
+          <div className="slot-pickup-location" title={order.pickup_location}>
+            {order.pickup_location}
+          </div>
+        )}
         <div
           className="slot-route"
           aria-label={`ルート: ${routeText}`}
@@ -203,12 +212,6 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
             </span>
           </div>
         </div>
-        {(order.contact_phone || order.parking_note) && (
-          <div className="slot-icons" aria-hidden="true">
-            {order.contact_phone && <span title="電話番号あり">📞</span>}
-            {order.parking_note && <span title="駐車メモあり">📝</span>}
-          </div>
-        )}
       </div>
       {isConflict && (
         <div
@@ -224,6 +227,18 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
         <DialogTitle>依頼詳細情報</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
+            {order.pickup_location && (
+              <Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                >
+                  お迎え場所
+                </Typography>
+                <Typography variant="body2">{order.pickup_location}</Typography>
+              </Box>
+            )}
             {order.contact_phone && (
               <Box>
                 <Typography
@@ -276,7 +291,10 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
                 <Typography variant="body2">✋ 所要時間が手動で調整されています</Typography>
               </Box>
             )}
-            {!order.contact_phone && !order.parking_note && !order.buffer_manual && (
+            {!order.pickup_location &&
+              !order.contact_phone &&
+              !order.parking_note &&
+              !order.buffer_manual && (
               <Typography variant="body2" color="text.secondary">
                 追加情報はありません
               </Typography>

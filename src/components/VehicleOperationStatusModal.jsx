@@ -5,6 +5,7 @@ import {
   deleteVehicleOperationStatus,
 } from '@/services/vehicleOperationService'
 import { getVehicles, updateVehicle } from '@/services/vehicleService'
+import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -282,17 +283,11 @@ export function VehicleOperationStatusModal({
 
         <Divider sx={{ my: 3 }} />
         <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            待機場所住所
-          </Typography>
-          <TextField
+          <PlacesAutocompleteField
             label="待機場所住所"
             value={waitingLocationAddress}
-            onChange={(e) => setWaitingLocationAddress(e.target.value)}
-            multiline
-            rows={2}
+            onChange={setWaitingLocationAddress}
             placeholder="例: 三重県鈴鹿市平田新町2-20"
-            fullWidth
             helperText="目的地から待機場所への所要時間を計算するために使用されます"
           />
         </Box>

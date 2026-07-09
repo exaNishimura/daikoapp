@@ -29,6 +29,7 @@ export async function saveOrderEdit({ order, formData, deps }) {
   const waypoints = (formData.waypoints || []).map((wp) => wp.trim()).filter((wp) => wp.length > 0)
 
   const updates = {
+    pickup_location: formData.pickup_location?.trim() || null,
     pickup_address: formData.pickup_address,
     dropoff_address: formData.dropoff_address,
     waypoints: waypoints.length > 0 ? waypoints : null,

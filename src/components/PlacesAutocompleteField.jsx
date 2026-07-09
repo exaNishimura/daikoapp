@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import Box from '@mui/material/Box'
 import FormLabel from '@mui/material/FormLabel'
 import FormHelperText from '@mui/material/FormHelperText'
+import { useTheme } from '@mui/material/styles'
 import {
   importPlacesLibrary,
   getMieLocationRestriction,
@@ -23,6 +24,7 @@ import {
  * @param {string} [props.placeholder]
  * @param {boolean} [props.required]
  * @param {string} [props.error] - エラーメッセージ（あれば赤表示）
+ * @param {string} [props.helperText] - 補助テキスト
  */
 export function PlacesAutocompleteField({
   value = '',
@@ -32,7 +34,9 @@ export function PlacesAutocompleteField({
   placeholder,
   required = false,
   error,
+  helperText,
 }) {
+  const theme = useTheme()
   const containerRef = useRef(null)
   const elementRef = useRef(null)
   // onChange を ref 経由で参照し、生成 effect の依存から外す（要素の作り直しを防ぐ）
@@ -117,6 +121,8 @@ export function PlacesAutocompleteField({
     }
   }, [value])
 
+  const isLight = theme.palette.mode === 'light'
+
   return (
     <Box>
       {label && (
@@ -128,8 +134,26 @@ export function PlacesAutocompleteField({
           {label}
         </FormLabel>
       )}
-      <div ref={containerRef} />
-      {error && <FormHelperText error>{error}</FormHelperText>}
+      <Box
+        ref={containerRef}
+        className="places-autocomplete-host"
+        data-color-scheme={theme.palette.mode}
+        data-error={error ? 'true' : undefined}
+        sx={{
+          width: '100%',
+          // MUI OutlinedInput と同じ枠線・角丸（dispatchLightTheme / darkTheme 双方に追従）
+          '--places-border': isLight ? 'rgba(0, 0, 0, 0.23)' : 'rgba(255, 255, 255, 0.23)',
+          '--places-border-hover': isLight ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
+          '--places-border-focus': theme.palette.primary.main,
+          '--places-border-error': theme.palette.error.main,
+          '--places-radius': `${theme.shape.borderRadius}px`,
+        }}
+      />
+      {error ? (
+        <FormHelperText error>{error}</FormHelperText>
+      ) : helperText ? (
+        <FormHelperText>{helperText}</FormHelperText>
+      ) : null}
     </Box>
   )
 }

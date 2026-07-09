@@ -52,13 +52,11 @@ export function OrderCard({ order, isSelected, onClick }) {
 
   const totalDuration = (order.base_duration_min || 30) + (order.buffer_min || 0)
 
-  const carInfo = []
-  if (order.car_plate) {
-    carInfo.push(order.car_plate.slice(-4))
-  }
-  if (order.car_color) {
-    carInfo.push(order.car_color)
-  }
+  const carInfoParts = []
+  if (order.car_model) carInfoParts.push(order.car_model)
+  if (order.car_color) carInfoParts.push(order.car_color)
+  if (order.car_plate) carInfoParts.push(order.car_plate.slice(-4))
+  const carInfoText = carInfoParts.join(' ')
 
   const statusColor =
     {
@@ -163,18 +161,6 @@ export function OrderCard({ order, isSelected, onClick }) {
           >
             {totalDuration}分
           </Typography>
-          {carInfo.length > 0 && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'text.secondary',
-                fontSize: '0.65rem',
-                flexShrink: 0,
-              }}
-            >
-              {carInfo.join(' ')}
-            </Typography>
-          )}
           {order.parking_note && (
             <Typography
               component="span"
@@ -186,6 +172,38 @@ export function OrderCard({ order, isSelected, onClick }) {
             </Typography>
           )}
         </Box>
+        {order.pickup_location && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              fontSize: '0.65rem',
+              lineHeight: 1.3,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={order.pickup_location}
+          >
+            {order.pickup_location}
+          </Typography>
+        )}
+        {carInfoText && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              fontSize: '0.65rem',
+              lineHeight: 1.3,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={carInfoText}
+          >
+            {carInfoText}
+          </Typography>
+        )}
         <Typography
           variant="caption"
           sx={{

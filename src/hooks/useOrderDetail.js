@@ -23,6 +23,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { getOrderConflictMessages } from '@/lib/slotConflictUtils'
 
 const buildInitialFormData = (order) => ({
+  pickup_location: order.pickup_location || '',
   pickup_address: order.pickup_address,
   dropoff_address: order.dropoff_address,
   waypoints: order.waypoints || [],
@@ -55,6 +56,11 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
   const [calculatingWaitingDuration, setCalculatingWaitingDuration] = useState(false)
   const [loading, setLoading] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
+
+  useEffect(() => {
+    setFormData(buildInitialFormData(order))
+    setEditing(false)
+  }, [order.id])
 
   const updateOrderMutation = useUpdateOrder()
   const cancelOrderMutation = useCancelOrder()

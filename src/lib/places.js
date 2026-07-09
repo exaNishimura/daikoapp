@@ -70,62 +70,110 @@ export function importPlacesLibrary({ timeoutMs = 10000, pollIntervalMs = 100 } 
 }
 
 /**
- * `PlaceAutocompleteElement` をダークテーマに寄せるスタイルを一度だけ <head> に注入する。
+ * `PlaceAutocompleteElement` を MUI OutlinedInput に合わせるスタイルを一度だけ <head> に注入する。
  *
- * MUI OutlinedInput（暗色）に見た目を近づける。候補リストは color-scheme: dark で
- * ブラウザ／要素側にダーク描画を促しつつ、::part で細部を調整。
+ * 枠線・角丸は gmp-place-autocomplete ホストに付与（Google 公式 CSS プロパティ）。
+ * 色・半径は `.places-autocomplete-host` の CSS 変数（MUI theme 由来）を参照する。
  */
 export function injectPlaceAutocompleteStyle() {
   if (typeof document === 'undefined') return
-  if (document.getElementById('place-autocomplete-style-v3')) return
+  if (document.getElementById('place-autocomplete-style-v6')) return
+
+  document.getElementById('place-autocomplete-style-v3')?.remove()
+  document.getElementById('place-autocomplete-style-v4')?.remove()
+  document.getElementById('place-autocomplete-style-v5')?.remove()
 
   const style = document.createElement('style')
-  style.id = 'place-autocomplete-style-v3'
+  style.id = 'place-autocomplete-style-v6'
   style.textContent = `
-    gmp-place-autocomplete {
+    .places-autocomplete-host gmp-place-autocomplete {
       width: 100%;
-      /* UA のダークスキーム（黒描画）を無効化。背景・文字色は下で明示する */
-      color-scheme: light;
-      /* 要素ホストの背景を透明にし、下の MUI Paper(#2a2a2a) を透けさせる */
+      box-sizing: border-box;
+      display: block;
+      border: 1px solid var(--places-border, rgba(0, 0, 0, 0.23));
+      border-radius: var(--places-radius, 8px);
       background-color: transparent;
       font-family: inherit;
+      transition:
+        border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+        border-width 200ms cubic-bezier(0.4, 0, 0.2, 1);
     }
-    gmp-place-autocomplete::part(input) {
+    .places-autocomplete-host:hover gmp-place-autocomplete {
+      border-color: var(--places-border-hover, rgba(0, 0, 0, 0.87));
+    }
+    .places-autocomplete-host:focus-within gmp-place-autocomplete {
+      border-color: var(--places-border-focus, #5b61e6);
+      border-width: 2px;
+    }
+    .places-autocomplete-host[data-error="true"] gmp-place-autocomplete {
+      border-color: var(--places-border-error, #dc2626);
+    }
+    .places-autocomplete-host[data-error="true"]:focus-within gmp-place-autocomplete {
+      border-color: var(--places-border-error, #dc2626);
+      border-width: 2px;
+    }
+    .places-autocomplete-host gmp-place-autocomplete::part(focus-ring) {
+      display: none;
+    }
+    .places-autocomplete-host gmp-place-autocomplete::part(input) {
       box-sizing: border-box;
       width: 100%;
       background-color: transparent;
-      color: rgba(255, 255, 255, 0.87);
-      border: 1px solid rgba(255, 255, 255, 0.23);
-      border-radius: 8px;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      border-radius: inherit;
       padding: 16.5px 14px;
       font-size: 1rem;
       line-height: 1.4375em;
       font-family: inherit;
     }
-    gmp-place-autocomplete::part(input):hover {
-      border-color: rgba(255, 255, 255, 0.87);
+
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete {
+      color-scheme: light;
     }
-    gmp-place-autocomplete::part(input):focus {
-      border-color: #646cff;
-      outline: 1px solid #646cff;
-      outline-offset: -1px;
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete::part(input) {
+      color: rgba(0, 0, 0, 0.87);
     }
-    /* 候補ドロップダウンのコンテナ（ここも既定だと黒くなる） */
-    gmp-place-autocomplete::part(prediction-list) {
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete::part(prediction-list) {
+      background-color: #ffffff;
+      border: 1px solid #e3e7ec;
+    }
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete::part(prediction-item) {
+      background-color: #ffffff;
+      color: #1f2733;
+    }
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete::part(prediction-item-selected) {
+      background-color: #f4f6f8;
+    }
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete::part(prediction-item-main-text) {
+      color: #1f2733;
+    }
+    .places-autocomplete-host[data-color-scheme="light"] gmp-place-autocomplete::part(prediction-item-secondary-text) {
+      color: #6b7280;
+    }
+
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete {
+      color-scheme: dark;
+    }
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete::part(input) {
+      color: rgba(255, 255, 255, 0.87);
+    }
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete::part(prediction-list) {
       background-color: #2a2a2a;
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
-    gmp-place-autocomplete::part(prediction-item) {
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete::part(prediction-item) {
       background-color: #2a2a2a;
       color: rgba(255, 255, 255, 0.87);
     }
-    gmp-place-autocomplete::part(prediction-item-selected) {
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete::part(prediction-item-selected) {
       background-color: #3a3a3a;
     }
-    gmp-place-autocomplete::part(prediction-item-main-text) {
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete::part(prediction-item-main-text) {
       color: rgba(255, 255, 255, 0.92);
     }
-    gmp-place-autocomplete::part(prediction-item-secondary-text) {
+    .places-autocomplete-host[data-color-scheme="dark"] gmp-place-autocomplete::part(prediction-item-secondary-text) {
       color: rgba(255, 255, 255, 0.6);
     }
   `

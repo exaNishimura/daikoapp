@@ -123,6 +123,15 @@
   min-width: 0;
 }
 
+.slot-pickup-location {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--dsp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .slot-route {
   font-size: 0.72rem;
   overflow: hidden;
@@ -169,13 +178,6 @@
   to {
     transform: translateX(-50%);
   }
-}
-
-.slot-icons {
-  display: flex;
-  gap: 0.25rem;
-  font-size: 0.72rem;
-  margin-top: 0.125rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
