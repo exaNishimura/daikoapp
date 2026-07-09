@@ -64,3 +64,21 @@ export function getDefaultShiftEditYearMonth(reference = new Date()) {
     month: reference.getMonth() + 1,
   }
 }
+
+/** シフト保存時: 設定時間を planned_* にも反映 */
+export function withPlannedShiftTimes({ start, end, ...rest }) {
+  return {
+    ...rest,
+    start,
+    end,
+    planned_start: start,
+    planned_end: end,
+  }
+}
+
+/** コピー元から予定時間を取得（実績で上書きされた start/end は無視） */
+export function getShiftPlannedTimesForCopy(shift) {
+  const start = shift.planned_start ?? shift.start
+  const end = shift.planned_end ?? shift.end
+  return { start, end, planned_start: start, planned_end: end }
+}

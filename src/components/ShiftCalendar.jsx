@@ -16,6 +16,10 @@ import {
   getStaffDisplayName,
   resolveShiftEmployee,
 } from '@/lib/staffFromEmployees'
+import {
+  computeDayTargetAmount,
+  roundTargetDisplayAmount,
+} from '@/lib/billing/shiftTargetAmount'
 import { getContrastTextColor } from '@/lib/colorContrast'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -552,53 +556,14 @@ function DayBlock({
   const dateParts = dayData.date.split('-')
   const dateFormatted = `${parseInt(dateParts[1])}月${parseInt(dateParts[2])}日`
 
-  // 目標金額を計算
-  const calculateTargetAmount = () => {
-    if (dayData.status || !dayData.shifts || dayData.shifts.length === 0) {
-      return null
-    }
-
-    // 従業員マップを作成（名前で検索）
-    const employeeMap = {}
-    employees.forEach((emp) => {
-      if (emp?.id) employeeMap[emp.id] = emp
-    })
-
-    let totalWage = 0
-
-    // 各シフトの給料を計算
-    dayData.shifts.forEach((shift) => {
-      if (!shift.start || !shift.end) return
-
-      const employee =
-        (shift.employee_id && employeeMap[shift.employee_id]) ||
-        resolveShiftEmployee(shift, employees)
-      if (!employee || !employee.hourly_wage) return
-
-      // 勤務時間を計算（時間単位）
-      const startTime = shift.start.split(':')
-      const endTime = shift.end.split(':')
-      const startMinutes = parseInt(startTime[0]) * 60 + parseInt(startTime[1])
-      let endMinutes = parseInt(endTime[0]) * 60 + parseInt(endTime[1])
-
-      // 翌日をまたぐ場合（終了時刻が開始時刻より小さい場合）
-      if (endMinutes <= startMinutes) {
-        endMinutes += 24 * 60 // 24時間分を加算
-      }
-
-      const workHours = (endMinutes - startMinutes) / 60
-      const wage = employee.hourly_wage * workHours
-      totalWage += wage
-    })
-
-    // 3000円を加算
-    return totalWage + 3000
-  }
-
-  const targetAmount = calculateTargetAmount()
   const salesRow = salesByDate[toWorkDateKey(dayData.date)] ?? null
-  const displayTarget =
-    targetAmount !== null ? Math.ceil(Math.round(targetAmount) / 1000) * 1000 : null
+  const displayTarget = roundTargetDisplayAmount(
+    computeDayTargetAmount({
+      shifts: dayData.shifts,
+      employees,
+      status: dayData.status,
+    })
+  )
   const totalSales = getDailyTotalSales(salesRow)
   const targetPct =
     displayTarget != null && displayTarget > 0
@@ -608,8 +573,8 @@ function DayBlock({
   return (
     <div className={`day-block ${isFriSat ? 'fri-sat' : ''}`} data-date={dayData.date}>
       <div className="day-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="day-header-main">
+          <div className="day-header-date-row">
             <div className="day-date">
               {dateFormatted}
               <span className="day-dow">({dayData.dow})</span>
@@ -623,7 +588,7 @@ function DayBlock({
             )}
           </div>
           {displayTarget !== null && (
-            <>
+            <div className="day-header-stats">
               <div className="target-amount">目標: ¥{displayTarget.toLocaleString()}</div>
               <div className="daily-sales-total">総売上: ¥{totalSales.toLocaleString()}</div>
               <div
@@ -631,7 +596,7 @@ function DayBlock({
               >
                 {targetPct}%
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

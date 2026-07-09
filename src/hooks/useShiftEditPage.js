@@ -13,7 +13,7 @@ import {
   resolveShiftEmployee,
   toShiftStaffFields,
 } from '@/lib/staffFromEmployees'
-import { DOW_MAP, getDaysInMonth } from '@/lib/shiftEditUtils'
+import { DOW_MAP, getDaysInMonth, getShiftPlannedTimesForCopy, withPlannedShiftTimes } from '@/lib/shiftEditUtils'
 
 const EMPTY_NEW_SHIFT = {
   car: '',
@@ -150,16 +150,18 @@ export function useShiftEditPage({ year, month }) {
 
     try {
       const dow = DOW_MAP[new Date(date).getDay()]
-      await createShiftMutation.mutateAsync({
-        date,
-        dow,
-        car: shiftData.car,
-        role: shiftData.role,
-        ...toShiftStaffFields(shiftData.employee_id, employees),
-        start: shiftData.start,
-        end: shiftData.end,
-        note: shiftData.note || null,
-      })
+      await createShiftMutation.mutateAsync(
+        withPlannedShiftTimes({
+          date,
+          dow,
+          car: shiftData.car,
+          role: shiftData.role,
+          ...toShiftStaffFields(shiftData.employee_id, employees),
+          start: shiftData.start,
+          end: shiftData.end,
+          note: shiftData.note || null,
+        })
+      )
       setNewShifts((prev) => ({ ...prev, [date]: { ...EMPTY_NEW_SHIFT } }))
       setSuccess('シフトを追加しました')
     } catch (err) {
@@ -176,8 +178,8 @@ export function useShiftEditPage({ year, month }) {
         car: shift.car,
         role: shift.role,
         employee_id: shift.employee_id || resolveShiftEmployee(shift, employees)?.id || '',
-        start: shift.start,
-        end: shift.end,
+        start: shift.planned_start ?? shift.start,
+        end: shift.planned_end ?? shift.end,
         note: shift.note || '',
       },
     }))
@@ -251,7 +253,7 @@ export function useShiftEditPage({ year, month }) {
           const dow = DOW_MAP[new Date(date).getDay()]
           return updateShiftMutation.mutateAsync({
             id: shiftId,
-            shiftData: {
+            shiftData: withPlannedShiftTimes({
               car: shiftData.car,
               role: shiftData.role,
               ...toShiftStaffFields(shiftData.employee_id, employees),
@@ -259,7 +261,7 @@ export function useShiftEditPage({ year, month }) {
               end: shiftData.end,
               note: shiftData.note || null,
               dow,
-            },
+            }),
           })
         })
         .filter(Boolean)
@@ -290,18 +292,18 @@ export function useShiftEditPage({ year, month }) {
       const dow = DOW_MAP[new Date(copyTargetDate).getDay()]
 
       await Promise.all(
-        sourceShifts.map((shift) =>
-          createShiftMutation.mutateAsync({
+        sourceShifts.map((shift) => {
+          const planned = getShiftPlannedTimesForCopy(shift)
+          return createShiftMutation.mutateAsync({
             date: copyTargetDate,
             dow,
             car: shift.car,
             role: shift.role,
             ...toShiftStaffFields(shift.employee_id, employees),
-            start: shift.start,
-            end: shift.end,
             note: shift.note || null,
+            ...planned,
           })
-        )
+        })
       )
       setSuccess(`${sourceDate}の${sourceShifts.length}件をコピー先に上書きしました`)
     } catch (err) {
@@ -338,18 +340,18 @@ export function useShiftEditPage({ year, month }) {
         await deleteShiftsByDateMutation.mutateAsync(targetDate)
         const dow = DOW_MAP[new Date(targetDate).getDay()]
         await Promise.all(
-          sourceShifts.map((shift) =>
-            createShiftMutation.mutateAsync({
+          sourceShifts.map((shift) => {
+            const planned = getShiftPlannedTimesForCopy(shift)
+            return createShiftMutation.mutateAsync({
               date: targetDate,
               dow,
               car: shift.car,
               role: shift.role,
               ...toShiftStaffFields(shift.employee_id, employees),
-              start: shift.start,
-              end: shift.end,
               note: shift.note || null,
+              ...planned,
             })
-          )
+          })
         )
       }
 
