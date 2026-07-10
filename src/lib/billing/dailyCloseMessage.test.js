@@ -26,7 +26,51 @@ describe('getCloseTargetWorkDate', () => {
 })
 
 describe('buildDailyCloseMessage', () => {
-  it('includes target and achievement in header', () => {
+  it('formats vehicle section with receivable and expense breakdown', () => {
+    const message = buildDailyCloseMessage({
+      workDate: '2026-07-09',
+      dow: '木',
+      salesRow: {
+        vehicle1_sales: 23500,
+        vehicle1_fuel_yen: 0,
+        vehicle1_expense_note: '徳丸🅿️代',
+        vehicle1_expense_amount: 800,
+      },
+      shifts: [
+        {
+          car: '1',
+          employee_id: 'e2',
+          start: '20:00',
+          end: '02:30',
+          staff: 'たかし',
+        },
+        {
+          car: '1',
+          employee_id: 'e1',
+          start: '20:00',
+          end: '02:00',
+          staff: 'なみ',
+        },
+      ],
+      employees: [
+        { id: 'e1', name: 'なみ', hourly_wage: 1200 },
+        { id: 'e2', name: 'たかし', hourly_wage: 1200 },
+      ],
+      receivables: [
+        { vehicle_num: 1, amount: 2000, company: { name: '徳丸工業' } },
+        { vehicle_num: 1, amount: 3000, company: { name: '○○株式会社' } },
+      ],
+    })
+
+    expect(message).toContain('売上 ¥23,500 / 燃料 ¥0')
+    expect(message).toContain('売掛 ¥5,000（徳丸工業 ¥2,000、○○株式会社 ¥3,000）')
+    expect(message).toContain('経費 ¥800（徳丸🅿️代 ¥800）')
+    expect(message).toContain('現金 ¥17,700')
+    expect(message).toContain('稼働: たかし　6.5h / なみ　6h')
+    expect(message).not.toMatch(/^売掛 徳丸工業/m)
+  })
+
+  it('builds vehicle sections without daily summary', () => {
     const message = buildDailyCloseMessage({
       workDate: '2026-07-09',
       dow: '木',
@@ -56,12 +100,13 @@ describe('buildDailyCloseMessage', () => {
       closedAtLabel: '2026/07/10 08:00',
     })
 
-    expect(message).toContain('■ 日次サマリ')
-    expect(message).toContain('目標:')
-    expect(message).toContain('総売上: ¥35,500')
-    expect(message).toContain('達成率:')
+    expect(message).not.toContain('■ 日次サマリ')
+    expect(message).not.toContain('目標:')
+    expect(message).not.toContain('達成率:')
+    expect(message).toContain('【7/9(木) 日次締め報告】')
     expect(message).toContain('■ 1号車')
     expect(message).toContain('西村')
+    expect(message).toContain('締め時刻: 2026/07/10 08:00')
   })
 
   it('warns when operating car has no sales input', () => {

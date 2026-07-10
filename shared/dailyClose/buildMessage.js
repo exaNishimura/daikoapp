@@ -2,8 +2,6 @@
  * 日次締め LINE 通知文面生成（Edge Function / テスト共用・@/ 非依存）
  */
 
-const TARGET_OVERHEAD_YEN = 3000
-
 const VEHICLE_FIELD_KEYS = {
   1: {
     distance_km: 'vehicle1_distance_km',
@@ -43,13 +41,6 @@ function calcShiftWorkHours(start, end) {
   return (endMinutes - startMinutes) / 60
 }
 
-function getPlannedShiftTimes(shift) {
-  return {
-    start: shift?.planned_start ?? shift?.start,
-    end: shift?.planned_end ?? shift?.end,
-  }
-}
-
 function normalizeStaffName(name) {
   if (typeof name !== 'string') return ''
   return name.normalize('NFKC').trim()
@@ -59,43 +50,6 @@ function getStaffDisplayName(shift, employees) {
   if (shift?.staff) return normalizeStaffName(shift.staff)
   const emp = (employees ?? []).find((e) => e?.id === shift?.employee_id)
   return emp?.name ? normalizeStaffName(emp.name) : ''
-}
-
-function computeDayTargetAmount({ shifts, employees, dayStatus }) {
-  if (dayStatus || !shifts?.length) return null
-
-  const employeeMap = {}
-  for (const emp of employees ?? []) {
-    if (emp?.id) employeeMap[emp.id] = emp
-  }
-
-  let totalWage = 0
-  for (const shift of shifts) {
-    const { start, end } = getPlannedShiftTimes(shift)
-    if (!start || !end) continue
-
-    const employee =
-      (shift.employee_id && employeeMap[shift.employee_id]) ||
-      (employees ?? []).find(
-        (e) => normalizeStaffName(e?.name) === normalizeStaffName(shift?.staff)
-      )
-    const hourlyWage = n(employee?.hourly_wage)
-    if (hourlyWage <= 0) continue
-    totalWage += hourlyWage * calcShiftWorkHours(start, end)
-  }
-
-  return totalWage + TARGET_OVERHEAD_YEN
-}
-
-function roundTargetDisplayAmount(amount) {
-  if (amount == null || amount <= 0) return null
-  return Math.ceil(Math.round(amount) / 1000) * 1000
-}
-
-function getDailyTotalSales(row) {
-  if (row == null) return 0
-  if (row.total_sales != null && row.total_sales !== '') return n(row.total_sales)
-  return n(row.vehicle1_sales) + n(row.vehicle2_sales)
 }
 
 function filterShiftsByCar(shifts, carNum) {
@@ -181,6 +135,17 @@ function getCompanyName(row, companyLookup) {
   return row.note?.trim() || '（請求先未設定）'
 }
 
+function formatBreakdownLine(label, total, items) {
+  const validItems = (items ?? []).filter((item) => item?.label || n(item?.amount) > 0)
+  if (validItems.length === 0) {
+    return `${label} ${formatYen(total)}`
+  }
+  const breakdown = validItems
+    .map((item) => `${item.label} ${formatYen(item.amount)}`)
+    .join('、')
+  return `${label} ${formatYen(total)}（${breakdown}）`
+}
+
 function buildVehicleSection({ carNum, salesRow, shifts, employees, receivables, companyLookup }) {
   const carReceivables = filterReceivablesByVehicle(receivables, carNum)
   const fields = getVehicleFieldKeys(carNum)
@@ -199,25 +164,27 @@ function buildVehicleSection({ carNum, salesRow, shifts, employees, receivables,
   const receivableTotal = sumReceivableAmounts(carReceivables)
   const vehicleCash = computeCashForVehicle(salesRow, carNum, receivableTotal)
   const staffLabels = formatStaffHoursLabels(shifts, employees, carNum)
+  const receivableItems = carReceivables.map((row) => ({
+    label: getCompanyName(row, companyLookup),
+    amount: n(row.amount),
+  }))
 
-  lines.push(`売上 ${formatYen(sales)} / 燃料 ${formatYen(fuel)} / 売掛 ${formatYen(receivableTotal)}`)
+  lines.push(`売上 ${formatYen(sales)} / 燃料 ${formatYen(fuel)}`)
+  lines.push(formatBreakdownLine('売掛', receivableTotal, receivableItems))
   if (expenseAmount > 0 || expenseNote) {
-    const expenseText = expenseNote
-      ? `経費 ${formatYen(expenseAmount)}（${expenseNote}）`
-      : `経費 ${formatYen(expenseAmount)}`
-    lines.push(expenseText)
+    const expenseItems = [
+      {
+        label: expenseNote || '経費',
+        amount: expenseAmount,
+      },
+    ]
+    lines.push(formatBreakdownLine('経費', expenseAmount, expenseItems))
   }
   lines.push(`現金 ${formatYen(vehicleCash)}`)
   if (staffLabels.length > 0) {
     lines.push(`稼働: ${staffLabels.join(' / ')}`)
   } else {
     lines.push('稼働: なし')
-  }
-
-  if (carReceivables.length > 0) {
-    for (const row of carReceivables) {
-      lines.push(`売掛 ${getCompanyName(row, companyLookup)} ${formatYen(row.amount)}`)
-    }
   }
 
   return lines.join('\n')
@@ -248,24 +215,6 @@ export function buildDailyCloseMessage({
 }) {
   const dateLabel = formatWorkDateLabel(workDate, dow)
   const lines = [`【${dateLabel} 日次締め報告】`, '']
-
-  const targetRaw = computeDayTargetAmount({ shifts, employees, dayStatus })
-  const displayTarget = roundTargetDisplayAmount(targetRaw)
-  const totalSales = getDailyTotalSales(salesRow)
-  const targetPct =
-    displayTarget != null && displayTarget > 0
-      ? Math.round((totalSales / displayTarget) * 100)
-      : null
-
-  lines.push('■ 日次サマリ')
-  if (displayTarget != null) {
-    lines.push(`目標: ${formatYen(displayTarget)}`)
-  }
-  lines.push(`総売上: ${formatYen(totalSales)}`)
-  if (targetPct != null) {
-    lines.push(`達成率: ${targetPct}%`)
-  }
-  lines.push('')
 
   const operatingCars = getOperatingCars(shifts)
   if (operatingCars.length === 0) {
