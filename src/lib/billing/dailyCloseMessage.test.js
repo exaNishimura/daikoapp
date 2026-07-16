@@ -31,6 +31,7 @@ describe('buildDailyCloseMessage', () => {
       workDate: '2026-07-09',
       dow: '木',
       salesRow: {
+        vehicle1_distance_km: 175.5,
         vehicle1_sales: 23500,
         vehicle1_fuel_yen: 0,
         vehicle1_expense_note: '徳丸🅿️代',
@@ -62,6 +63,7 @@ describe('buildDailyCloseMessage', () => {
       ],
     })
 
+    expect(message).toContain('走行距離 175.5 km')
     expect(message).toContain('売上 ¥23,500 / 燃料 ¥0')
     expect(message).toContain('売掛 ¥5,000（徳丸工業 ¥2,000、○○株式会社 ¥3,000）')
     expect(message).toContain('経費 ¥800（徳丸🅿️代 ¥800）')
@@ -69,6 +71,21 @@ describe('buildDailyCloseMessage', () => {
     expect(message).toContain('稼働: たかし　6.5h / なみ　6h')
     expect(message).not.toMatch(/^売掛 徳丸工業/m)
   })
+
+  it('shows — when distance_km is missing', () => {
+    const message = buildDailyCloseMessage({
+      workDate: '2026-07-09',
+      salesRow: { vehicle1_sales: 10000, vehicle1_fuel_yen: 0 },
+      shifts: [
+        { car: '1', employee_id: 'e1', start: '20:00', end: '04:00', staff: '西村' },
+      ],
+      employees,
+      receivables: [],
+    })
+
+    expect(message).toContain('走行距離 —')
+  })
+
 
   it('builds vehicle sections without daily summary', () => {
     const message = buildDailyCloseMessage({

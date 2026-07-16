@@ -105,6 +105,13 @@ function formatYen(value) {
   return `¥${Number(value).toLocaleString('ja-JP')}`
 }
 
+function formatDistanceKm(value) {
+  if (value == null || value === '') return '—'
+  const num = Number(value)
+  if (!Number.isFinite(num)) return '—'
+  return `${num.toLocaleString('ja-JP')} km`
+}
+
 function formatWorkDateLabel(workDate, dow) {
   if (!workDate) return ''
   const [y, m, d] = workDate.split('-').map(Number)
@@ -159,6 +166,7 @@ function buildVehicleSection({ carNum, salesRow, shifts, employees, receivables,
 
   const fuel = fields ? salesRow?.[fields.fuel_yen] : null
   const sales = fields ? salesRow?.[fields.sales] : null
+  const distance = fields ? salesRow?.[fields.distance_km] : null
   const expenseAmount = fields ? n(salesRow?.[fields.expense_amount]) : 0
   const expenseNote = fields ? String(salesRow?.[fields.expense_note] ?? '').trim() : ''
   const receivableTotal = sumReceivableAmounts(carReceivables)
@@ -169,6 +177,7 @@ function buildVehicleSection({ carNum, salesRow, shifts, employees, receivables,
     amount: n(row.amount),
   }))
 
+  lines.push(`走行距離 ${formatDistanceKm(distance)}`)
   lines.push(`売上 ${formatYen(sales)} / 燃料 ${formatYen(fuel)}`)
   lines.push(formatBreakdownLine('売掛', receivableTotal, receivableItems))
   if (expenseAmount > 0 || expenseNote) {
