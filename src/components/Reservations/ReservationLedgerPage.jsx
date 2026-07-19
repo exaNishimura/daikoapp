@@ -20,9 +20,12 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import PhoneIcon from '@mui/icons-material/Phone'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import {
   useCreateReservation,
@@ -34,17 +37,58 @@ import { formatDateInJst } from '@/lib/reservation/reservationWindowUtils'
 import { ReservationFormDialog } from './ReservationFormDialog'
 import './ReservationLedgerPage.css'
 
-function formatReservedAt(iso) {
-  return dayjs(iso).format('YYYY/MM/DD HH:mm')
+function formatReservedAt(iso, compact = false) {
+  return dayjs(iso).format(compact ? 'M/D HH:mm' : 'YYYY/MM/DD HH:mm')
 }
 
 function memoPreview(memo) {
   const t = String(memo ?? '').trim()
-  if (!t) return '—'
-  return t.length > 40 ? `${t.slice(0, 40)}…` : t
+  if (!t) return ''
+  return t.length > 80 ? `${t.slice(0, 80)}…` : t
+}
+
+function ReservationCard({ row, onOpen, onEdit, onDelete }) {
+  const memo = memoPreview(row.memo)
+  return (
+    <article className="reservation-card">
+      <button type="button" className="reservation-card__main" onClick={() => onOpen(row)}>
+        <div className="reservation-card__time">{formatReservedAt(row.reserved_at, true)}</div>
+        <div className="reservation-card__name">{row.customer_name}</div>
+        <div className="reservation-card__phone">
+          <PhoneIcon sx={{ fontSize: 16, opacity: 0.75 }} aria-hidden />
+          <span>{row.phone}</span>
+        </div>
+        {memo ? <div className="reservation-card__memo">{memo}</div> : null}
+      </button>
+      <div className="reservation-card__actions">
+        <IconButton
+          size="large"
+          aria-label="編集"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(row)
+          }}
+        >
+          <EditIcon />
+        </IconButton>
+        <IconButton
+          size="large"
+          aria-label="削除"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(row)
+          }}
+        >
+          <DeleteOutlineIcon />
+        </IconButton>
+      </div>
+    </article>
+  )
 }
 
 export function ReservationLedgerPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const [searchParams, setSearchParams] = useSearchParams()
   const dateParam = searchParams.get('date') || ''
   const dateFilter = dateParam ? dayjs(dateParam) : null
@@ -98,33 +142,40 @@ export function ReservationLedgerPage() {
   }
 
   return (
-    <Box className="reservation-ledger">
+    <Box className={`reservation-ledger${isMobile ? ' reservation-ledger--mobile' : ''}`}>
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        alignItems={{ sm: 'center' }}
+        direction={isMobile ? 'column' : 'row'}
+        spacing={1.5}
+        alignItems={isMobile ? 'stretch' : 'center'}
         justifyContent="space-between"
         className="reservation-ledger__header"
       >
-        <Typography variant="h5" component="h1">
+        <Typography variant={isMobile ? 'h6' : 'h5'} component="h1">
           予約台帳
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          新規登録
-        </Button>
+        {!isMobile && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+            新規登録
+          </Button>
+        )}
       </Stack>
 
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
+        direction={isMobile ? 'column' : 'row'}
+        spacing={1.5}
         className="reservation-ledger__filters"
+        alignItems={isMobile ? 'stretch' : 'center'}
       >
         <DatePicker
           label="日付"
           value={dateFilter}
           onChange={handleDateChange}
           slotProps={{
-            textField: { size: 'small', sx: { minWidth: 180 } },
+            textField: {
+              size: 'small',
+              fullWidth: isMobile,
+              sx: isMobile ? undefined : { minWidth: 180 },
+            },
             field: { clearable: true },
           }}
         />
@@ -133,13 +184,31 @@ export function ReservationLedgerPage() {
           label="氏名・電話で検索"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          sx={{ minWidth: 220 }}
+          fullWidth={isMobile}
+          sx={isMobile ? undefined : { minWidth: 220 }}
         />
-        {!dateFilter && (
-          <Button size="small" onClick={() => handleDateChange(dayjs(formatDateInJst()))}>
-            今日
-          </Button>
-        )}
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          {!dateFilter && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => handleDateChange(dayjs(formatDateInJst()))}
+              sx={isMobile ? { flex: 1 } : undefined}
+            >
+              今日
+            </Button>
+          )}
+          {dateFilter && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => handleDateChange(null)}
+              sx={isMobile ? { flex: 1 } : undefined}
+            >
+              日付クリア
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       {listQuery.isError && (
@@ -148,55 +217,84 @@ export function ReservationLedgerPage() {
         </Alert>
       )}
 
-      <TableContainer component={Paper} className="reservation-ledger__table">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>予約日時</TableCell>
-              <TableCell>顧客名</TableCell>
-              <TableCell>電話</TableCell>
-              <TableCell>メモ</TableCell>
-              <TableCell align="right" width={120}>
-                操作
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {listQuery.isLoading && (
+      {listQuery.isLoading && (
+        <Typography className="reservation-ledger__status">読み込み中...</Typography>
+      )}
+
+      {!listQuery.isLoading && rows.length === 0 && (
+        <Typography className="reservation-ledger__empty">
+          条件に一致する予約はありません
+        </Typography>
+      )}
+
+      {!listQuery.isLoading && rows.length > 0 && isMobile && (
+        <div className="reservation-ledger__cards">
+          {rows.map((row) => (
+            <ReservationCard
+              key={row.id}
+              row={row}
+              onOpen={setDetail}
+              onEdit={openEdit}
+              onDelete={setDeleteTarget}
+            />
+          ))}
+        </div>
+      )}
+
+      {!listQuery.isLoading && rows.length > 0 && !isMobile && (
+        <TableContainer component={Paper} className="reservation-ledger__table">
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5}>読み込み中...</TableCell>
-              </TableRow>
-            )}
-            {!listQuery.isLoading && rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="reservation-ledger__empty">
-                  条件に一致する予約はありません
+                <TableCell>予約日時</TableCell>
+                <TableCell>顧客名</TableCell>
+                <TableCell>電話</TableCell>
+                <TableCell>メモ</TableCell>
+                <TableCell align="right" width={120}>
+                  操作
                 </TableCell>
               </TableRow>
-            )}
-            {rows.map((row) => (
-              <TableRow key={row.id} hover onClick={() => setDetail(row)} sx={{ cursor: 'pointer' }}>
-                <TableCell>{formatReservedAt(row.reserved_at)}</TableCell>
-                <TableCell>{row.customer_name}</TableCell>
-                <TableCell>{row.phone}</TableCell>
-                <TableCell>{memoPreview(row.memo)}</TableCell>
-                <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                  <IconButton size="small" aria-label="編集" onClick={() => openEdit(row)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    aria-label="削除"
-                    onClick={() => setDeleteTarget(row)}
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  hover
+                  onClick={() => setDetail(row)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <TableCell>{formatReservedAt(row.reserved_at)}</TableCell>
+                  <TableCell>{row.customer_name}</TableCell>
+                  <TableCell>{row.phone}</TableCell>
+                  <TableCell>{memoPreview(row.memo) || '—'}</TableCell>
+                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                    <IconButton size="small" aria-label="編集" onClick={() => openEdit(row)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" aria-label="削除" onClick={() => setDeleteTarget(row)}>
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {isMobile && (
+        <div className="reservation-ledger__fab">
+          <Button
+            variant="contained"
+            size="large"
+            fullWidth
+            startIcon={<AddIcon />}
+            onClick={openCreate}
+          >
+            新規登録
+          </Button>
+        </div>
+      )}
 
       <ReservationFormDialog
         open={formOpen}
@@ -211,7 +309,13 @@ export function ReservationLedgerPage() {
         }}
       />
 
-      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>予約を削除</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -225,11 +329,21 @@ export function ReservationLedgerPage() {
             </Alert>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>キャンセル</Button>
+        <DialogActions
+          sx={{
+            flexDirection: isMobile ? 'column-reverse' : 'row',
+            gap: isMobile ? 1 : 0,
+            px: isMobile ? 2 : undefined,
+            pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
+          }}
+        >
+          <Button onClick={() => setDeleteTarget(null)} fullWidth={isMobile}>
+            キャンセル
+          </Button>
           <Button
             color="error"
             variant="contained"
+            fullWidth={isMobile}
             disabled={deleteMut.isPending}
             onClick={async () => {
               await deleteMut.mutateAsync(deleteTarget.id)
@@ -241,23 +355,52 @@ export function ReservationLedgerPage() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(detail)} onClose={() => setDetail(null)} fullWidth maxWidth="sm">
+      <Dialog
+        open={Boolean(detail)}
+        onClose={() => setDetail(null)}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>予約詳細</DialogTitle>
         <DialogContent>
           {detail && (
-            <Stack spacing={1} sx={{ mt: 1 }}>
-              <Typography>日時: {formatReservedAt(detail.reserved_at)}</Typography>
-              <Typography>顧客名: {detail.customer_name}</Typography>
-              <Typography>電話: {detail.phone}</Typography>
-              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-                メモ: {detail.memo?.trim() ? detail.memo : '（なし）'}
+            <Stack spacing={1.5} sx={{ mt: 1 }}>
+              <Typography variant="body1">
+                <span className="reservation-detail__label">日時</span>
+                {formatReservedAt(detail.reserved_at)}
+              </Typography>
+              <Typography variant="body1">
+                <span className="reservation-detail__label">顧客名</span>
+                {detail.customer_name}
+              </Typography>
+              <Typography variant="body1">
+                <span className="reservation-detail__label">電話</span>
+                <a className="reservation-detail__tel" href={`tel:${detail.phone}`}>
+                  {detail.phone}
+                </a>
+              </Typography>
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                <span className="reservation-detail__label">メモ</span>
+                {detail.memo?.trim() ? detail.memo : '（なし）'}
               </Typography>
             </Stack>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetail(null)}>閉じる</Button>
+        <DialogActions
+          sx={{
+            flexDirection: isMobile ? 'column-reverse' : 'row',
+            gap: isMobile ? 1 : 0,
+            px: isMobile ? 2 : undefined,
+            pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
+          }}
+        >
+          <Button onClick={() => setDetail(null)} fullWidth={isMobile}>
+            閉じる
+          </Button>
           <Button
+            variant="contained"
+            fullWidth={isMobile}
             onClick={() => {
               openEdit(detail)
               setDetail(null)

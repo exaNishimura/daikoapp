@@ -6,6 +6,10 @@
   color: #fff;
 }
 
+.reservation-ledger--mobile {
+  padding: 12px 12px calc(88px + env(safe-area-inset-bottom, 0px));
+}
+
 .reservation-ledger__header {
   margin-bottom: 16px;
 }
@@ -28,8 +32,122 @@
   font-weight: 600;
 }
 
+.reservation-ledger__status,
 .reservation-ledger__empty {
   text-align: center;
   color: #999;
-  padding: 32px 16px !important;
+  padding: 32px 16px;
+}
+
+.reservation-ledger__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reservation-card {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.reservation-card__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 12px 14px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.reservation-card__main:active {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.reservation-card__time {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffb300;
+}
+
+.reservation-card__name {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.reservation-card__phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.reservation-card__memo {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.reservation-card__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 1px solid #444;
+  background: #242424;
+}
+
+.reservation-card__actions .MuiIconButton-root {
+  color: #ddd;
+}
+
+.reservation-ledger__fab {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+}
+
+.reservation-ledger__fab .MuiButton-root {
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.reservation-detail__label {
+  display: inline-block;
+  min-width: 4.5em;
+  margin-right: 8px;
+  color: #999;
+  font-size: 0.85em;
+}
+
+.reservation-detail__tel {
+  color: #90caf9;
+  text-decoration: none;
+}
+
+.reservation-detail__tel:active {
+  text-decoration: underline;
+}
+
+@media (max-width: 899px) {
+  .reservation-ledger .MuiFormControl-root,
+  .reservation-ledger .MuiTextField-root {
+    width: 100%;
+  }
 }

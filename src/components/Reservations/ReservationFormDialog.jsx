@@ -8,10 +8,12 @@ import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { missingReservationFields } from '@/services/reservationService'
 
-function ReservationFormFields({ initial, onClose, onSubmit }) {
+function ReservationFormFields({ initial, onClose, onSubmit, isMobile }) {
   const [reservedAt, setReservedAt] = useState(() =>
     initial?.reserved_at ? dayjs(initial.reserved_at) : dayjs()
   )
@@ -95,11 +97,18 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
           />
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+      <DialogActions
+        sx={{
+          flexDirection: isMobile ? 'column-reverse' : 'row',
+          gap: isMobile ? 1 : 0,
+          px: isMobile ? 2 : undefined,
+          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
+        }}
+      >
+        <Button onClick={onClose} disabled={saving} fullWidth={isMobile}>
           キャンセル
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving}>
+        <Button variant="contained" onClick={handleSave} disabled={saving} fullWidth={isMobile}>
           保存
         </Button>
       </DialogActions>
@@ -116,15 +125,18 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
  * }} props
  */
 export function ReservationFormDialog({ open, initial = null, onClose, onSubmit }) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const formKey = `${initial?.id ?? 'new'}:${initial?.updated_at ?? 'create'}`
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       {open ? (
         <ReservationFormFields
           key={formKey}
           initial={initial}
           onClose={onClose}
           onSubmit={onSubmit}
+          isMobile={isMobile}
         />
       ) : null}
     </Dialog>
