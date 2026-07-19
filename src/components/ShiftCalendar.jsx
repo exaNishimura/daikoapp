@@ -22,6 +22,7 @@ import {
   roundTargetDisplayAmount,
 } from '@/lib/billing/shiftTargetAmount'
 import { getContrastTextColor } from '@/lib/colorContrast'
+import { getActiveWorkDate, formatWorkDateKey } from '@/utils/businessDayUtils'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -90,10 +91,10 @@ export function ShiftCalendar() {
   const { isAuthenticated } = useAuth()
   const [visibleEmployeeIds, setVisibleEmployeeIds] = useState([])
   const [searchText, setSearchText] = useState('')
-  // 現在の年月を初期値として設定
-  const today = new Date()
-  const [selectedYear, setSelectedYear] = useState(today.getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1)
+  // 締め時刻（08:00）までは前日を営業当日として初期年月を設定
+  const initialWorkDate = getActiveWorkDate()
+  const [selectedYear, setSelectedYear] = useState(initialWorkDate.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(initialWorkDate.getMonth() + 1)
   const calendarContainerRef = useRef(null)
   const hasScrolledRef = useRef(false)
   const [searchExpanded, setSearchExpanded] = useState(false) // デフォルトは閉じた状態
@@ -128,22 +129,21 @@ export function ShiftCalendar() {
     [dailySalesQuery.data]
   )
 
-  // 本日の日付まで自動スクロール
+  // 営業当日（締め08:00未満は前日）まで自動スクロール
   useEffect(() => {
     if (loading || hasScrolledRef.current) return
 
-    const today = new Date()
-    const currentYear = today.getFullYear()
-    const currentMonth = today.getMonth() + 1
-    const currentDate = today.getDate()
+    const workDate = getActiveWorkDate()
+    const workYear = workDate.getFullYear()
+    const workMonth = workDate.getMonth() + 1
 
-    // 選択された年月が現在の年月の場合のみスクロール
-    if (selectedYear === currentYear && selectedMonth === currentMonth) {
-      const todayDateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`
+    // 選択された年月が営業当日の年月の場合のみスクロール
+    if (selectedYear === workYear && selectedMonth === workMonth) {
+      const workDateStr = formatWorkDateKey(workDate)
 
       // 少し遅延を入れてDOMの更新を待つ
       setTimeout(() => {
-        const todayElement = document.querySelector(`[data-date="${todayDateStr}"]`)
+        const todayElement = document.querySelector(`[data-date="${workDateStr}"]`)
         if (todayElement && calendarContainerRef.current) {
           todayElement.scrollIntoView({
             behavior: 'smooth',

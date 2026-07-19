@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   BUSINESS_START_HOUR,
   BUSINESS_END_HOUR,
+  SALES_CLOSE_HOUR,
   isWithinBusinessHours,
   getBusinessDayBoundaries,
+  getActiveWorkDate,
+  formatWorkDateKey,
   getMinBusinessDateTime,
   snapDateTimeTo15Minutes,
 } from './businessDayUtils'
@@ -12,6 +15,10 @@ describe('constants', () => {
   it('uses 18:00 - 06:00 as the business window', () => {
     expect(BUSINESS_START_HOUR).toBe(18)
     expect(BUSINESS_END_HOUR).toBe(6)
+  })
+
+  it('uses 08:00 as the sales close hour for active work date', () => {
+    expect(SALES_CLOSE_HOUR).toBe(8)
   })
 })
 
@@ -77,6 +84,36 @@ describe('getBusinessDayBoundaries', () => {
     expect(businessDay.getDate()).toBe(2)
     expect(start.getHours()).toBe(18)
     expect(start.getDate()).toBe(2)
+  })
+})
+
+describe('getActiveWorkDate', () => {
+  it('keeps calendar date during evening business hours', () => {
+    const ref = new Date(2025, 5, 1, 23, 30)
+    expect(formatWorkDateKey(getActiveWorkDate(ref))).toBe('2025-06-01')
+  })
+
+  it('keeps previous work date after midnight until sales close', () => {
+    const ref = new Date(2025, 5, 2, 3, 0)
+    expect(formatWorkDateKey(getActiveWorkDate(ref))).toBe('2025-06-01')
+  })
+
+  it('keeps previous work date at 07:59', () => {
+    const ref = new Date(2025, 5, 2, 7, 59)
+    expect(formatWorkDateKey(getActiveWorkDate(ref))).toBe('2025-06-01')
+  })
+
+  it('switches to calendar date at 08:00', () => {
+    const ref = new Date(2025, 5, 2, 8, 0)
+    expect(formatWorkDateKey(getActiveWorkDate(ref))).toBe('2025-06-02')
+  })
+
+  it('rolls back across month boundary before close', () => {
+    const ref = new Date(2025, 6, 1, 2, 0) // 2025-07-01 02:00
+    const workDate = getActiveWorkDate(ref)
+    expect(formatWorkDateKey(workDate)).toBe('2025-06-30')
+    expect(workDate.getFullYear()).toBe(2025)
+    expect(workDate.getMonth() + 1).toBe(6)
   })
 })
 

@@ -6,10 +6,16 @@
  * 例: 2025-06-01 23:00 → 営業日 2025-06-01
  *     2025-06-02 03:00 → 営業日 2025-06-01（前日扱い）
  *     2025-06-02 12:00 → 営業時間外（昼）
+ *
+ * シフト表・売上の「営業当日」は日次締め（08:00）まで前日を維持する。
+ * 例: 2025-06-02 07:59 → 営業当日 2025-06-01
+ *     2025-06-02 08:00 → 営業当日 2025-06-02
  */
 
 export const BUSINESS_START_HOUR = 18
 export const BUSINESS_END_HOUR = 6
+/** 日次締め時刻。これ未満はシフト表の営業当日を前日扱いにする */
+export const SALES_CLOSE_HOUR = 8
 
 /**
  * 指定時刻が営業時間内（18:00 以降または 06:00 未満）かを判定
@@ -60,6 +66,32 @@ export function getBusinessDayBoundaries(reference = new Date()) {
   )
 
   return { start, end, businessDay }
+}
+
+/**
+ * シフト表・売上で使う「営業当日」を返す（日次締め 08:00 基準）。
+ * カレンダー日付が変わっても、08:00 未満は前日を営業当日として扱う。
+ * @param {Date} [reference=new Date()] - 基準時刻
+ * @returns {Date} 年月日のみ意味あり（時刻は 00:00）
+ */
+export function getActiveWorkDate(reference = new Date()) {
+  const workDate = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate())
+  if (reference.getHours() < SALES_CLOSE_HOUR) {
+    workDate.setDate(workDate.getDate() - 1)
+  }
+  return workDate
+}
+
+/**
+ * Date を 'YYYY-MM-DD' にフォーマット（ローカル日付）
+ * @param {Date} date
+ * @returns {string}
+ */
+export function formatWorkDateKey(date) {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 /**
