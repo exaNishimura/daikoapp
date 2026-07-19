@@ -31,6 +31,7 @@ import { useCompanies } from '@/hooks/billing/useCompanies'
 import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesEditor'
 import { useUpdateShiftsBulk } from '@/hooks/useShifts'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { sumShiftTimesHours } from '@/lib/billing/shiftStaffHours'
 import { sumReceivableAmounts, isShiftEditableReceivable } from '@/lib/billing/shiftReceivables'
@@ -38,6 +39,9 @@ import {
   buildVehicleSalesSavePayload,
   readVehicleSalesForm,
 } from '@/lib/billing/vehicleSalesForm'
+import { isVehicleSalesFormDirty } from '@/lib/billing/reassignVehicleSales'
+import { useReassignVehicleSales } from '@/hooks/billing/useReassignVehicleSales'
+import { ReassignVehicleDialog } from '@/components/ShiftCalendar/ReassignVehicleDialog'
 
 const EMPTY_FORM = {
   distance_km: '',
@@ -79,11 +83,15 @@ export function VehicleSalesModal({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { isAuthenticated } = useAuth()
+  const { showToast } = useToast()
   const adminCanEdit = isAdmin || isAuthenticated
   const isLocked = isDayClosed && !adminCanEdit
   const [form, setForm] = useState(EMPTY_FORM)
+  const [initialForm, setInitialForm] = useState(EMPTY_FORM)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const [reassignError, setReassignError] = useState(null)
 
   const saleQuery = useDailySaleByDate(open ? workDate : null)
   const staffSalesQuery = useDailyStaffSalesByDate(open ? workDate : null)
@@ -93,6 +101,7 @@ export function VehicleSalesModal({
   const upsertStaffMutation = useUpsertDailyStaffSalesBatch()
   const replaceReceivablesMutation = useReplaceShiftReceivables()
   const updateShiftsMutation = useUpdateShiftsBulk()
+  const reassignMutation = useReassignVehicleSales()
 
   const dataLoading =
     saleQuery.isLoading ||
@@ -103,27 +112,31 @@ export function VehicleSalesModal({
     upsertMutation.isPending ||
     upsertStaffMutation.isPending ||
     replaceReceivablesMutation.isPending ||
-    updateShiftsMutation.isPending
+    updateShiftsMutation.isPending ||
+    reassignMutation.isPending
   const loading = dataLoading || saving
+  const isDirty = isVehicleSalesFormDirty(form, initialForm)
 
   useEffect(() => {
     if (!open || !carNum) return
     setError(null)
     setSuccess(null)
+    setReassignOpen(false)
+    setReassignError(null)
   }, [open, workDate, carNum])
 
   useEffect(() => {
     if (!open || !carNum || dataLoading) return
-    setForm(
-      readVehicleSalesForm({
-        dailyRow: saleQuery.data ?? null,
-        carNum,
-        dayShifts,
-        employees,
-        savedStaffRows: staffSalesQuery.data ?? [],
-        receivableRows: receivablesQuery.data ?? [],
-      })
-    )
+    const next = readVehicleSalesForm({
+      dailyRow: saleQuery.data ?? null,
+      carNum,
+      dayShifts,
+      employees,
+      savedStaffRows: staffSalesQuery.data ?? [],
+      receivableRows: receivablesQuery.data ?? [],
+    })
+    setForm(next)
+    setInitialForm(next)
   }, [
     open,
     workDate,
@@ -139,6 +152,37 @@ export function VehicleSalesModal({
   const handleClose = () => {
     if (saving) return
     onClose()
+  }
+
+  const handleOpenReassign = () => {
+    if (!adminCanEdit) return
+    if (isDirty) {
+      setError('先に売上を保存してください')
+      return
+    }
+    setReassignError(null)
+    setReassignOpen(true)
+  }
+
+  const handleConfirmReassign = async ({ toCar }) => {
+    if (!workDate || !carNum || !toCar) return
+    setReassignError(null)
+    try {
+      const result = await reassignMutation.mutateAsync({
+        workDate,
+        fromCar: carNum,
+        toCar,
+      })
+      setReassignOpen(false)
+      const modeLabel = result?.mode === 'swap' ? '入れ替え' : '付け替え'
+      showToast(
+        `${modeLabel}しました（${carNum}号車 → ${toCar}号車）`,
+        'success'
+      )
+      onClose()
+    } catch (err) {
+      setReassignError(err.message || '号車変更に失敗しました')
+    }
   }
 
   const handleShiftTimeChange = (shiftId, field, value) => {
@@ -453,6 +497,16 @@ export function VehicleSalesModal({
           pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
         }}
       >
+        {adminCanEdit && (
+          <Button
+            onClick={handleOpenReassign}
+            disabled={loading}
+            fullWidth={isMobile}
+            sx={isMobile ? undefined : { mr: 'auto' }}
+          >
+            号車変更
+          </Button>
+        )}
         <Button onClick={handleClose} disabled={saving} fullWidth={isMobile}>
           閉じる
         </Button>
@@ -460,6 +514,22 @@ export function VehicleSalesModal({
           保存
         </Button>
       </DialogActions>
+
+      <ReassignVehicleDialog
+        open={reassignOpen}
+        fromCar={carNum}
+        dailyRow={saleQuery.data ?? null}
+        dayShifts={dayShifts}
+        receivableRows={receivablesQuery.data ?? []}
+        loading={reassignMutation.isPending}
+        error={reassignError}
+        onClose={() => {
+          if (reassignMutation.isPending) return
+          setReassignOpen(false)
+          setReassignError(null)
+        }}
+        onConfirm={handleConfirmReassign}
+      />
     </Dialog>
   )
 }
