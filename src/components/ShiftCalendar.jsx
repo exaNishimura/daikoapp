@@ -23,6 +23,9 @@ import {
 } from '@/lib/billing/shiftTargetAmount'
 import { getContrastTextColor } from '@/lib/colorContrast'
 import { getActiveWorkDate, formatWorkDateKey } from '@/utils/businessDayUtils'
+import { useReservationsByMonth } from '@/hooks/useReservations'
+import { formatDateInJst } from '@/lib/reservation/reservationWindowUtils'
+import { ReservationDayBadge } from '@/components/Reservations/ReservationDayBadge'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -106,11 +109,22 @@ export function ShiftCalendar() {
   const employeesQuery = useEmployees()
   const dailySalesQuery = useDailySales(selectedYear, selectedMonth)
   const closuresQuery = useClosuresByDate(selectedYear, selectedMonth)
+  const reservationsQuery = useReservationsByMonth(selectedYear, selectedMonth)
 
   const shifts = shiftsQuery.data ?? []
   const employees = employeesQuery.data ?? []
   const loading = shiftsQuery.isLoading || employeesQuery.isLoading
   const closuresByDate = closuresQuery.closuresByDate
+
+  const reservationsByDate = useMemo(() => {
+    const map = {}
+    for (const row of reservationsQuery.data ?? []) {
+      const key = formatDateInJst(new Date(row.reserved_at))
+      if (!map[key]) map[key] = []
+      map[key].push(row)
+    }
+    return map
+  }, [reservationsQuery.data])
 
   // 月が変わったらスクロールフラグをリセット
   useEffect(() => {
@@ -508,6 +522,7 @@ export function ShiftCalendar() {
                 salesByDate={salesByDate}
                 isDayClosed={Boolean(closuresByDate[date])}
                 isAdmin={isAuthenticated}
+                dayReservations={reservationsByDate[date] ?? []}
                 onOpenVehicleSales={(carNum) =>
                   setVehicleSalesTarget({ date, carNum })
                 }
@@ -560,6 +575,7 @@ function DayBlock({
   salesByDate,
   isDayClosed = false,
   isAdmin = false,
+  dayReservations = [],
   onOpenVehicleSales,
   onOpenVehicleSummary,
 }) {
@@ -601,6 +617,7 @@ function DayBlock({
                 {dayData.status}
               </div>
             )}
+            <ReservationDayBadge date={dayData.date} reservations={dayReservations} />
           </div>
           {displayTarget !== null && (
             <div className="day-header-stats">

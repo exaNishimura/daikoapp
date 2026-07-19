@@ -104,4 +104,14 @@ export const queryKeys = {
     all: ['fixedExpenses'],
     byMonth: (year, month) => ['fixedExpenses', 'byMonth', year, month],
   },
+
+  // ========================================
+  // 予約台帳
+  // ========================================
+  reservations: {
+    all: ['reservations'],
+    list: (filters = {}) => ['reservations', 'list', filters],
+    byMonth: (year, month) => ['reservations', 'byMonth', year, month],
+    detail: (id) => ['reservations', 'detail', id],
+  },
 }

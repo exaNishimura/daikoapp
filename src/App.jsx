@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 're
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { DispatchBoard } from '@/components/DispatchBoard'
 import { ShiftCalendar } from '@/components/ShiftCalendar'
+import { ReservationLedgerPage } from '@/components/Reservations/ReservationLedgerPage'
 import { ShiftEditPage } from '@/components/ShiftEditPage'
 import { EmployeeManagement } from '@/components/EmployeeManagement'
 import { LoginPage } from '@/components/LoginPage'
@@ -26,6 +27,7 @@ import './App.css'
 const NAV_LINKS = [
   { to: '/', label: '配車画面', requiresAuth: false },
   { to: '/shift', label: 'シフト表', requiresAuth: false },
+  { to: '/reservations', label: '予約台帳', requiresAuth: false },
   { to: '/shift/edit', label: 'シフト編集', requiresAuth: true },
   { to: '/employees', label: '従業員管理', requiresAuth: true },
   { to: '/admin/sales', label: '日次売上', requiresAuth: true },
@@ -189,6 +191,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<DispatchBoard />} />
         <Route path="/shift" element={<ShiftCalendar />} />
+        <Route path="/reservations" element={<ReservationLedgerPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/shift/edit"
