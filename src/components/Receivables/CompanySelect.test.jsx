@@ -106,4 +106,89 @@ describe('CompanySelect', () => {
 
     expect(onChange).toHaveBeenCalledWith(null)
   })
+
+  it('shows create option when creatable and no exact match', async () => {
+    const user = userEvent.setup()
+    render(
+      <CompanySelect
+        companies={companies}
+        value={null}
+        onChange={() => {}}
+        creatable
+        onCreate={vi.fn()}
+      />
+    )
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.type(input, '新規株式会社')
+
+    expect(screen.getByText('「新規株式会社」を新規追加')).toBeInTheDocument()
+  })
+
+  it('does not show create option when exact name already exists', async () => {
+    const user = userEvent.setup()
+    render(
+      <CompanySelect
+        companies={companies}
+        value={null}
+        onChange={() => {}}
+        creatable
+        onCreate={vi.fn()}
+      />
+    )
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.type(input, '田中商店')
+
+    expect(screen.queryByText('「田中商店」を新規追加')).not.toBeInTheDocument()
+    expect(screen.getByText('田中商店')).toBeInTheDocument()
+  })
+
+  it('calls onCreate then onChange with new id when create option selected', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const onCreate = vi.fn().mockResolvedValue({ id: 99, name: '新規株式会社' })
+    render(
+      <CompanySelect
+        companies={companies}
+        value={null}
+        onChange={onChange}
+        creatable
+        onCreate={onCreate}
+      />
+    )
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.type(input, '新規株式会社')
+    await user.click(screen.getByText('「新規株式会社」を新規追加'))
+
+    expect(onCreate).toHaveBeenCalledWith('新規株式会社')
+    expect(onChange).toHaveBeenCalledWith(99)
+  })
+
+  it('creates company on blur when creatable and name typed', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const onCreate = vi.fn().mockResolvedValue({ id: 88, name: 'ブラー商事' })
+    render(
+      <div>
+        <CompanySelect
+          companies={companies}
+          value={null}
+          onChange={onChange}
+          creatable
+          onCreate={onCreate}
+        />
+        <input aria-label="amount" />
+      </div>
+    )
+    const input = screen.getByRole('combobox')
+    await user.click(input)
+    await user.type(input, 'ブラー商事')
+    await user.click(screen.getByLabelText('amount'))
+
+    expect(onCreate).toHaveBeenCalledWith('ブラー商事')
+    expect(onChange).toHaveBeenCalledWith(88)
+    expect(input).toHaveValue('ブラー商事')
+  })
 })

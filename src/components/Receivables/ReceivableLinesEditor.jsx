@@ -10,12 +10,22 @@ import { EMPTY_RECEIVABLE_LINE } from '@/lib/billing/shiftReceivables'
 
 /**
  * 売掛の複数行入力（請求先 + 金額 + 備考）
+ *
+ * @param {Object} props
+ * @param {Array} props.lines
+ * @param {(lines: Array) => void} props.onChange
+ * @param {boolean} [props.disabled]
+ * @param {Array|null} [props.companies] 指定時に請求先セレクトを表示
+ * @param {boolean} [props.creatable] 一致なし時に名前だけで取引先追加
+ * @param {(name: string) => Promise<{id: number}|number>} [props.onCreateCompany]
  */
 export function ReceivableLinesEditor({
   lines,
   onChange,
   disabled = false,
   companies = null,
+  creatable = false,
+  onCreateCompany,
 }) {
   const showCompany = Array.isArray(companies)
 
@@ -64,6 +74,8 @@ export function ReceivableLinesEditor({
                 onChange={(company_id) => updateLine(index, { company_id })}
                 disabled={disabled}
                 label="請求先"
+                creatable={creatable}
+                onCreate={onCreateCompany}
               />
             </Box>
           )}

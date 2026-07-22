@@ -27,7 +27,7 @@ import {
   useReceivablesByWorkDate,
   useReplaceShiftReceivables,
 } from '@/hooks/billing/useReceivables'
-import { useCompanies } from '@/hooks/billing/useCompanies'
+import { useCompanies, useCreateCompany } from '@/hooks/billing/useCompanies'
 import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesEditor'
 import { useUpdateShiftsBulk } from '@/hooks/useShifts'
 import { useAuth } from '@/contexts/AuthContext'
@@ -97,6 +97,7 @@ export function VehicleSalesModal({
   const staffSalesQuery = useDailyStaffSalesByDate(open ? workDate : null)
   const receivablesQuery = useReceivablesByWorkDate(open ? workDate : null)
   const companiesQuery = useCompanies({ activeOnly: true })
+  const createCompanyMutation = useCreateCompany()
   const upsertMutation = useUpsertDailySale()
   const upsertStaffMutation = useUpsertDailyStaffSalesBatch()
   const replaceReceivablesMutation = useReplaceShiftReceivables()
@@ -469,9 +470,39 @@ export function VehicleSalesModal({
               onChange={(receivables) => setForm((prev) => ({ ...prev, receivables }))}
               disabled={formDisabled}
               companies={companiesQuery.data ?? []}
+              creatable
+              onCreateCompany={async (name) => {
+                const trimmed = name.trim()
+                const findExisting = (list) =>
+                  (list ?? []).find(
+                    (c) => String(c.name ?? '').trim().toLowerCase() === trimmed.toLowerCase()
+                  )
+                const existing = findExisting(companiesQuery.data)
+                if (existing) return existing
+                const nextOrder =
+                  (companiesQuery.data ?? []).reduce(
+                    (max, c) => Math.max(max, c.display_order ?? 0),
+                    0
+                  ) + 10
+                try {
+                  return await createCompanyMutation.mutateAsync({
+                    name: trimmed,
+                    invoice_display_name: null,
+                    aliases: [],
+                    display_order: nextOrder,
+                    is_active: true,
+                    memo: null,
+                  })
+                } catch (err) {
+                  const { data: refreshed } = await companiesQuery.refetch()
+                  const raced = findExisting(refreshed)
+                  if (raced) return raced
+                  throw err
+                }
+              }}
             />
             <Typography variant="caption" color="text.secondary" display="block">
-              複数行入力可。請求先を選択すると売掛一覧に反映されます。
+              複数行入力可。請求先がなければ名前を入力して新規追加できます。
               {receivablesQuery.data?.length > 0 && (
                 <>
                   {' '}
