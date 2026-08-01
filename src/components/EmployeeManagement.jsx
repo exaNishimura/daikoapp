@@ -206,7 +206,7 @@ export function EmployeeManagement() {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h4" component="h1">
-            従業員管理
+            従業員マスタ
           </Typography>
         </Box>
         <Button

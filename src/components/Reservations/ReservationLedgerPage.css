@@ -2,8 +2,8 @@
   flex: 1;
   overflow: auto;
   padding: 16px 20px 32px;
-  background: #1a1a1a;
-  color: #fff;
+  background: #f4f6f8;
+  color: #1f2733;
 }
 
 .reservation-ledger--mobile {
@@ -19,23 +19,23 @@
 }
 
 .reservation-ledger__table {
-  background: #2a2a2a;
+  background: #ffffff;
 }
 
 .reservation-ledger__table .MuiTableCell-root {
-  border-color: #444;
-  color: #eee;
+  border-color: #e3e7ec;
+  color: #1f2733;
 }
 
 .reservation-ledger__table .MuiTableHead-root .MuiTableCell-root {
-  color: #bbb;
+  color: #6b7280;
   font-weight: 600;
 }
 
 .reservation-ledger__status,
 .reservation-ledger__empty {
   text-align: center;
-  color: #999;
+  color: #6b7280;
   padding: 32px 16px;
 }
 
@@ -49,8 +49,8 @@
   display: flex;
   align-items: stretch;
   gap: 4px;
-  background: #2a2a2a;
-  border: 1px solid #444;
+  background: #ffffff;
+  border: 1px solid #e3e7ec;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -71,13 +71,13 @@
 }
 
 .reservation-card__main:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(91, 97, 230, 0.04);
 }
 
 .reservation-card__time {
   font-size: 15px;
   font-weight: 700;
-  color: #ffb300;
+  color: #b45309;
 }
 
 .reservation-card__name {
@@ -92,13 +92,13 @@
   align-items: center;
   gap: 4px;
   font-size: 14px;
-  color: #ccc;
+  color: #6b7280;
 }
 
 .reservation-card__memo {
   margin-top: 4px;
   font-size: 13px;
-  color: #aaa;
+  color: #6b7280;
   line-height: 1.4;
   word-break: break-word;
 }
@@ -107,12 +107,12 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border-left: 1px solid #444;
-  background: #242424;
+  border-left: 1px solid #e3e7ec;
+  background: #f8fafc;
 }
 
 .reservation-card__actions .MuiIconButton-root {
-  color: #ddd;
+  color: #4b5563;
 }
 
 .reservation-ledger__fab {
@@ -125,19 +125,19 @@
 
 .reservation-ledger__fab .MuiButton-root {
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 16px rgba(31, 39, 51, 0.12);
 }
 
 .reservation-detail__label {
   display: inline-block;
   min-width: 4.5em;
   margin-right: 8px;
-  color: #999;
+  color: #6b7280;
   font-size: 0.85em;
 }
 
 .reservation-detail__tel {
-  color: #90caf9;
+  color: #2563eb;
   text-decoration: none;
 }
 

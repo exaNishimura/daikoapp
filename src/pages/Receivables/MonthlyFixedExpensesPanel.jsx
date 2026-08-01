@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
@@ -77,7 +77,7 @@ export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDele
 
         {sorted.length === 0 && (
           <Typography variant="caption" color="text.secondary">
-            固定経費がまだ登録されていません
+            固定経費がまだ登録されていません（前月に登録があれば自動で引き継がれます）
           </Typography>
         )}
       </Box>
@@ -135,7 +135,14 @@ export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDele
 }
 
 function FixedExpenseRow({ row, billingMonth, onUpsert, onDelete }) {
-  const handleChange = (v) => {
+  const [labelDraft, setLabelDraft] = useState(row.label ?? '')
+  const [labelSaving, setLabelSaving] = useState(false)
+
+  useEffect(() => {
+    setLabelDraft(row.label ?? '')
+  }, [row.id, row.label])
+
+  const handleAmountChange = (v) => {
     const next = v ?? 0
     if (next === (row.amount ?? 0)) return
     onUpsert({
@@ -146,10 +153,50 @@ function FixedExpenseRow({ row, billingMonth, onUpsert, onDelete }) {
     })
   }
 
+  const commitLabel = async () => {
+    const next = labelDraft.trim()
+    if (!next) {
+      setLabelDraft(row.label ?? '')
+      return
+    }
+    if (next === row.label) return
+    setLabelSaving(true)
+    try {
+      await onUpsert({
+        id: row.id,
+        billing_month: billingMonth,
+        label: next,
+        amount: row.amount ?? 0,
+      })
+    } catch {
+      setLabelDraft(row.label ?? '')
+    } finally {
+      setLabelSaving(false)
+    }
+  }
+
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-      <Box sx={{ flex: 1 }}>{row.label}</Box>
-      <AmountInput value={row.amount ?? 0} onChange={handleChange} label="金額" />
+      <TextField
+        size="small"
+        label="項目名"
+        value={labelDraft}
+        onChange={(e) => setLabelDraft(e.target.value)}
+        onBlur={commitLabel}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            e.currentTarget.blur()
+          }
+          if (e.key === 'Escape') {
+            setLabelDraft(row.label ?? '')
+            e.currentTarget.blur()
+          }
+        }}
+        disabled={labelSaving}
+        sx={{ flex: 1 }}
+      />
+      <AmountInput value={row.amount ?? 0} onChange={handleAmountChange} label="金額" />
       <IconButton size="small" color="error" onClick={() => onDelete(row.id)} aria-label="削除">
         <DeleteIcon fontSize="small" />
       </IconButton>

@@ -11,10 +11,11 @@ async function unwrap(promise) {
   return data
 }
 
-export function useCompanyProfile() {
+export function useCompanyProfile(options = {}) {
   return useQuery({
     queryKey: queryKeys.companyProfile.current(),
     queryFn: () => unwrap(getCompanyProfile()),
+    ...options,
   })
 }
 

@@ -23,8 +23,8 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
-  color: white;
+  background-color: #eef0f4;
+  color: #1f2733;
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -52,7 +52,7 @@ button:focus-visible {
 }
 
 .location-info {
-  background-color: #1a1a1a;
+  background-color: #f4f6f8;
   padding: 1.5rem;
   border-radius: 8px;
   margin-top: 1rem;

@@ -9,7 +9,7 @@ import TableRow from '@mui/material/TableRow'
 import TableContainer from '@mui/material/TableContainer'
 import Typography from '@mui/material/Typography'
 import InputBase from '@mui/material/InputBase'
-import { useTheme } from '@mui/material/styles'
+import { useTheme, alpha } from '@mui/material/styles'
 import { calcDailyDerived, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback'
 
@@ -20,14 +20,74 @@ const STICKY_DAY_WIDTH = 44
 const STICKY_DOW_WIDTH = 40
 const STICKY_DOW_LEFT = STICKY_DAY_WIDTH
 
-function rowBackground(dow) {
-  if (dow === 0) return 'rgba(255, 80, 80, 0.06)'
-  if (dow === 6) return 'rgba(80, 140, 255, 0.06)'
-  return 'background.paper'
+/** 列グループ（ヘッダ2段 + 縦線で区分） */
+const COLUMN_GROUPS = [
+  {
+    id: 'v1',
+    label: '1号車',
+    tint: 'primary',
+    fields: [
+      { key: 'vehicle1_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, minWidth: 72 },
+      { key: 'vehicle1_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+      { key: 'vehicle1_sales', label: '売上', unit: '¥', type: 'number', step: 1, minWidth: 88 },
+      { key: 'vehicle1_expense_note', label: '経費内容', type: 'text', minWidth: 120 },
+      { key: 'vehicle1_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+    ],
+  },
+  {
+    id: 'v2',
+    label: '2号車',
+    tint: 'info',
+    fields: [
+      { key: 'vehicle2_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, minWidth: 72 },
+      { key: 'vehicle2_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+      { key: 'vehicle2_sales', label: '売上', unit: '¥', type: 'number', step: 1, minWidth: 88 },
+      { key: 'vehicle2_expense_note', label: '経費内容', type: 'text', minWidth: 120 },
+      { key: 'vehicle2_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+    ],
+  },
+  {
+    id: 'shared',
+    label: '共通',
+    tint: null,
+    fields: [
+      { key: 'labor_cost', label: '人件費', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+      { key: 'cash', label: '現金', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+    ],
+  },
+]
+
+const DERIVED_COLUMNS = [
+  { key: 'total_sales', label: '総売上', minWidth: 88 },
+  { key: 'receivable', label: '未収（売掛）', minWidth: 120 },
+  { key: 'fuel_total', label: '燃料計', minWidth: 80 },
+  { key: 'profit', label: '推定利益', minWidth: 88 },
+]
+
+function cellBorderSx(theme, { groupEdge = false, strong = false } = {}) {
+  return {
+    borderRight: `${strong || groupEdge ? 2 : 1}px solid ${
+      strong || groupEdge ? theme.palette.divider : alpha(theme.palette.divider, 0.7)
+    }`,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  }
+}
+
+function groupTint(theme, tint) {
+  if (tint === 'primary') return alpha(theme.palette.primary.main, 0.06)
+  if (tint === 'info') return alpha(theme.palette.info.main, 0.06)
+  if (tint === 'success') return alpha(theme.palette.success.main, 0.05)
+  return 'transparent'
+}
+
+function rowBackground(theme, dow) {
+  if (dow === 0) return alpha(theme.palette.error.main, 0.05)
+  if (dow === 6) return alpha(theme.palette.primary.main, 0.05)
+  return theme.palette.background.paper
 }
 
 function parseCssColor(color) {
-  if (typeof color !== 'string') return [42, 42, 42]
+  if (typeof color !== 'string') return [255, 255, 255]
   if (color.startsWith('#')) {
     const h = color.slice(1)
     const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
@@ -39,7 +99,7 @@ function parseCssColor(color) {
   }
   const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
   if (m) return [Number(m[1]), Number(m[2]), Number(m[3])]
-  return [42, 42, 42]
+  return [255, 255, 255]
 }
 
 /** 固定列用: paper に色を混ぜた不透明背景（横スクロール時の透け防止） */
@@ -47,19 +107,18 @@ function stickyRowBackground(theme, dow) {
   const paperRgb = parseCssColor(theme.palette.background.paper)
   if (dow === 0) {
     const fg = parseCssColor(theme.palette.error.main)
-    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.06 + paperRgb[i] * 0.94))
+    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.05 + paperRgb[i] * 0.95))
     return `rgb(${r}, ${g}, ${b})`
   }
   if (dow === 6) {
     const fg = parseCssColor(theme.palette.primary.main)
-    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.06 + paperRgb[i] * 0.94))
+    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.05 + paperRgb[i] * 0.95))
     return `rgb(${r}, ${g}, ${b})`
   }
   return theme.palette.background.paper
 }
 
-/** 横スクロール時に左端を固定するセル用スタイル */
-function stickyColSx({ left, width, bg, header = false, edge = false }) {
+function stickyColSx({ left, width, bg, header = false, edge = false, theme }) {
   return {
     position: 'sticky',
     left,
@@ -68,12 +127,9 @@ function stickyColSx({ left, width, bg, header = false, edge = false }) {
     width,
     maxWidth: width,
     bgcolor: bg,
+    ...cellBorderSx(theme, { groupEdge: edge, strong: edge }),
     ...(edge
-      ? {
-          borderRight: 1,
-          borderColor: 'divider',
-          boxShadow: '4px 0 8px -4px rgba(0,0,0,0.12)',
-        }
+      ? { boxShadow: '4px 0 8px -4px rgba(0,0,0,0.12)' }
       : {}),
   }
 }
@@ -85,21 +141,6 @@ function daysInMonth(year, month) {
 function toDateString(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
-
-const EDITABLE_FIELDS = [
-  { key: 'vehicle1_distance_km', label: '距離(1号車)', unit: 'km', type: 'number', step: 0.1 },
-  { key: 'vehicle2_distance_km', label: '距離(2号車)', unit: 'km', type: 'number', step: 0.1 },
-  { key: 'vehicle1_fuel_yen', label: '燃料(1号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle2_fuel_yen', label: '燃料(2号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle1_sales', label: '売上(1号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle2_sales', label: '売上(2号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle1_expense_note', label: '経費内容(1号車)', type: 'text' },
-  { key: 'vehicle1_expense_amount', label: '経費額(1号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'vehicle2_expense_note', label: '経費内容(2号車)', type: 'text' },
-  { key: 'vehicle2_expense_amount', label: '経費額(2号車)', unit: '¥', type: 'number', step: 1 },
-  { key: 'labor_cost', label: '人件費', unit: '¥', type: 'number', step: 1 },
-  { key: 'cash', label: '現金', unit: '¥', type: 'number', step: 1 },
-]
 
 function CellInput({ value, onChange, type, step }) {
   return (
@@ -115,16 +156,28 @@ function CellInput({ value, onChange, type, step }) {
           padding: '2px 4px',
         },
       }}
-      sx={{ width: '100%', fontSize: 13 }}
+      sx={{
+        width: '100%',
+        fontSize: 13,
+        bgcolor: 'rgba(255,255,255,0.55)',
+        borderRadius: 0.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        '&:hover': { borderColor: 'primary.light' },
+        '&.Mui-focused, &:focus-within': {
+          borderColor: 'primary.main',
+          bgcolor: '#fff',
+        },
+      }}
     />
   )
 }
 
 /**
  * 1ヶ月分 (1〜末日) の日次売上をインライン編集するテーブル。
+ * - 列グループ（1号車 / 2号車 / 共通 / 集計）+ 縦線で視覚的に区分
  * - 編集中の値は内部 `draft` state に保持
  * - 500ms 静止したら `onUpsert(payload)` に送る (debounce)
- * - total_sales / fuel_total / profit は派生表示 (DB は GENERATED 列)
  */
 export function DailySalesTable({ year, month, rows, receivableByDate = new Map(), onUpsert }) {
   const theme = useTheme()
@@ -187,13 +240,18 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
     return row?.[fieldKey] ?? ''
   }
 
+  const headerBg = theme.palette.grey[50]
+  const derivedHeaderBg = alpha(theme.palette.success.main, 0.06)
+
   return (
     <TableContainer
       component={Paper}
+      variant="outlined"
       sx={{
         width: '100%',
         overflowX: 'auto',
         WebkitOverflowScrolling: 'touch',
+        borderColor: 'divider',
       }}
     >
       <Table
@@ -211,50 +269,125 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
         }}
       >
         <TableHead>
+          {/* グループ行 */}
           <TableRow>
             <TableCell
-              sx={stickyColSx({
-                left: 0,
-                width: STICKY_DAY_WIDTH,
-                bg: 'background.paper',
-                header: true,
-              })}
+              rowSpan={2}
+              sx={{
+                ...stickyColSx({
+                  left: 0,
+                  width: STICKY_DAY_WIDTH,
+                  bg: headerBg,
+                  header: true,
+                  theme,
+                }),
+                verticalAlign: 'middle',
+                fontWeight: 700,
+                textAlign: 'center',
+              }}
             >
               日
             </TableCell>
             <TableCell
-              sx={stickyColSx({
-                left: STICKY_DOW_LEFT,
-                width: STICKY_DOW_WIDTH,
-                bg: 'background.paper',
-                header: true,
-                edge: true,
-              })}
+              rowSpan={2}
+              sx={{
+                ...stickyColSx({
+                  left: STICKY_DOW_LEFT,
+                  width: STICKY_DOW_WIDTH,
+                  bg: headerBg,
+                  header: true,
+                  edge: true,
+                  theme,
+                }),
+                verticalAlign: 'middle',
+                fontWeight: 700,
+                textAlign: 'center',
+              }}
             >
               曜
             </TableCell>
-            {EDITABLE_FIELDS.map((f) => (
+            {COLUMN_GROUPS.map((g) => (
               <TableCell
-                key={f.key}
-                align={f.type === 'number' ? 'right' : 'left'}
-                sx={{ minWidth: f.type === 'text' ? 140 : 88 }}
+                key={g.id}
+                align="center"
+                colSpan={g.fields.length}
+                sx={{
+                  ...cellBorderSx(theme, { groupEdge: true, strong: true }),
+                  bgcolor: groupTint(theme, g.tint) || headerBg,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  letterSpacing: '0.04em',
+                  borderTop: `2px solid ${
+                    g.tint === 'primary'
+                      ? theme.palette.primary.main
+                      : g.tint === 'info'
+                        ? theme.palette.info.main
+                        : theme.palette.divider
+                  }`,
+                }}
               >
-                {f.label}
-                {f.unit && ` (${f.unit})`}
+                {g.label}
               </TableCell>
             ))}
-            <TableCell align="right" sx={{ minWidth: 88 }}>
-              総売上
+            <TableCell
+              align="center"
+              colSpan={DERIVED_COLUMNS.length}
+              sx={{
+                ...cellBorderSx(theme, { groupEdge: true, strong: true }),
+                bgcolor: derivedHeaderBg,
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: '0.04em',
+                borderTop: `2px solid ${theme.palette.success.main}`,
+              }}
+            >
+              集計
             </TableCell>
-            <TableCell align="right" sx={{ minWidth: 120 }}>
-              未収（売掛）
-            </TableCell>
-            <TableCell align="right" sx={{ minWidth: 88 }}>
-              燃料計
-            </TableCell>
-            <TableCell align="right" sx={{ minWidth: 88 }}>
-              推定利益
-            </TableCell>
+          </TableRow>
+
+          {/* 項目行 */}
+          <TableRow>
+            {COLUMN_GROUPS.map((g) =>
+              g.fields.map((f, idx) => (
+                <TableCell
+                  key={f.key}
+                  align={f.type === 'number' ? 'right' : 'left'}
+                  sx={{
+                    ...cellBorderSx(theme, {
+                      groupEdge: idx === g.fields.length - 1,
+                      strong: idx === g.fields.length - 1,
+                    }),
+                    minWidth: f.minWidth,
+                    bgcolor: groupTint(theme, g.tint) || headerBg,
+                    fontWeight: 600,
+                    fontSize: 12,
+                    color: 'text.secondary',
+                  }}
+                >
+                  {f.label}
+                  {f.unit ? ` (${f.unit})` : ''}
+                </TableCell>
+              ))
+            )}
+            {DERIVED_COLUMNS.map((c, idx) => (
+              <TableCell
+                key={c.key}
+                align="right"
+                sx={{
+                  ...cellBorderSx(theme, {
+                    groupEdge: idx === DERIVED_COLUMNS.length - 1,
+                    strong: idx === DERIVED_COLUMNS.length - 1,
+                  }),
+                  minWidth: c.minWidth,
+                  bgcolor: derivedHeaderBg,
+                  fontWeight: 600,
+                  fontSize: 12,
+                  color: 'text.secondary',
+                }}
+              >
+                {c.label}
+              </TableCell>
+            ))}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -276,18 +409,22 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
             const receivableSummary = receivableByDate.get(workDate)
             const receivableTotal = receivableSummary?.total ?? 0
             const receivableCount = receivableSummary?.count ?? 0
-            const bg = rowBackground(dow)
+            const bg = rowBackground(theme, dow)
             const stickyBg = stickyRowBackground(theme, dow)
+
             return (
-              <TableRow
-                key={workDate}
-                hover
-                sx={{ bgcolor: bg }}
-              >
+              <TableRow key={workDate} hover sx={{ bgcolor: bg }}>
                 <TableCell
                   sx={{
-                    ...stickyColSx({ left: 0, width: STICKY_DAY_WIDTH, bg: stickyBg }),
+                    ...stickyColSx({
+                      left: 0,
+                      width: STICKY_DAY_WIDTH,
+                      bg: stickyBg,
+                      theme,
+                    }),
                     fontVariantNumeric: 'tabular-nums',
+                    fontWeight: 600,
+                    textAlign: 'center',
                   }}
                 >
                   {day}
@@ -299,38 +436,64 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                       width: STICKY_DOW_WIDTH,
                       bg: stickyBg,
                       edge: true,
+                      theme,
                     }),
-                    color: isWeekend ? (dow === 0 ? 'error.main' : 'primary.main') : 'text.secondary',
+                    color: isWeekend
+                      ? dow === 0
+                        ? 'error.main'
+                        : 'primary.main'
+                      : 'text.secondary',
+                    fontWeight: isWeekend ? 700 : 500,
+                    textAlign: 'center',
                   }}
                 >
                   {DOW_LABELS[dow]}
                 </TableCell>
-                {EDITABLE_FIELDS.map((f) => (
-                  <TableCell
-                    key={f.key}
-                    align={f.type === 'number' ? 'right' : 'left'}
-                    sx={{ minWidth: f.type === 'text' ? 140 : 88 }}
-                  >
-                    <CellInput
-                      value={getCellValue(workDate, f.key)}
-                      onChange={(raw) => handleChange(workDate, f, raw)}
-                      type={f.type}
-                      step={f.step}
-                    />
-                  </TableCell>
-                ))}
+
+                {COLUMN_GROUPS.map((g) =>
+                  g.fields.map((f, idx) => (
+                    <TableCell
+                      key={f.key}
+                      align={f.type === 'number' ? 'right' : 'left'}
+                      sx={{
+                        ...cellBorderSx(theme, {
+                          groupEdge: idx === g.fields.length - 1,
+                          strong: idx === g.fields.length - 1,
+                        }),
+                        minWidth: f.minWidth,
+                        bgcolor: groupTint(theme, g.tint),
+                      }}
+                    >
+                      <CellInput
+                        value={getCellValue(workDate, f.key)}
+                        onChange={(raw) => handleChange(workDate, f, raw)}
+                        type={f.type}
+                        step={f.step}
+                      />
+                    </TableCell>
+                  ))
+                )}
+
                 <TableCell
                   align="right"
-                  sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary', minWidth: 88 }}
+                  sx={{
+                    ...cellBorderSx(theme),
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'text.secondary',
+                    minWidth: 88,
+                    bgcolor: derivedHeaderBg,
+                  }}
                 >
                   ¥{derived.total_sales.toLocaleString('ja-JP')}
                 </TableCell>
                 <TableCell
                   align="right"
                   sx={{
+                    ...cellBorderSx(theme),
                     fontVariantNumeric: 'tabular-nums',
                     color: 'text.secondary',
                     minWidth: 120,
+                    bgcolor: derivedHeaderBg,
                   }}
                 >
                   {receivableCount > 0
@@ -339,17 +502,25 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                 </TableCell>
                 <TableCell
                   align="right"
-                  sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary', minWidth: 88 }}
+                  sx={{
+                    ...cellBorderSx(theme),
+                    fontVariantNumeric: 'tabular-nums',
+                    color: 'text.secondary',
+                    minWidth: 80,
+                    bgcolor: derivedHeaderBg,
+                  }}
                 >
                   ¥{derived.fuel_total.toLocaleString('ja-JP')}
                 </TableCell>
                 <TableCell
                   align="right"
                   sx={{
+                    ...cellBorderSx(theme, { groupEdge: true, strong: true }),
                     fontVariantNumeric: 'tabular-nums',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     color: derived.profit < 0 ? 'error.main' : 'success.main',
                     minWidth: 88,
+                    bgcolor: derivedHeaderBg,
                   }}
                 >
                   ¥{derived.profit.toLocaleString('ja-JP')}
@@ -361,7 +532,7 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
       </Table>
       <Box sx={{ p: 1, color: 'text.secondary', fontSize: 12 }}>
         <Typography variant="caption">
-          入力は 500ms 静止すると自動保存されます (debounce)
+          入力は 500ms 静止すると自動保存されます。列は「1号車 / 2号車 / 共通 / 集計」で区分しています。
         </Typography>
       </Box>
     </TableContainer>

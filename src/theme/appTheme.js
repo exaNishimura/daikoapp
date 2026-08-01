@@ -1,10 +1,10 @@
 import { createTheme } from '@mui/material/styles'
 
 /**
- * 配車画面専用のライトテーマ。
- * グローバルもライト固定だが、配車固有のトークンを subtree で適用する。
+ * アプリ全体のデフォルトテーマ（ライト固定）。
+ * ダークモードは使用しない。配車画面も同系統のライトトーン。
  */
-export const dispatchLightTheme = createTheme({
+export const appLightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {

@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -10,6 +10,7 @@ import 'dayjs/locale/ja'
 import App from './App.jsx'
 import { ToastProvider } from './contexts/ToastContext'
 import { queryClient } from './lib/queryClient'
+import { appLightTheme } from './theme/appTheme'
 import './index.css'
 
 // Google Places APIスクリプトを動的に読み込む
@@ -63,61 +64,10 @@ const loadGooglePlacesAPI = () => {
 // アプリ起動時にGoogle Places APIを読み込む
 loadGooglePlacesAPI()
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#646cff',
-    },
-    secondary: {
-      main: '#646cff',
-    },
-    background: {
-      default: '#1a1a1a',
-      paper: '#2a2a2a',
-    },
-    divider: 'rgba(255, 255, 255, 0.12)',
-  },
-  typography: {
-    fontFamily: [
-      '-apple-system',
-      'BlinkMacSystemFont',
-      '"Segoe UI"',
-      'Roboto',
-      '"Helvetica Neue"',
-      'Arial',
-      'sans-serif',
-    ].join(','),
-    h6: {
-      fontWeight: 600,
-    },
-  },
-  shape: {
-    borderRadius: 8,
-  },
-  components: {
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#2a2a2a',
-          color: '#ffffff',
-        },
-      },
-    },
-    MuiDrawer: {
-      styleOverrides: {
-        paper: {
-          backgroundColor: '#2a2a2a',
-        },
-      },
-    },
-  },
-})
-
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={darkTheme}>
+      <ThemeProvider theme={appLightTheme}>
         <CssBaseline />
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ja">
           <ToastProvider>

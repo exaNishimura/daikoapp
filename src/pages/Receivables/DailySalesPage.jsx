@@ -50,9 +50,10 @@ export function DailySalesPage() {
 
   const dailyRows = useMemo(() => dailyQuery.data ?? [], [dailyQuery.data])
   const fixedExpenses = useMemo(
-    () => fixedExpensesQuery.data ?? [],
+    () => fixedExpensesQuery.data?.rows ?? [],
     [fixedExpensesQuery.data]
   )
+  const fixedExpensesCarriedOver = Boolean(fixedExpensesQuery.data?.carriedOver)
   const receivableRows = useMemo(
     () => receivablesQuery.data ?? [],
     [receivablesQuery.data]
@@ -87,7 +88,7 @@ export function DailySalesPage() {
     try {
       await upsertDaily.mutateAsync(payload)
     } catch (err) {
-      setError(`日次売上の保存に失敗: ${err.message}`)
+      setError(`売上の保存に失敗: ${err.message}`)
     }
   }
 
@@ -97,6 +98,7 @@ export function DailySalesPage() {
       await upsertFixed.mutateAsync(payload)
     } catch (err) {
       setError(`固定経費の保存に失敗: ${err.message}`)
+      throw err
     }
   }
 
@@ -127,7 +129,7 @@ export function DailySalesPage() {
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4" component="h1">
-          日次売上
+          売上管理
         </Typography>
         <Box sx={{ flex: 1 }} />
         <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
@@ -140,12 +142,17 @@ export function DailySalesPage() {
       )}
       {dailyQuery.error && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          日次売上の取得に失敗: {dailyQuery.error.message}
+          売上データの取得に失敗: {dailyQuery.error.message}
         </Alert>
       )}
       {fixedExpensesQuery.error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           月額固定経費の取得に失敗: {fixedExpensesQuery.error.message}
+        </Alert>
+      )}
+      {fixedExpensesCarriedOver && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          前月の月額固定経費を当月へ引き継ぎました。金額は必要に応じて修正してください。
         </Alert>
       )}
 
@@ -154,7 +161,7 @@ export function DailySalesPage() {
 
         <Paper sx={{ minWidth: 0 }}>
           <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 2 }}>
-            <Tab label="日次売上" />
+            <Tab label="日次" />
             <Tab label="月額固定経費" />
           </Tabs>
           <Box sx={{ p: 2, minWidth: 0 }}>

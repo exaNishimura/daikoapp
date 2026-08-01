@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  getFixedExpensesByMonth,
+  getFixedExpensesByMonthWithCarryOver,
   upsertFixedExpense,
   upsertFixedExpensesBulk,
   deleteFixedExpense,
@@ -16,7 +16,14 @@ async function unwrap(promise) {
 export function useFixedExpenses(year, month) {
   return useQuery({
     queryKey: queryKeys.fixedExpenses.byMonth(year, month),
-    queryFn: () => unwrap(getFixedExpensesByMonth(year, month)),
+    queryFn: async () => {
+      const result = await getFixedExpensesByMonthWithCarryOver(year, month)
+      if (result.error) throw result.error
+      return {
+        rows: result.data ?? [],
+        carriedOver: Boolean(result.carriedOver),
+      }
+    },
     enabled: !!year && !!month,
   })
 }
