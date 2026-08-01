@@ -115,8 +115,6 @@ export function DailySalesPage() {
     <Box
       sx={{
         p: 3,
-        maxWidth: 1600,
-        mx: 'auto',
         width: '100%',
         minWidth: 0,
         flex: 1,
