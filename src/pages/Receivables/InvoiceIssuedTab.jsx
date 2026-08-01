@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
@@ -14,12 +15,14 @@ import Alert from '@mui/material/Alert'
 import Typography from '@mui/material/Typography'
 import DownloadIcon from '@mui/icons-material/Download'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import FolderZipIcon from '@mui/icons-material/FolderZip'
 import {
   useInvoices,
   useDownloadInvoice,
   useMarkInvoicePaid,
   useRevokeInvoice,
 } from '@/hooks/billing/useInvoices'
+import { downloadInvoicesZip } from '@/lib/billing/downloadInvoicesZip'
 
 function fmtMonth(billingMonth) {
   if (!billingMonth) return ''
@@ -33,17 +36,35 @@ function fmtDate(s) {
   return m ? `${m[1]}/${m[2]}/${m[3]}` : s
 }
 
+/** 発行時と同じ命名: `YYYYMM_会社名様_請求書` */
+function invoiceDisplayName(row, year, month) {
+  const ymPrefix = `${year}${String(month).padStart(2, '0')}`
+  const baseName =
+    row.companies?.invoice_display_name ||
+    row.companies?.name ||
+    `company-${row.company_id}`
+  return `${ymPrefix}_${baseName}様_請求書`
+}
+
 export function InvoiceIssuedTab({ year, month }) {
   const invoicesQuery = useInvoices({ year, month })
   const dlInvoice = useDownloadInvoice()
   const markPaid = useMarkInvoicePaid()
   const revoke = useRevokeInvoice()
   const [error, setError] = useState(null)
+  const [zipWarning, setZipWarning] = useState(null)
+  const [zipBusy, setZipBusy] = useState(false)
 
   const rows = invoicesQuery.data ?? []
+  const downloadableCount = rows.filter((r) => r.file_path).length
+
+  const clearAlerts = () => {
+    setError(null)
+    setZipWarning(null)
+  }
 
   const handleTogglePaid = async (row) => {
-    setError(null)
+    clearAlerts()
     try {
       await markPaid.mutateAsync({
         id: row.id,
@@ -58,7 +79,7 @@ export function InvoiceIssuedTab({ year, month }) {
     if (!window.confirm(`「${row.companies?.name}」の ${fmtMonth(row.billing_month)} 請求書を取消します。よろしいですか?`)) {
       return
     }
-    setError(null)
+    clearAlerts()
     try {
       await revoke.mutateAsync(row.id)
     } catch (err) {
@@ -67,7 +88,7 @@ export function InvoiceIssuedTab({ year, month }) {
   }
 
   const handleDownload = async (row) => {
-    setError(null)
+    clearAlerts()
     if (!row.file_path) {
       setError('この請求書には Storage ファイルが紐づいていません')
       return
@@ -75,11 +96,33 @@ export function InvoiceIssuedTab({ year, month }) {
     try {
       await dlInvoice.mutateAsync({
         filePath: row.file_path,
-        displayName:
-          row.companies?.invoice_display_name || row.companies?.name || null,
+        displayName: invoiceDisplayName(row, year, month),
       })
     } catch (err) {
       setError(`ダウンロードに失敗: ${err.message}`)
+    }
+  }
+
+  const handleZipDownload = async () => {
+    clearAlerts()
+    setZipBusy(true)
+    try {
+      const { included, skipped } = await downloadInvoicesZip(
+        rows.map((r) => ({
+          filePath: r.file_path,
+          displayName: invoiceDisplayName(r, year, month),
+        })),
+        `invoices-${year}${String(month).padStart(2, '0')}`
+      )
+      if (skipped > 0) {
+        setZipWarning(
+          `${included} 件を zip に含めました（${skipped} 件はファイルなし／取得失敗のためスキップ）`
+        )
+      }
+    } catch (err) {
+      setError(`一括ダウンロードに失敗: ${err.message}`)
+    } finally {
+      setZipBusy(false)
     }
   }
 
@@ -90,6 +133,11 @@ export function InvoiceIssuedTab({ year, month }) {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+      {zipWarning && (
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setZipWarning(null)}>
+          {zipWarning}
         </Alert>
       )}
       {invoicesQuery.error && (
@@ -103,67 +151,97 @@ export function InvoiceIssuedTab({ year, month }) {
           {year} 年 {month} 月の発行済請求書はありません。
         </Alert>
       ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>請求月</TableCell>
-                <TableCell>取引先</TableCell>
-                <TableCell>発行日</TableCell>
-                <TableCell align="right">件数</TableCell>
-                <TableCell align="right">金額</TableCell>
-                <TableCell align="center">入金</TableCell>
-                <TableCell align="center">操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id} hover>
-                  <TableCell>{fmtMonth(r.billing_month)}</TableCell>
-                  <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
-                  <TableCell>{fmtDate(r.issue_date)}</TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {r.line_count}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                    ¥{Number(r.total_amount).toLocaleString('ja-JP')}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Checkbox
-                      checked={!!r.paid_at}
-                      onChange={() => handleTogglePaid(r)}
-                      disabled={markPaid.isPending}
-                    />
-                    {r.paid_at && (
-                      <Typography variant="caption" display="block" color="text.secondary">
-                        {fmtDate(r.paid_at.slice(0, 10))}
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDownload(r)}
-                      disabled={!r.file_path || dlInvoice.isPending}
-                      aria-label="ダウンロード"
-                    >
-                      <DownloadIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleRevoke(r)}
-                      disabled={!!r.paid_at || revoke.isPending}
-                      aria-label="取消"
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+        <>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 1.5,
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {rows.length} 件
+              {downloadableCount < rows.length
+                ? `（うち DL 可 ${downloadableCount} 件）`
+                : null}
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={
+                zipBusy ? <CircularProgress size={16} /> : <FolderZipIcon />
+              }
+              onClick={handleZipDownload}
+              disabled={zipBusy || downloadableCount === 0}
+            >
+              {zipBusy ? 'zip 生成中…' : '全件 zip で DL'}
+            </Button>
+          </Box>
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>請求月</TableCell>
+                  <TableCell>取引先</TableCell>
+                  <TableCell>発行日</TableCell>
+                  <TableCell align="right">件数</TableCell>
+                  <TableCell align="right">金額</TableCell>
+                  <TableCell align="center">入金</TableCell>
+                  <TableCell align="center">操作</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id} hover>
+                    <TableCell>{fmtMonth(r.billing_month)}</TableCell>
+                    <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
+                    <TableCell>{fmtDate(r.issue_date)}</TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {r.line_count}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      ¥{Number(r.total_amount).toLocaleString('ja-JP')}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Checkbox
+                        checked={!!r.paid_at}
+                        onChange={() => handleTogglePaid(r)}
+                        disabled={markPaid.isPending}
+                      />
+                      {r.paid_at && (
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {fmtDate(r.paid_at.slice(0, 10))}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDownload(r)}
+                        disabled={!r.file_path || dlInvoice.isPending || zipBusy}
+                        aria-label="ダウンロード"
+                      >
+                        <DownloadIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleRevoke(r)}
+                        disabled={!!r.paid_at || revoke.isPending || zipBusy}
+                        aria-label="取消"
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
       )}
     </Box>
   )
