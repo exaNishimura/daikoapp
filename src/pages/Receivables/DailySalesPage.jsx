@@ -161,7 +161,7 @@ export function DailySalesPage() {
 
         <Paper sx={{ minWidth: 0 }}>
           <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 2 }}>
-            <Tab label="日次" />
+            <Tab label="日次売上" />
             <Tab label="月額固定経費" />
           </Tabs>
           <Box sx={{ p: 2, minWidth: 0 }}>
