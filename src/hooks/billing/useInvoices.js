@@ -10,13 +10,18 @@ import {
 import {
   getReceivables,
   getUnbilledByCompany,
+  createReceivable,
+  updateReceivable,
+  deleteReceivable,
 } from '@/services/billing/receivablesService'
 import { getCompanyProfile } from '@/services/billing/companyProfileService'
 import {
   buildInvoicePath,
   uploadInvoiceFile,
   getInvoiceFileUrl,
+  deleteInvoiceFile,
 } from '@/services/billing/invoiceStorageService'
+import { toBillingMonthFromWorkDate } from '@/lib/billing/receivableForm'
 import { generateInvoicePdf } from '@/lib/pdf/generateInvoicePdf'
 import { monthEnd } from '@/lib/excel/formatters'
 import { queryKeys } from '@/lib/queryClient'
@@ -385,6 +390,115 @@ export function useRevokeInvoice() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (invoiceId) => unwrap(revokeInvoice(invoiceId)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
+      qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+    },
+  })
+}
+
+/**
+ * 発行済請求書の修正→再発行。
+ *
+ * 流れ:
+ *   1. ダイアログ上で編集した売掛を DB に反映 (create/update/delete)
+ *   2. 既存 invoice を取消 (revoke)
+ *   3. 旧 Storage ファイルを削除 (失敗しても続行)
+ *   4. 最新の未請求売掛から PDF を再生成して発行
+ *
+ * 入金済みは revoke_invoice 側で拒否される。
+ *
+ * @param {Object} args
+ * @param {Object} args.invoice          invoices 行 (companies join 済み)
+ * @param {number} args.year
+ * @param {number} args.month
+ * @param {Array}  args.lines            再発行後に残す売掛ドラフト
+ * @param {number[]} args.deletedIds     削除する売掛 id
+ * @param {string} [args.strategy]       省略時 normal
+ * @param {Date|string} [args.issueDate] 省略時は対象月末日
+ */
+export function useReissueInvoice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      invoice,
+      year,
+      month,
+      lines,
+      deletedIds = [],
+      strategy = STRATEGIES.NORMAL,
+      issueDate,
+    }) => {
+      if (!invoice?.id) throw new Error('invoice is required')
+      if (!year || !month) throw new Error('year / month is required')
+      if (invoice.paid_at) {
+        throw new Error('入金済みの請求書は修正できません。先に入金を解除してください')
+      }
+      if (!Array.isArray(lines) || lines.length === 0) {
+        throw new Error('明細が 1 件以上必要です')
+      }
+      if (strategy === STRATEGIES.SKIP) {
+        throw new Error('スキップでは再発行できません')
+      }
+
+      const companyId = invoice.company_id
+      const billingMonth = `${year}-${String(month).padStart(2, '0')}-01`
+      const oldFilePath = invoice.file_path
+
+      // 1. 売掛の差分を反映 (まだ invoice_id が付いたままでも AR の更新/削除は可)
+      for (const id of deletedIds) {
+        await unwrap(deleteReceivable(id))
+      }
+
+      for (const line of lines) {
+        const workDate = line.work_date
+        const payload = {
+          company_id: companyId,
+          work_date: workDate,
+          billing_month:
+            toBillingMonthFromWorkDate(workDate) || billingMonth,
+          vehicle_num: line.vehicle_num ?? null,
+          departure: line.departure?.trim() || null,
+          destination: line.destination?.trim() || null,
+          amount: Number(line.amount) || 0,
+          note: line.note?.trim() || null,
+        }
+        if (line.id != null) {
+          await unwrap(updateReceivable(line.id, payload))
+        } else {
+          await unwrap(createReceivable(payload))
+        }
+      }
+
+      // 2. 取消 → 紐付いていた売掛が未請求に戻る
+      await unwrap(revokeInvoice(invoice.id))
+
+      // 3. 旧 PDF 削除 (失敗しても再発行は続行。同パス upsert で上書きされる)
+      if (oldFilePath) {
+        const { error: delErr } = await deleteInvoiceFile(oldFilePath)
+        if (delErr && import.meta.env.DEV) {
+          console.warn('旧請求書ファイルの削除に失敗:', delErr)
+        }
+      }
+
+      // 4. 再発行
+      const profile = await unwrap(getCompanyProfile())
+      const company = {
+        company_id: companyId,
+        company_name: invoice.companies?.name,
+        invoice_display_name: invoice.companies?.invoice_display_name,
+      }
+      const issued = await issueOneCompany({
+        company,
+        year,
+        month,
+        issueDate: issueDate ?? monthEnd(year, month),
+        profile,
+        strategy,
+      })
+
+      return { successes: issued, failures: [] }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
       qc.invalidateQueries({ queryKey: queryKeys.receivables.all })

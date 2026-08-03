@@ -16,6 +16,8 @@ import Typography from '@mui/material/Typography'
 import DownloadIcon from '@mui/icons-material/Download'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FolderZipIcon from '@mui/icons-material/FolderZip'
+import ReplayIcon from '@mui/icons-material/Replay'
+import Tooltip from '@mui/material/Tooltip'
 import {
   useInvoices,
   useDownloadInvoice,
@@ -23,6 +25,7 @@ import {
   useRevokeInvoice,
 } from '@/hooks/billing/useInvoices'
 import { downloadInvoicesZip } from '@/lib/billing/downloadInvoicesZip'
+import { InvoiceReissueDialog } from './InvoiceReissueDialog'
 
 function fmtMonth(billingMonth) {
   if (!billingMonth) return ''
@@ -54,6 +57,7 @@ export function InvoiceIssuedTab({ year, month }) {
   const [error, setError] = useState(null)
   const [zipWarning, setZipWarning] = useState(null)
   const [zipBusy, setZipBusy] = useState(false)
+  const [reissueTarget, setReissueTarget] = useState(null)
 
   const rows = invoicesQuery.data ?? []
   const downloadableCount = rows.filter((r) => r.file_path).length
@@ -218,23 +222,58 @@ export function InvoiceIssuedTab({ year, month }) {
                       )}
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDownload(r)}
-                        disabled={!r.file_path || dlInvoice.isPending || zipBusy}
-                        aria-label="ダウンロード"
+                      <Tooltip title="ダウンロード">
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDownload(r)}
+                            disabled={
+                              !r.file_path || dlInvoice.isPending || zipBusy
+                            }
+                            aria-label="ダウンロード"
+                          >
+                            <DownloadIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip
+                        title={
+                          r.paid_at
+                            ? '入金済みのため修正不可（先に入金解除）'
+                            : '修正して再発行'
+                        }
                       >
-                        <DownloadIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleRevoke(r)}
-                        disabled={!!r.paid_at || revoke.isPending || zipBusy}
-                        aria-label="取消"
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => setReissueTarget(r)}
+                            disabled={!!r.paid_at || revoke.isPending || zipBusy}
+                            aria-label="修正して再発行"
+                          >
+                            <ReplayIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip
+                        title={
+                          r.paid_at ? '入金済みのため取消不可' : '取消'
+                        }
                       >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRevoke(r)}
+                            disabled={
+                              !!r.paid_at || revoke.isPending || zipBusy
+                            }
+                            aria-label="取消"
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -243,6 +282,14 @@ export function InvoiceIssuedTab({ year, month }) {
           </TableContainer>
         </>
       )}
+
+      <InvoiceReissueDialog
+        open={!!reissueTarget}
+        invoice={reissueTarget}
+        year={year}
+        month={month}
+        onClose={() => setReissueTarget(null)}
+      />
     </Box>
   )
 }
