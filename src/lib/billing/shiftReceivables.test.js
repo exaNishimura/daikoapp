@@ -102,6 +102,19 @@ describe('buildShiftReceivableInsertPayloads', () => {
       vehicle_num: 1,
     })
   })
+
+  it('同請求先・同金額の複数行を許可する', () => {
+    const rows = buildShiftReceivableInsertPayloads(
+      '2026-07-01',
+      [
+        { company_id: 3, amount: '5000', note: '' },
+        { company_id: 3, amount: '5000', note: '' },
+      ],
+      '1'
+    )
+    expect(rows).toHaveLength(2)
+    expect(rows.map((r) => r.amount)).toEqual([5000, 5000])
+  })
 })
 
 describe('filterReceivablesByVehicle', () => {
