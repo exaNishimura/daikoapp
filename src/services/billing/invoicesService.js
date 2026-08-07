@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { formatIsoDate } from '@/lib/excel/formatters'
 
 /**
  * invoices (請求書ヘッダ) サービス。
@@ -85,7 +86,7 @@ export async function issueInvoice(params) {
   try {
     const issueDateStr =
       params.issueDate instanceof Date
-        ? params.issueDate.toISOString().slice(0, 10)
+        ? formatIsoDate(params.issueDate)
         : params.issueDate
     const { data, error } = await supabase.rpc('issue_invoice', {
       p_company_id: params.companyId,

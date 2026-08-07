@@ -88,3 +88,37 @@ export function monthStart(year, month) {
 export function monthEnd(year, month) {
   return new Date(year, month, 0)
 }
+
+/**
+ * Date をローカル日付の 'YYYY-MM-DD' に整形する。
+ * toISOString() は UTC 変換で JST だと日付が 1 日ずれるため使わない。
+ * @param {Date | null | undefined} date
+ * @returns {string}
+ */
+export function formatIsoDate(date) {
+  if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return ''
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/**
+ * 請求書の発行日を決める。
+ * - 対象月の月中（月初〜月末前日）に発行 → 当日
+ * - 月末当日以降、または対象月外 → 対象月末日
+ *
+ * @param {number} year
+ * @param {number} month 1-12
+ * @param {Date} [today=new Date()]
+ * @returns {Date}
+ */
+export function resolveIssueDate(year, month, today = new Date()) {
+  const start = monthStart(year, month)
+  const end = monthEnd(year, month)
+  const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  if (todayLocal >= start && todayLocal < end) {
+    return todayLocal
+  }
+  return end
+}

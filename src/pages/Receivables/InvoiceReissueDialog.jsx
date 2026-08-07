@@ -31,7 +31,7 @@ import { useInvoice, useReissueInvoice } from '@/hooks/billing/useInvoices'
 import { getCompanyProfile } from '@/services/billing/companyProfileService'
 import { getReceivables } from '@/services/billing/receivablesService'
 import { generateInvoicePdf } from '@/lib/pdf/generateInvoicePdf'
-import { monthEnd } from '@/lib/excel/formatters'
+import { resolveIssueDate } from '@/lib/excel/formatters'
 import {
   parseVehicleNumForSave,
   validateReceivableForm,
@@ -251,7 +251,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         .slice()
         .sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)))
       const chunks = expandByStrategy(sorted, strategy)
-      const issueDate = monthEnd(year, month)
+      const issueDate = resolveIssueDate(year, month)
       const previews = []
 
       for (const chunk of chunks) {

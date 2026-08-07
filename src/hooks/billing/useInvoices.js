@@ -23,7 +23,7 @@ import {
 } from '@/services/billing/invoiceStorageService'
 import { toBillingMonthFromWorkDate } from '@/lib/billing/receivableForm'
 import { generateInvoicePdf } from '@/lib/pdf/generateInvoicePdf'
-import { monthEnd } from '@/lib/excel/formatters'
+import { resolveIssueDate } from '@/lib/excel/formatters'
 import { queryKeys } from '@/lib/queryClient'
 import {
   STRATEGIES,
@@ -192,7 +192,7 @@ export function useInvoice(id) {
  *   - year, month                                必須
  *   - targets: [{ companyId, strategy }]         発行対象。strategy 省略時は normal
  *   - companyIds?: number[]                      簡易呼び出し用。指定時は全社 normal で発行
- *   - issueDate?: Date                           省略時は対象月の月末日
+ *   - issueDate?: Date                           省略時は resolveIssueDate（月中=当日 / 月末以降=月末）
  *
  * 出力: { successes: [{ companyId, invoiceId, filePath, sequence? }], failures: [...] }
  *   1 社失敗しても他社は発行する (部分成功許容)。
@@ -226,7 +226,7 @@ export function useIssueInvoices() {
         }))
         .filter((t) => t.company)
 
-      const finalIssueDate = issueDate ?? monthEnd(year, month)
+      const finalIssueDate = issueDate ?? resolveIssueDate(year, month)
 
       const successes = []
       const failures = []
@@ -297,7 +297,7 @@ export function usePreviewInvoice() {
         .slice()
         .sort((a, b) => new Date(a.work_date) - new Date(b.work_date))
       const chunks = expandByStrategy(sortedLines, strategy)
-      const finalIssueDate = issueDate ?? monthEnd(year, month)
+      const finalIssueDate = issueDate ?? resolveIssueDate(year, month)
 
       const previews = []
       for (const chunk of chunks) {
@@ -415,7 +415,7 @@ export function useRevokeInvoice() {
  * @param {Array}  args.lines            再発行後に残す売掛ドラフト
  * @param {number[]} args.deletedIds     削除する売掛 id
  * @param {string} [args.strategy]       省略時 normal
- * @param {Date|string} [args.issueDate] 省略時は対象月末日
+ * @param {Date|string} [args.issueDate] 省略時は resolveIssueDate（月中=当日 / 月末以降=月末）
  */
 export function useReissueInvoice() {
   const qc = useQueryClient()
@@ -492,7 +492,7 @@ export function useReissueInvoice() {
         company,
         year,
         month,
-        issueDate: issueDate ?? monthEnd(year, month),
+        issueDate: issueDate ?? resolveIssueDate(year, month),
         profile,
         strategy,
       })

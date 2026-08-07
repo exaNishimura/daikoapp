@@ -7,6 +7,8 @@ import {
   formatLineNumber,
   monthStart,
   monthEnd,
+  formatIsoDate,
+  resolveIssueDate,
 } from './formatters'
 
 describe('formatYen', () => {
@@ -74,5 +76,49 @@ describe('monthStart / monthEnd', () => {
     expect(monthEnd(2026, 5)).toEqual(new Date(2026, 4, 31))
     expect(monthEnd(2026, 2)).toEqual(new Date(2026, 1, 28)) // 2026 not a leap year
     expect(monthEnd(2024, 2)).toEqual(new Date(2024, 1, 29)) // 2024 leap
+  })
+})
+
+describe('formatIsoDate', () => {
+  it('formats local calendar date without UTC shift', () => {
+    expect(formatIsoDate(new Date(2026, 4, 31))).toBe('2026-05-31')
+    expect(formatIsoDate(new Date(2026, 4, 15))).toBe('2026-05-15')
+  })
+
+  it('returns empty for invalid', () => {
+    expect(formatIsoDate(null)).toBe('')
+    expect(formatIsoDate(new Date('invalid'))).toBe('')
+  })
+})
+
+describe('resolveIssueDate', () => {
+  it('returns today when issuing mid-month of the target month', () => {
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 15))).toEqual(
+      new Date(2026, 4, 15)
+    )
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 1))).toEqual(
+      new Date(2026, 4, 1)
+    )
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 30))).toEqual(
+      new Date(2026, 4, 30)
+    )
+  })
+
+  it('returns month end on the last day of the target month', () => {
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 31))).toEqual(
+      new Date(2026, 4, 31)
+    )
+  })
+
+  it('returns month end when issuing after the target month', () => {
+    expect(resolveIssueDate(2026, 5, new Date(2026, 5, 3))).toEqual(
+      new Date(2026, 4, 31)
+    )
+  })
+
+  it('returns month end when issuing before the target month', () => {
+    expect(resolveIssueDate(2026, 5, new Date(2026, 3, 20))).toEqual(
+      new Date(2026, 4, 31)
+    )
   })
 })
