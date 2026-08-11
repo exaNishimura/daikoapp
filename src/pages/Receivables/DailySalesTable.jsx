@@ -20,6 +20,11 @@ const STICKY_DAY_WIDTH = 44
 const STICKY_DOW_WIDTH = 40
 const STICKY_DOW_LEFT = STICKY_DAY_WIDTH
 
+/** 距離・金額列は固定幅（テーブル伸長で広がらない）。経費内容は可変のまま。 */
+const DIST_COL = 44
+const AMOUNT_COL = 52
+const EXPENSE_NOTE_MIN = 120
+
 /** 列グループ（ヘッダ2段 + 縦線で区分） */
 const COLUMN_GROUPS = [
   {
@@ -27,11 +32,11 @@ const COLUMN_GROUPS = [
     label: '1号車',
     tint: 'primary',
     fields: [
-      { key: 'vehicle1_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, minWidth: 72 },
-      { key: 'vehicle1_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, minWidth: 80 },
-      { key: 'vehicle1_sales', label: '売上', unit: '¥', type: 'number', step: 1, minWidth: 88 },
-      { key: 'vehicle1_expense_note', label: '経費内容', type: 'text', minWidth: 120 },
-      { key: 'vehicle1_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+      { key: 'vehicle1_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, width: DIST_COL },
+      { key: 'vehicle1_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      { key: 'vehicle1_sales', label: '売上', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      { key: 'vehicle1_expense_note', label: '経費内容', type: 'text', minWidth: EXPENSE_NOTE_MIN },
+      { key: 'vehicle1_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
     ],
   },
   {
@@ -39,11 +44,11 @@ const COLUMN_GROUPS = [
     label: '2号車',
     tint: 'info',
     fields: [
-      { key: 'vehicle2_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, minWidth: 72 },
-      { key: 'vehicle2_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, minWidth: 80 },
-      { key: 'vehicle2_sales', label: '売上', unit: '¥', type: 'number', step: 1, minWidth: 88 },
-      { key: 'vehicle2_expense_note', label: '経費内容', type: 'text', minWidth: 120 },
-      { key: 'vehicle2_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+      { key: 'vehicle2_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, width: DIST_COL },
+      { key: 'vehicle2_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      { key: 'vehicle2_sales', label: '売上', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      { key: 'vehicle2_expense_note', label: '経費内容', type: 'text', minWidth: EXPENSE_NOTE_MIN },
+      { key: 'vehicle2_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
     ],
   },
   {
@@ -51,11 +56,26 @@ const COLUMN_GROUPS = [
     label: '共通',
     tint: null,
     fields: [
-      { key: 'labor_cost', label: '人件費', unit: '¥', type: 'number', step: 1, minWidth: 80 },
-      { key: 'cash', label: '現金', unit: '¥', type: 'number', step: 1, minWidth: 80 },
+      { key: 'labor_cost', label: '人件費', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      { key: 'cash', label: '現金', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
     ],
   },
 ]
+
+function fieldColSx(field) {
+  if (field.width != null) {
+    return {
+      width: field.width,
+      minWidth: field.width,
+      maxWidth: field.width,
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+    }
+  }
+  return {
+    minWidth: field.minWidth,
+  }
+}
 
 const DERIVED_COLUMNS = [
   { key: 'total_sales', label: '総売上', minWidth: 88 },
@@ -352,20 +372,20 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                 <TableCell
                   key={f.key}
                   align={f.type === 'number' ? 'right' : 'left'}
+                  title={f.unit ? `${f.label} (${f.unit})` : f.label}
                   sx={{
                     ...cellBorderSx(theme, {
                       groupEdge: idx === g.fields.length - 1,
                       strong: idx === g.fields.length - 1,
                     }),
-                    minWidth: f.minWidth,
+                    ...fieldColSx(f),
                     bgcolor: groupTint(theme, g.tint) || headerBg,
                     fontWeight: 600,
                     fontSize: 12,
                     color: 'text.secondary',
                   }}
                 >
-                  {f.label}
-                  {f.unit ? ` (${f.unit})` : ''}
+                  {f.width != null ? f.label : `${f.label}${f.unit ? ` (${f.unit})` : ''}`}
                 </TableCell>
               ))
             )}
@@ -460,7 +480,7 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                           groupEdge: idx === g.fields.length - 1,
                           strong: idx === g.fields.length - 1,
                         }),
-                        minWidth: f.minWidth,
+                        ...fieldColSx(f),
                         bgcolor: groupTint(theme, g.tint),
                       }}
                     >
