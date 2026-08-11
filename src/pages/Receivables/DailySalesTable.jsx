@@ -21,8 +21,8 @@ const STICKY_DOW_WIDTH = 40
 const STICKY_DOW_LEFT = STICKY_DAY_WIDTH
 
 /** 距離・金額列は固定幅（テーブル伸長で広がらない）。経費内容は可変のまま。 */
-const DIST_COL = 44
-const AMOUNT_COL = 52
+const DIST_COL = 52
+const AMOUNT_COL = 80
 const EXPENSE_NOTE_MIN = 120
 
 /** 列グループ（ヘッダ2段 + 縦線で区分） */
