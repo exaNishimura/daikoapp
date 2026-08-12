@@ -10,6 +10,7 @@ import { LoginPage } from '@/components/LoginPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { LineQueuePage } from '@/components/LineIntake/LineQueuePage'
 import { LineSettingsPage } from '@/components/LineIntake/LineSettingsPage'
+import { LineHoldingAlertHost } from '@/components/LineIntake/LineHoldingAlertHost'
 import { LiffOrderForm } from '@/components/Liff/LiffOrderForm'
 import { CompaniesPage } from '@/pages/Receivables/CompaniesPage'
 import { CompanyProfilePage } from '@/pages/Receivables/CompanyProfilePage'
@@ -503,6 +504,7 @@ function AppShell() {
       style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
       {!isLiff && <NavBar />}
+      {!isLiff && <LineHoldingAlertHost />}
       <AppRoutes />
     </div>
   )

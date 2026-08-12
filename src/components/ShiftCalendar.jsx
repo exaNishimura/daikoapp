@@ -23,9 +23,16 @@ import {
 } from '@/lib/billing/shiftTargetAmount'
 import { getContrastTextColor } from '@/lib/colorContrast'
 import { getActiveWorkDate, formatWorkDateKey } from '@/utils/businessDayUtils'
-import { useReservationsByMonth } from '@/hooks/useReservations'
+import { useReservations, useReservationsByMonth } from '@/hooks/useReservations'
 import { formatDateInJst } from '@/lib/reservation/reservationWindowUtils'
 import { ReservationDayBadge } from '@/components/Reservations/ReservationDayBadge'
+import { ReservationTonightDialog } from '@/components/Reservations/ReservationTonightDialog'
+import {
+  filterReservationsInReceptionNight,
+  getTonightListFilters,
+  markTonightDialogDismissed,
+  wasTonightDialogDismissed,
+} from '@/lib/reservation/tonightReservations'
 import EditIcon from '@mui/icons-material/Edit'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
@@ -104,12 +111,17 @@ export function ShiftCalendar() {
   const [headerCollapsed, setHeaderCollapsed] = useState(false)
   const [vehicleSalesTarget, setVehicleSalesTarget] = useState(null)
   const [vehicleSummaryTarget, setVehicleSummaryTarget] = useState(null)
+  const [tonightOpen, setTonightOpen] = useState(false)
+  const tonightPromptedRef = useRef(false)
+  const tonightWorkDate = useMemo(() => formatWorkDateKey(getActiveWorkDate()), [])
+  const tonightFilters = useMemo(() => getTonightListFilters(tonightWorkDate), [tonightWorkDate])
 
   const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
   const employeesQuery = useEmployees()
   const dailySalesQuery = useDailySales(selectedYear, selectedMonth)
   const closuresQuery = useClosuresByDate(selectedYear, selectedMonth)
   const reservationsQuery = useReservationsByMonth(selectedYear, selectedMonth)
+  const tonightQuery = useReservations(tonightFilters)
 
   const shifts = shiftsQuery.data ?? []
   const employees = employeesQuery.data ?? []
@@ -125,6 +137,20 @@ export function ShiftCalendar() {
     }
     return map
   }, [reservationsQuery.data])
+
+  const tonightReservations = useMemo(
+    () => filterReservationsInReceptionNight(tonightQuery.data, tonightWorkDate),
+    [tonightQuery.data, tonightWorkDate]
+  )
+
+  useEffect(() => {
+    if (tonightPromptedRef.current) return
+    if (tonightQuery.isLoading || tonightQuery.isError) return
+    if (tonightReservations.length === 0) return
+    if (wasTonightDialogDismissed(tonightWorkDate)) return
+    tonightPromptedRef.current = true
+    setTonightOpen(true)
+  }, [tonightQuery.isLoading, tonightQuery.isError, tonightReservations, tonightWorkDate])
 
   // 月が変わったらスクロールフラグをリセット
   useEffect(() => {
@@ -534,6 +560,16 @@ export function ShiftCalendar() {
           </div>
         )}
       </div>
+
+      <ReservationTonightDialog
+        open={tonightOpen}
+        workDate={tonightWorkDate}
+        reservations={tonightReservations}
+        onClose={() => {
+          markTonightDialogDismissed(tonightWorkDate)
+          setTonightOpen(false)
+        }}
+      />
 
       <VehicleSalesModal
         open={Boolean(vehicleSalesTarget)}

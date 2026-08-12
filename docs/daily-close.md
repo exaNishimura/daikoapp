@@ -34,6 +34,8 @@ supabase secrets set ALERT_EMAIL_FROM="notifications@your-domain.com"
 supabase secrets set ALERT_EMAIL_TO="admin@example.com"
 ```
 
+スタッフ向け LINE グループ push は日次締めのみ。予約当日・受注まわりはアプリ内ポップアップ。
+
 ### 4. 8時 cron（Supabase Dashboard）
 
 Dashboard の場所: **Integrations → Cron**（Database 配下ではない）
@@ -95,4 +97,4 @@ https://resend.com で API Key 発行・送信ドメイン検証が必要。
 2. Messaging API 有効化
 3. 「グループトーク・複数人トークへの参加を許可」を ON
 4. トークン発行・グループへボット招待
-5. グループ ID: `Ceee2ca4387e89ae2ae1f85b1d0d4962c`
+5. グループ ID: `LINE_GROUP_ID`（日次締め専用）

@@ -6,7 +6,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import {
   buildHoldExpiredCustomerMessage,
-  buildHoldExpiredGroupMessage,
   pushTextWithRetry,
 } from '../../../shared/lineIntake/messaging.js'
 
@@ -50,7 +49,6 @@ Deno.serve(async (req) => {
   if (error) return json({ error: error.message }, 500)
 
   const results = []
-  const groupId = Deno.env.get('LINE_GROUP_ID')
 
   for (const unit of expired || []) {
     const dedupeKey = `hold_expire:${unit.id}`
@@ -81,10 +79,6 @@ Deno.serve(async (req) => {
     await notify(
       booking.line_user_id,
       buildHoldExpiredCustomerMessage({ pickupAtLabel: pickupLabel })
-    )
-    await notify(
-      groupId,
-      buildHoldExpiredGroupMessage({ bookingId: booking.id, pickupAtLabel: pickupLabel })
     )
 
     await supabase

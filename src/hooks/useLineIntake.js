@@ -11,7 +11,8 @@ export const lineIntakeKeys = {
   settings: () => [...lineIntakeKeys.all, 'settings'],
 }
 
-export function useLineQueue() {
+export function useLineQueue(options = {}) {
+  const { enabled = true, refetchInterval } = options
   return useQuery({
     queryKey: lineIntakeKeys.queue(),
     queryFn: async () => {
@@ -19,6 +20,8 @@ export function useLineQueue() {
       if (error) throw error
       return data
     },
+    enabled,
+    refetchInterval,
   })
 }
 

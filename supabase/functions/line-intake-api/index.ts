@@ -2,7 +2,7 @@
  * LINE 受注 API（受付・承認・キャンセル・管理者変更・再投影）
  *
  * Secrets:
- * - LINE_CHANNEL_ACCESS_TOKEN, LINE_GROUP_ID
+ * - LINE_CHANNEL_ACCESS_TOKEN（顧客 userId push のみ。スタッフ通知はアプリ内ポップアップ）
  * - LINE_CHANNEL_SECRET, LINE_LIFF_ID（参照用・Webhook 側で主利用）
  * - GOOGLE_MAPS_API_KEY
  * - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -16,9 +16,7 @@ import { snapshotDiscount } from '../../../shared/lineIntake/discount.js'
 import { computeHoldUntil } from '../../../shared/lineIntake/holdDeadline.js'
 import { fetchDirectionsDurationMinutes } from '../../../shared/lineIntake/mapsDirections.js'
 import {
-  buildApprovalRequestGroupMessage,
   buildConfirmedCustomerMessage,
-  buildHoldExpiredCustomerMessage,
   buildTentativeCustomerMessage,
   pushTextWithRetry,
 } from '../../../shared/lineIntake/messaging.js'
@@ -313,17 +311,6 @@ async function handleSubmit(supabase, body) {
       pickupAtLabel: pickupLabel,
       holdUntilLabel: holdLabel,
       discountLabel: discount.applied ? discount.label : null,
-    })
-  )
-  const groupId = Deno.env.get('LINE_GROUP_ID')
-  await notify(
-    groupId,
-    buildApprovalRequestGroupMessage({
-      bookingId: booking.id,
-      unitCount: units.length,
-      pickupAtLabel: pickupLabel,
-      usesExtraCapacity: availability.usesExtraCapacity,
-      customerPhone: contactPhone,
     })
   )
 

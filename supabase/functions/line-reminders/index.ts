@@ -1,7 +1,7 @@
 /**
  * LINE リマインド
  * - 顧客: 確定分のお迎え 60 分前（1通・冪等）
- * - 管理者: 当日営業開始前の確定一覧（1通）
+ * - 管理者グループ通知は廃止（アプリ内ポップアップ）
  *
  * Authorization: Bearer CRON_SECRET
  * body: { mode?: 'customer'|'admin'|'both', business_day?: 'YYYY-MM-DD' }
@@ -9,12 +9,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { getLineBusinessDayKey } from '../../../shared/lineIntake/availability.js'
-import {
-  buildAdminDayListMessage,
-  buildCustomerReminderMessage,
-  pushTextWithRetry,
-} from '../../../shared/lineIntake/messaging.js'
-import { getReceptionNightWindow } from '../../../shared/reservation/windowUtils.js'
+import { buildCustomerReminderMessage, pushTextWithRetry } from '../../../shared/lineIntake/messaging.js'
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -89,33 +84,10 @@ Deno.serve(async (req) => {
   }
 
   if (mode === 'admin' || mode === 'both') {
-    const businessDay = body.business_day || getLineBusinessDayKey(now)
-    const dedupeKey = `admin_day_list:${businessDay}`
-    if (await tryDedupe(supabase, 'admin_day_list', dedupeKey)) {
-      const { startIso, endIso } = getReceptionNightWindow(businessDay)
-      const { data: units } = await supabase
-        .from('line_booking_units')
-        .select('*, line_bookings(*)')
-        .eq('status', 'CONFIRMED')
-        .gte('pickup_at', startIso)
-        .lt('pickup_at', endIso)
-        .order('pickup_at', { ascending: true })
-
-      const lines = (units || []).map((u) => {
-        const t = new Date(u.pickup_at).toLocaleTimeString('ja-JP', {
-          timeZone: 'Asia/Tokyo',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-        const extra = u.uses_extra_capacity ? ' [要手配]' : ''
-        return `${t} ${u.pickup_address} → ${u.dropoff_address}${extra}`
-      })
-
-      const text = buildAdminDayListMessage({ businessDayLabel: businessDay, lines })
-      await notify(Deno.env.get('LINE_GROUP_ID'), text)
-      results.admin = { sent: true, business_day: businessDay, count: lines.length }
-    } else {
-      results.admin = { skipped: true, business_day: businessDay }
+    results.admin = {
+      skipped: true,
+      reason: 'staff_in_app_only',
+      business_day: body.business_day || getLineBusinessDayKey(now),
     }
   }
 

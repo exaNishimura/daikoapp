@@ -241,7 +241,7 @@ LINE でも同様のフォールバックが必要。
 既存（日次締め）:
 
 - `LINE_CHANNEL_ACCESS_TOKEN`
-- `LINE_GROUP_ID`
+- `LINE_GROUP_ID`（日次締めのスタッフグループ。受注スタッフ通知はアプリ内）
 
 顧客向け受付で追加想定:
 
