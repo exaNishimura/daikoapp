@@ -1,0 +1,22 @@
+{
+  "feature_name": "line-order-intake",
+  "created_at": "2026-08-11T07:25:00.000Z",
+  "updated_at": "2026-08-11T08:30:00.000Z",
+  "language": "ja",
+  "phase": "implementation",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  },
+  "ready_for_implementation": true
+}

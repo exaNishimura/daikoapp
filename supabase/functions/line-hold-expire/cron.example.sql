@@ -1,0 +1,8 @@
+-- pg_cron 例: 毎分ホールド期限切れ
+-- select cron.schedule('line-hold-expire', '* * * * *', $$
+--   select net.http_post(
+--     url := 'https://<project>.supabase.co/functions/v1/line-hold-expire',
+--     headers := jsonb_build_object('Authorization', 'Bearer ' || '<CRON_SECRET>', 'Content-Type', 'application/json'),
+--     body := '{}'::jsonb
+--   );
+-- $$);

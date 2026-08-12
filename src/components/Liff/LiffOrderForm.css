@@ -1,0 +1,29 @@
+.liff-order-form {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef1f8 0%, #f7f8fa 40%);
+}
+
+.liff-order-form__brand {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.liff-order-form__unit {
+  background: #fff;
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.liff-order-form__my-unit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+}

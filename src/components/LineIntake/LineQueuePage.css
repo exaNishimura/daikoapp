@@ -1,0 +1,20 @@
+.line-queue-page {
+  background: #f7f8fa;
+}
+
+.line-queue-card {
+  background: #fff;
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.line-queue-card:hover {
+  border-color: #5b61e6;
+}
+
+.line-queue-card:focus-visible {
+  outline: 2px solid #5b61e6;
+  outline-offset: 2px;
+}

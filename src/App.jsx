@@ -8,6 +8,9 @@ import { ShiftEditPage } from '@/components/ShiftEditPage'
 import { EmployeeManagement } from '@/components/EmployeeManagement'
 import { LoginPage } from '@/components/LoginPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { LineQueuePage } from '@/components/LineIntake/LineQueuePage'
+import { LineSettingsPage } from '@/components/LineIntake/LineSettingsPage'
+import { LiffOrderForm } from '@/components/Liff/LiffOrderForm'
 import { CompaniesPage } from '@/pages/Receivables/CompaniesPage'
 import { CompanyProfilePage } from '@/pages/Receivables/CompanyProfilePage'
 import { ReceivablesListPage } from '@/pages/Receivables/ReceivablesListPage'
@@ -44,6 +47,7 @@ const NAV_CATEGORIES = [
     items: [
       { to: '/', label: '配車画面', requiresAuth: false, end: true },
       { to: '/reservations', label: '予約台帳', requiresAuth: false },
+      { to: '/line-queue', label: 'LINE仮受付', requiresAuth: true },
     ],
   },
   {
@@ -70,6 +74,7 @@ const NAV_CATEGORIES = [
       { to: '/employees', label: '従業員マスタ', requiresAuth: true },
       { to: '/admin/companies', label: '取引先マスタ', requiresAuth: true },
       { to: '/admin/company-profile', label: '自社情報', requiresAuth: true },
+      { to: '/admin/line-settings', label: 'LINE受注設定', requiresAuth: true },
     ],
   },
 ]
@@ -403,7 +408,24 @@ function AppRoutes() {
         <Route path="/" element={<DispatchBoard />} />
         <Route path="/shift" element={<ShiftCalendar />} />
         <Route path="/reservations" element={<ReservationLedgerPage />} />
+        <Route path="/liff/order" element={<LiffOrderForm />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/line-queue"
+          element={
+            <ProtectedRoute>
+              <LineQueuePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/line-settings"
+          element={
+            <ProtectedRoute>
+              <LineSettingsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/shift/edit"
           element={
@@ -473,16 +495,24 @@ function AppRoutes() {
   )
 }
 
+function AppShell() {
+  const location = useLocation()
+  const isLiff = location.pathname.startsWith('/liff')
+  return (
+    <div
+      style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
+    >
+      {!isLiff && <NavBar />}
+      <AppRoutes />
+    </div>
+  )
+}
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div
-          style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
-        >
-          <NavBar />
-          <AppRoutes />
-        </div>
+        <AppShell />
       </BrowserRouter>
     </AuthProvider>
   )
