@@ -19,7 +19,11 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
-import { callLineIntakeApi, fetchLiffNightOccupancy, listMyLineUnits } from '@/services/lineIntakeService'
+import {
+  callLineIntakeApi,
+  fetchLiffNightOccupancy,
+  listMyLineUnits,
+} from '@/services/lineIntakeService'
 import {
   buildLiffNightSlots,
   firstAvailableSlot,
@@ -199,17 +203,22 @@ export function LiffOrderForm() {
       setUnits((prev) =>
         prev.map((u) => {
           if (u.pickup_date && u.pickup_date !== nightDate) return u
-          const current = slots.find((s) => s.hour === u.pickup_hour && s.minute === u.pickup_minute)
+          const current = slots.find(
+            (s) => s.hour === u.pickup_hour && s.minute === u.pickup_minute
+          )
           if (current?.available) return u
-          return { ...u, pickup_date: nightDate, pickup_hour: first.hour, pickup_minute: first.minute }
+          return {
+            ...u,
+            pickup_date: nightDate,
+            pickup_hour: first.hour,
+            pickup_minute: first.minute,
+          }
         })
       )
     })()
     return () => {
       cancelled = true
     }
-    // units.length は台数による同時占用判定のため。units 全体は見ない
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nightDate, units.length])
 
   useEffect(() => {
@@ -261,7 +270,7 @@ export function LiffOrderForm() {
     const currentMinute = units[index]?.pickup_minute
     const minute = minutes.some((s) => s.minute === currentMinute)
       ? currentMinute
-      : minutes[0]?.minute ?? ''
+      : (minutes[0]?.minute ?? '')
     updateUnit(index, { pickup_hour: hour, pickup_minute: minute })
   }
 
@@ -325,7 +334,11 @@ export function LiffOrderForm() {
     try {
       validateBeforeSubmit()
 
-      const { data, error: apiErr, raw } = await callLineIntakeApi({
+      const {
+        data,
+        error: apiErr,
+        raw,
+      } = await callLineIntakeApi({
         action: 'submit',
         line_user_id: userId,
         contact_phone: phone,
@@ -470,13 +483,19 @@ export function LiffOrderForm() {
                   <Select
                     labelId={`liff-hour-${index}`}
                     label="時"
-                    value={unit.pickup_hour === '' || unit.pickup_hour == null ? '' : unit.pickup_hour}
+                    value={
+                      unit.pickup_hour === '' || unit.pickup_hour == null ? '' : unit.pickup_hour
+                    }
                     onChange={(e) =>
                       updateUnitHour(index, e.target.value === '' ? '' : Number(e.target.value))
                     }
                   >
                     {LIFF_PICKUP_HOURS.map((hour) => (
-                      <MenuItem key={hour} value={hour} disabled={!hourHasAvailable(nightSlots, hour)}>
+                      <MenuItem
+                        key={hour}
+                        value={hour}
+                        disabled={!hourHasAvailable(nightSlots, hour)}
+                      >
                         {formatLiffHourOptionLabel(hour, nightSlots)}
                       </MenuItem>
                     ))}
@@ -499,10 +518,9 @@ export function LiffOrderForm() {
                     }
                   >
                     {LIFF_PICKUP_MINUTES.map((minute) => {
-                      const slot =
-                        nightSlots.find(
-                          (s) => s.hour === unit.pickup_hour && s.minute === minute
-                        ) || { minute, past: false, booked: false, available: true }
+                      const slot = nightSlots.find(
+                        (s) => s.hour === unit.pickup_hour && s.minute === minute
+                      ) || { minute, past: false, booked: false, available: true }
                       return (
                         <MenuItem key={minute} value={minute} disabled={!slot.available}>
                           {formatLiffMinuteOptionLabel(slot)}

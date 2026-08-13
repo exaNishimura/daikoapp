@@ -63,8 +63,7 @@ export function ReceivablesImportPage() {
     () => existingReceivablesQuery.data ?? [],
     [existingReceivablesQuery.data]
   )
-  const hasExistingData =
-    parsed?.period && existingReceivables.length > 0
+  const hasExistingData = parsed?.period && existingReceivables.length > 0
   const hasInvoicedExisting = existingReceivables.some((r) => r.invoice_id != null)
 
   const companyMap = useMemo(() => {
@@ -134,9 +133,7 @@ export function ReceivablesImportPage() {
     setResult(null)
 
     if (hasInvoicedExisting && mode === MODE.OVERWRITE) {
-      setRunError(
-        '当月に請求書発行済みの売掛が含まれます。先に該当請求書を取消してください。'
-      )
+      setRunError('当月に請求書発行済みの売掛が含まれます。先に該当請求書を取消してください。')
       return
     }
     if (unmatchedNames.length > 0) {
@@ -190,8 +187,8 @@ export function ReceivablesImportPage() {
 
       <Alert severity="warning" sx={{ mb: 2 }}>
         <AlertTitle>初期データ移行・運用復旧用</AlertTitle>
-        このページは <strong>過去データの移行・運用復旧</strong> 用です。
-        日々の運用は <a href="/admin/receivables">売掛画面</a> から直接入力してください。
+        このページは <strong>過去データの移行・運用復旧</strong> 用です。 日々の運用は{' '}
+        <a href="/admin/receivables">売掛画面</a> から直接入力してください。
       </Alert>
 
       {!parsed && !parseError && (
@@ -256,14 +253,11 @@ export function ReceivablesImportPage() {
                 同月既存データの扱い
               </Typography>
               <Alert severity={hasInvoicedExisting ? 'error' : 'info'} sx={{ mb: 1 }}>
-                {parsed.period.year} 年 {parsed.period.month} 月の売掛が
-                {' '}<strong>{existingReceivables.length}</strong> 件既に登録されています
+                {parsed.period.year} 年 {parsed.period.month} 月の売掛が{' '}
+                <strong>{existingReceivables.length}</strong> 件既に登録されています
                 {hasInvoicedExisting && '（うち請求書発行済みあり）'}
               </Alert>
-              <RadioGroup
-                value={mode}
-                onChange={(e) => setMode(e.target.value)}
-              >
+              <RadioGroup value={mode} onChange={(e) => setMode(e.target.value)}>
                 <FormControlLabel
                   value={MODE.MERGE}
                   control={<Radio />}
@@ -302,16 +296,13 @@ export function ReceivablesImportPage() {
               {result.rpc.inserted?.receivables ?? 0} / fixed_expenses{' '}
               {result.rpc.inserted?.fixed_expenses ?? 0}
               {result.rpc.overwrite && (
-                <>
-                  {' '}
-                  · 上書き削除: receivables {result.rpc.deleted?.receivables ?? 0} 件
-                </>
+                <> · 上書き削除: receivables {result.rpc.deleted?.receivables ?? 0} 件</>
               )}
               {result.plan.duplicate_count > 0 && (
-                <>{' '}· 重複スキップ: {result.plan.duplicate_count} 件</>
+                <> · 重複スキップ: {result.plan.duplicate_count} 件</>
               )}
               {result.plan.skipped_receivables > 0 && (
-                <>{' '}· マッピング未解決スキップ: {result.plan.skipped_receivables} 件</>
+                <> · マッピング未解決スキップ: {result.plan.skipped_receivables} 件</>
               )}
             </Alert>
           )}
@@ -320,12 +311,10 @@ export function ReceivablesImportPage() {
             <Button
               variant="contained"
               color="primary"
-              startIcon={importMutation.isPending ? <CircularProgress size={16} /> : <SaveAltIcon />}
-              disabled={
-                importMutation.isPending ||
-                mode === MODE.SKIP ||
-                unmatchedNames.length > 0
+              startIcon={
+                importMutation.isPending ? <CircularProgress size={16} /> : <SaveAltIcon />
               }
+              disabled={importMutation.isPending || mode === MODE.SKIP || unmatchedNames.length > 0}
               onClick={handleRun}
             >
               {importMutation.isPending ? '取り込み中…' : 'この内容で保存'}

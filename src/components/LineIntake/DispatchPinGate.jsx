@@ -23,7 +23,12 @@ export function DispatchPinGate({ children }) {
     setError('')
     setSubmitting(true)
     try {
-      const { data, error: apiErr, raw, status } = await callLineIntakeApi({
+      const {
+        data,
+        error: apiErr,
+        raw,
+        status,
+      } = await callLineIntakeApi({
         action: 'verify_pin',
         pin,
       })

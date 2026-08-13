@@ -1,4 +1,7 @@
-import { getReceptionNightWindow, parseJstDateString } from '@/lib/reservation/reservationWindowUtils'
+import {
+  getReceptionNightWindow,
+  parseJstDateString,
+} from '@/lib/reservation/reservationWindowUtils'
 
 const STORAGE_VERSION = 'v1'
 

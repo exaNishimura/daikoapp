@@ -13,7 +13,10 @@ import {
   sumShiftTimesHours,
 } from './shiftStaffHours'
 
-const employees = [{ id: '1', name: '西村' }, { id: '2', name: '井上' }]
+const employees = [
+  { id: '1', name: '西村' },
+  { id: '2', name: '井上' },
+]
 
 describe('calcShiftWorkHours', () => {
   it('同日の勤務時間を計算する', () => {
@@ -103,12 +106,8 @@ describe('buildShiftTimeRows', () => {
 
 describe('applyShiftTimeUpdates', () => {
   it('フォームの開始/終了をシフトにマージする', () => {
-    const shifts = [
-      { id: 's1', staff: '西村', employee_id: '1', start: '19:00', end: '23:00' },
-    ]
-    const merged = applyShiftTimeUpdates(shifts, [
-      { shiftId: 's1', start: '20:00', end: '00:00' },
-    ])
+    const shifts = [{ id: 's1', staff: '西村', employee_id: '1', start: '19:00', end: '23:00' }]
+    const merged = applyShiftTimeUpdates(shifts, [{ shiftId: 's1', start: '20:00', end: '00:00' }])
     expect(merged[0].start).toBe('20:00')
     expect(merged[0].end).toBe('00:00')
   })
@@ -116,12 +115,8 @@ describe('applyShiftTimeUpdates', () => {
 
 describe('buildShiftUpdatePayloads', () => {
   it('シフト更新ペイロードを生成する', () => {
-    const payloads = buildShiftUpdatePayloads([
-      { shiftId: 's1', start: '20:00', end: '00:30' },
-    ])
-    expect(payloads).toEqual([
-      { id: 's1', shiftData: { start: '20:00', end: '00:30' } },
-    ])
+    const payloads = buildShiftUpdatePayloads([{ shiftId: 's1', start: '20:00', end: '00:30' }])
+    expect(payloads).toEqual([{ id: 's1', shiftData: { start: '20:00', end: '00:30' } }])
   })
 
   it('開始・終了が既存シフトと同じ行は更新対象に含めない', () => {
@@ -145,9 +140,7 @@ describe('buildShiftUpdatePayloads', () => {
       ],
       dayShifts
     )
-    expect(payloads).toEqual([
-      { id: 's2', shiftData: { start: '21:30', end: '01:00' } },
-    ])
+    expect(payloads).toEqual([{ id: 's2', shiftData: { start: '21:30', end: '01:00' } }])
   })
 })
 
@@ -197,9 +190,7 @@ describe('computeLaborCostFromStaffHours', () => {
   })
 
   it('マスタに無いスタッフは0円扱い', () => {
-    expect(
-      computeLaborCostFromStaffHours([{ staff_name: '臨時', hours: 5 }], [])
-    ).toBe(0)
+    expect(computeLaborCostFromStaffHours([{ staff_name: '臨時', hours: 5 }], [])).toBe(0)
   })
 })
 

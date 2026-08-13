@@ -55,6 +55,7 @@ export default [
 
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true }],
       'no-restricted-imports': [
         'error',
         {
@@ -74,6 +75,33 @@ export default [
           message: 'Use import.meta.env.DEV instead of process.env.NODE_ENV in Vite projects.',
         },
       ],
+    },
+  },
+  {
+    files: ['**/*.{test,spec}.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        vi: 'readonly',
+      },
+    },
+  },
+  {
+    files: [
+      'src/lib/billing/dailyCloseMessage.test.js',
+      'src/lib/reservation/buildReservationLineMessage.js',
+      'src/lib/reservation/reservationWindowUtils.js',
+    ],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   prettier,

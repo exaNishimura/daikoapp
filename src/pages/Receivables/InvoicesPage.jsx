@@ -34,9 +34,7 @@ export function InvoicesPage() {
           請求書
         </Typography>
         <Box sx={{ flex: 1 }} />
-        {tab !== 2 && (
-          <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
-        )}
+        {tab !== 2 && <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />}
       </Box>
 
       <Paper>

@@ -155,9 +155,7 @@ export function isVehicleOperational(vehicleId, targetTime, operationStatuses) {
   }
 
   const targetRow = dateToRowIndex(new Date(targetTime))
-  return windows.some(
-    (window) => targetRow >= window.startRow && targetRow < window.endRow
-  )
+  return windows.some((window) => targetRow >= window.startRow && targetRow < window.endRow)
 }
 
 /**

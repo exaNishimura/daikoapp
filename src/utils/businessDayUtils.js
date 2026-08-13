@@ -152,7 +152,9 @@ export function snapDateTimeTo15Minutes(dateTimeString) {
  */
 export function normalizeTimeInput(value) {
   if (value == null || value === '') return ''
-  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/)
+  const match = String(value)
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})/)
   if (!match) return ''
   return `${match[1].padStart(2, '0')}:${match[2]}`
 }

@@ -48,7 +48,8 @@ export async function fetchDirectionsDurationMinutes(opts) {
     const outbound = await fetchLegMinutes(fetchImpl, opts.origin, opts.destination, opts.apiKey)
     if (outbound.minutes == null) return { duration: null, error: outbound.error }
 
-    const waiting = typeof opts.waitingLocationAddress === 'string' ? opts.waitingLocationAddress.trim() : ''
+    const waiting =
+      typeof opts.waitingLocationAddress === 'string' ? opts.waitingLocationAddress.trim() : ''
     if (waiting) {
       const ret = await fetchLegMinutes(fetchImpl, opts.destination, waiting, opts.apiKey)
       if (ret.minutes != null && ret.minutes > 0) {

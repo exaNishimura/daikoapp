@@ -53,7 +53,10 @@ export function UnknownCompanyResolver({ companyNames, companies, decisions, onC
       <Typography variant="h6" sx={{ mb: 1 }}>
         取引先マッピング
       </Typography>
-      <Alert severity={totalToResolve === 0 || resolvedCount === totalToResolve ? 'success' : 'warning'} sx={{ mb: 2 }}>
+      <Alert
+        severity={totalToResolve === 0 || resolvedCount === totalToResolve ? 'success' : 'warning'}
+        sx={{ mb: 2 }}
+      >
         自動マッチ: {matchedCount} / {companyNames.length}
         {totalToResolve > 0 && ` · 要解決: ${totalToResolve - resolvedCount} 件`}
       </Alert>
@@ -143,4 +146,3 @@ export function UnknownCompanyResolver({ companyNames, companies, decisions, onC
     </Paper>
   )
 }
-

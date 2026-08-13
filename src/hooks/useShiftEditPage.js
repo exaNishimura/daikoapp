@@ -13,7 +13,12 @@ import {
   resolveShiftEmployee,
   toShiftStaffFields,
 } from '@/lib/staffFromEmployees'
-import { DOW_MAP, getDaysInMonth, getShiftPlannedTimesForCopy, withPlannedShiftTimes } from '@/lib/shiftEditUtils'
+import {
+  DOW_MAP,
+  getDaysInMonth,
+  getShiftPlannedTimesForCopy,
+  withPlannedShiftTimes,
+} from '@/lib/shiftEditUtils'
 
 const EMPTY_NEW_SHIFT = {
   car: '',

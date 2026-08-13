@@ -12,10 +12,7 @@ import Divider from '@mui/material/Divider'
 import SaveIcon from '@mui/icons-material/Save'
 import RestoreIcon from '@mui/icons-material/Restore'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import {
-  useCompanyProfile,
-  useUpdateCompanyProfile,
-} from '@/hooks/billing/useCompanyProfile'
+import { useCompanyProfile, useUpdateCompanyProfile } from '@/hooks/billing/useCompanyProfile'
 import {
   BANK_ACCOUNT_TYPES,
   COMPANY_PROFILE_FIELDS,
@@ -42,15 +39,11 @@ function ProfileForm({ initial, onSave, isSaving }) {
   const { errors, isValid } = useMemo(() => validateCompanyProfileForm(form), [form])
 
   const isDirty = useMemo(
-    () =>
-      COMPANY_PROFILE_FIELDS.some(
-        (f) => (form[f] ?? '') !== (serverSnapshot[f] ?? '')
-      ),
+    () => COMPANY_PROFILE_FIELDS.some((f) => (form[f] ?? '') !== (serverSnapshot[f] ?? '')),
     [form, serverSnapshot]
   )
 
-  const handleChange = (field) => (e) =>
-    setForm((prev) => ({ ...prev, [field]: e.target.value }))
+  const handleChange = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
   const handleBlurPostal = () =>
     setForm((prev) => ({ ...prev, postal_code: normalizePostalCode(prev.postal_code) }))
@@ -201,11 +194,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
         </Box>
 
         <Box sx={{ mt: 3, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-          <Button
-            onClick={handleReset}
-            startIcon={<RestoreIcon />}
-            disabled={isSaving || !isDirty}
-          >
+          <Button onClick={handleReset} startIcon={<RestoreIcon />} disabled={isSaving || !isDirty}>
             元に戻す
           </Button>
           <Button
@@ -227,10 +216,7 @@ export function CompanyProfilePage() {
   const profileQuery = useCompanyProfile()
   const updateMutation = useUpdateCompanyProfile()
 
-  const initial = useMemo(
-    () => pickProfileFields(profileQuery.data),
-    [profileQuery.data]
-  )
+  const initial = useMemo(() => pickProfileFields(profileQuery.data), [profileQuery.data])
 
   const isLoading = profileQuery.isLoading
   const ready = !isLoading

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { matchCompany, findCandidateCompanies } from './matchCompany'
 
 const companies = [
-  { id: 1, name: '鈴友', invoice_display_name: '鈴友株式会社', aliases: ['鈴友', '鈴友(株)'], is_active: true },
+  {
+    id: 1,
+    name: '鈴友',
+    invoice_display_name: '鈴友株式会社',
+    aliases: ['鈴友', '鈴友(株)'],
+    is_active: true,
+  },
   { id: 2, name: '田中商事', invoice_display_name: null, aliases: ['田中'], is_active: true },
   { id: 3, name: '山田運輸', invoice_display_name: null, aliases: [], is_active: false },
   { id: 4, name: 'スズトモ商店', invoice_display_name: null, aliases: [], is_active: true },

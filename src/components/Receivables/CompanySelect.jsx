@@ -205,9 +205,7 @@ export function CompanySelect({
         if (typeof opt === 'string' || typeof val === 'string') return opt === val
         return opt.id === val.id
       }}
-      getOptionDisabled={(opt) =>
-        typeof opt !== 'string' && creating && opt.isCreateOption
-      }
+      getOptionDisabled={(opt) => typeof opt !== 'string' && creating && opt.isCreateOption}
       disabled={disabled || creating}
       clearOnBlur={!creatable}
       selectOnFocus
@@ -217,12 +215,7 @@ export function CompanySelect({
         const { key, ...liProps } = props
         if (option.isCreateOption) {
           return (
-            <Box
-              component="li"
-              key={key ?? CREATE_OPTION_ID}
-              {...liProps}
-              sx={{ fontWeight: 600 }}
-            >
+            <Box component="li" key={key ?? CREATE_OPTION_ID} {...liProps} sx={{ fontWeight: 600 }}>
               「{option.name}」を新規追加
             </Box>
           )
@@ -240,9 +233,7 @@ export function CompanySelect({
             }}
           >
             <span>{labelOf(option)}</span>
-            {!option.is_active && (
-              <span style={{ fontSize: 12, color: '#888' }}>(無効)</span>
-            )}
+            {!option.is_active && <span style={{ fontSize: 12, color: '#888' }}>(無効)</span>}
           </Box>
         )
       }}

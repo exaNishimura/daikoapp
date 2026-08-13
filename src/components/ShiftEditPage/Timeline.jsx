@@ -215,8 +215,18 @@ export function CarBlock({ carNum, shifts, staffColorByName, employees }) {
       >
         {carNum}号車
       </Box>
-      <Lane role="代行" shifts={driverShifts} staffColorByName={staffColorByName} employees={employees} />
-      <Lane role="随伴" shifts={companionShifts} staffColorByName={staffColorByName} employees={employees} />
+      <Lane
+        role="代行"
+        shifts={driverShifts}
+        staffColorByName={staffColorByName}
+        employees={employees}
+      />
+      <Lane
+        role="随伴"
+        shifts={companionShifts}
+        staffColorByName={staffColorByName}
+        employees={employees}
+      />
     </Box>
   )
 }

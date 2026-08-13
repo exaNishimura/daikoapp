@@ -15,7 +15,8 @@ const NOT_INITIALIZED = () => ({
 function monthRange(year, month) {
   const m = String(month).padStart(2, '0')
   const start = `${year}-${m}-01`
-  const next = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`
+  const next =
+    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`
   return { start, next }
 }
 
@@ -115,10 +116,7 @@ export async function upsertDailySale(payload) {
 export async function deleteDailySale(workDate) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { error } = await supabase
-      .from('daily_sales')
-      .delete()
-      .eq('work_date', workDate)
+    const { error } = await supabase.from('daily_sales').delete().eq('work_date', workDate)
     if (error) throw error
     return { data: { work_date: workDate }, error: null }
   } catch (error) {

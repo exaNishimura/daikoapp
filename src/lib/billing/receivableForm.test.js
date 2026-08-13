@@ -53,7 +53,10 @@ describe('validateReceivableForm', () => {
   })
 
   it('flags missing company_id', () => {
-    const result = validateReceivableForm({ ...baseForm, company_id: null }, { year: 2026, month: 5 })
+    const result = validateReceivableForm(
+      { ...baseForm, company_id: null },
+      { year: 2026, month: 5 }
+    )
     expect(result.errors.company_id).toBeTruthy()
   })
 

@@ -11,10 +11,7 @@ import Stack from '@mui/material/Stack'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
 import { fromMonthString, toMonthString, monthRange } from '@/components/Receivables/monthUtils'
-import {
-  useDailySales,
-  useUpsertDailySale,
-} from '@/hooks/billing/useDailySales'
+import { useDailySales, useUpsertDailySale } from '@/hooks/billing/useDailySales'
 import {
   useFixedExpenses,
   useUpsertFixedExpense,
@@ -54,10 +51,7 @@ export function DailySalesPage() {
     [fixedExpensesQuery.data]
   )
   const fixedExpensesCarriedOver = Boolean(fixedExpensesQuery.data?.carriedOver)
-  const receivableRows = useMemo(
-    () => receivablesQuery.data ?? [],
-    [receivablesQuery.data]
-  )
+  const receivableRows = useMemo(() => receivablesQuery.data ?? [], [receivablesQuery.data])
 
   const receivableByDate = useMemo(
     () => summarizeReceivablesByDate(receivableRows),

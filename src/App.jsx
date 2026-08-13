@@ -390,11 +390,7 @@ function NavBar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
           {brandBlock}
           {categories.map((cat) => (
-            <NavCategoryDropdown
-              key={cat.id}
-              category={cat}
-              pathname={location.pathname}
-            />
+            <NavCategoryDropdown key={cat.id} category={cat} pathname={location.pathname} />
           ))}
         </div>
       )}
@@ -405,7 +401,15 @@ function NavBar() {
 
 function AppRoutes() {
   return (
-    <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Routes>
         <Route
           path="/"
@@ -508,9 +512,7 @@ function AppShell() {
   const location = useLocation()
   const isLiff = location.pathname.startsWith('/liff')
   return (
-    <div
-      style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       {!isLiff && <NavBar />}
       {!isLiff && <LineHoldingAlertHost />}
       <AppRoutes />

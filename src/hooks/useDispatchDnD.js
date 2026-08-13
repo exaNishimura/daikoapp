@@ -40,7 +40,14 @@ function getClientYFromEvent(event) {
   return null
 }
 
-export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, setSlots, setOrders }) {
+export function useDispatchDnD({
+  vehicles,
+  slots,
+  orders,
+  operationStatuses,
+  setSlots,
+  setOrders,
+}) {
   const { showToast } = useToast()
   const [dragOverPosition, setDragOverPosition] = useState(null)
   const [mousePosition, setMousePosition] = useState(null)
@@ -51,9 +58,11 @@ export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, set
   const ordersRef = useRef(orders)
   const operationStatusesRef = useRef(operationStatuses)
 
-  slotsRef.current = slots
-  ordersRef.current = orders
-  operationStatusesRef.current = operationStatuses
+  useEffect(() => {
+    slotsRef.current = slots
+    ordersRef.current = orders
+    operationStatusesRef.current = operationStatuses
+  }, [slots, orders, operationStatuses])
 
   const buildDragPreview = (vehicleId, rawTopPx) => {
     const ctx = dragContextRef.current
@@ -177,9 +186,7 @@ export function useDispatchDnD({ vehicles, slots, orders, operationStatuses, set
         const startRowIndex = dateToRowIndex(new Date(slot.start_at))
         const originalTop = rowIndexToPixels(startRowIndex)
         if (event.delta?.y !== undefined) {
-          setDragOverPosition(
-            buildDragPreview(vehicleId, originalTop + event.delta.y)
-          )
+          setDragOverPosition(buildDragPreview(vehicleId, originalTop + event.delta.y))
           return
         }
       }

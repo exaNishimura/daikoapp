@@ -96,8 +96,6 @@ export function summarizeUnpaidInvoices(invoices, today = new Date()) {
     invoice_count: unpaid.length,
     average_days_overdue: Math.round(daysSum / unpaid.length),
     over_60_count: over60,
-    by_company: Array.from(byCompany.values()).sort(
-      (a, b) => b.total_unpaid - a.total_unpaid
-    ),
+    by_company: Array.from(byCompany.values()).sort((a, b) => b.total_unpaid - a.total_unpaid),
   }
 }

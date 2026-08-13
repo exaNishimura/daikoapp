@@ -109,7 +109,10 @@ export function InvoiceIssueTab({ year, month }) {
       setResult(out)
       setResultOpen(true)
     } catch (err) {
-      setResult({ successes: [], failures: [{ companyId: 0, companyName: '全体エラー', error: err.message }] })
+      setResult({
+        successes: [],
+        failures: [{ companyId: 0, companyName: '全体エラー', error: err.message }],
+      })
       setResultOpen(true)
     }
   }
@@ -126,7 +129,9 @@ export function InvoiceIssueTab({ year, month }) {
     )
   }
 
-  const selectedCount = rows.filter((r) => decisionFor(r).selected && decisionFor(r).strategy !== STRATEGIES.SKIP).length
+  const selectedCount = rows.filter(
+    (r) => decisionFor(r).selected && decisionFor(r).strategy !== STRATEGIES.SKIP
+  ).length
   const totalAmount = rows
     .filter((r) => decisionFor(r).selected && decisionFor(r).strategy !== STRATEGIES.SKIP)
     .reduce((s, r) => s + r.total_amount, 0)

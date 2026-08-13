@@ -43,9 +43,7 @@ export function OrderCardList({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        ...(fillHeight
-          ? { flex: 1, minHeight: 0, height: '100%' }
-          : { flexShrink: 0 }),
+        ...(fillHeight ? { flex: 1, minHeight: 0, height: '100%' } : { flexShrink: 0 }),
         ...(expanded
           ? fillHeight
             ? { flex: 1, minHeight: 0, height: '100%' }
@@ -74,7 +72,14 @@ export function OrderCardList({
         }}
         onClick={handleToggle}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: 24,
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0 }}>
             <Typography
               variant="caption"

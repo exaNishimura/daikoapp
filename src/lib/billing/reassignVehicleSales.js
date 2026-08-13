@@ -45,10 +45,7 @@ export function hasVehicleShifts(dayShifts = [], carNum) {
 export function hasOpenReceivablesForVehicle(receivableRows = [], carNum) {
   const car = String(carNum)
   return (receivableRows ?? []).some(
-    (row) =>
-      row?.invoice_id == null &&
-      row?.vehicle_num != null &&
-      String(row.vehicle_num) === car
+    (row) => row?.invoice_id == null && row?.vehicle_num != null && String(row.vehicle_num) === car
   )
 }
 

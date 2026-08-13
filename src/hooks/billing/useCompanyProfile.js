@@ -1,8 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  getCompanyProfile,
-  upsertCompanyProfile,
-} from '@/services/billing/companyProfileService'
+import { getCompanyProfile, upsertCompanyProfile } from '@/services/billing/companyProfileService'
 import { queryKeys } from '@/lib/queryClient'
 
 async function unwrap(promise) {

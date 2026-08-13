@@ -53,9 +53,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading }) {
     const payload = {
       name: String(form.name).trim(),
       invoice_display_name:
-        form.invoice_display_name?.trim() === ''
-          ? null
-          : String(form.invoice_display_name).trim(),
+        form.invoice_display_name?.trim() === '' ? null : String(form.invoice_display_name).trim(),
       aliases: normalizeAliases(form.aliases),
       display_order: Number(form.display_order) || 0,
       is_active: !!form.is_active,
@@ -89,9 +87,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading }) {
           <TextField
             label="請求書表記名 (任意)"
             value={form.invoice_display_name ?? ''}
-            onChange={(e) =>
-              setForm({ ...form, invoice_display_name: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, invoice_display_name: e.target.value })}
             helperText="空欄ならマスタ名をそのまま使用"
             fullWidth
             disabled={loading}
@@ -141,9 +137,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading }) {
             minRows={2}
             disabled={loading}
           />
-          {submitError && (
-            <Box sx={{ color: 'error.main', fontSize: 13 }}>{submitError}</Box>
-          )}
+          {submitError && <Box sx={{ color: 'error.main', fontSize: 13 }}>{submitError}</Box>}
         </Box>
       </DialogContent>
       <DialogActions>

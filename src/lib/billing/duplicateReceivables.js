@@ -46,9 +46,7 @@ export function receivableKey(row) {
  */
 export function findDuplicates(incoming, existing = []) {
   if (!Array.isArray(incoming) || incoming.length === 0) return []
-  const seen = new Set(
-    (Array.isArray(existing) ? existing : []).map(receivableKey)
-  )
+  const seen = new Set((Array.isArray(existing) ? existing : []).map(receivableKey))
   const result = []
   for (const row of incoming) {
     const key = receivableKey(row)

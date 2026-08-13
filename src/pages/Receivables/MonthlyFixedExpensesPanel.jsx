@@ -24,15 +24,9 @@ const DEFAULT_LABELS = ['共済掛金', '損害保険', '駐車場', '携帯', '
  * @param {(id) => Promise} props.onDelete
  */
 export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDelete }) {
-  const sorted = useMemo(
-    () => [...(rows ?? [])].sort((a, b) => (a.id ?? 0) - (b.id ?? 0)),
-    [rows]
-  )
+  const sorted = useMemo(() => [...(rows ?? [])].sort((a, b) => (a.id ?? 0) - (b.id ?? 0)), [rows])
 
-  const total = useMemo(
-    () => sorted.reduce((s, r) => s + (Number(r.amount) || 0), 0),
-    [sorted]
-  )
+  const total = useMemo(() => sorted.reduce((s, r) => s + (Number(r.amount) || 0), 0), [sorted])
 
   const usedLabels = useMemo(() => new Set(sorted.map((r) => r.label)), [sorted])
   const quickAdds = DEFAULT_LABELS.filter((l) => !usedLabels.has(l))
@@ -121,7 +115,12 @@ export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDele
               onChange={(v) => setDraft({ ...draft, amount: v ?? 0 })}
               label="金額"
             />
-            <IconButton size="small" color="primary" onClick={handleAdd} disabled={!draft.label.trim()}>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={handleAdd}
+              disabled={!draft.label.trim()}
+            >
               <SaveIcon fontSize="small" />
             </IconButton>
             <IconButton size="small" onClick={() => setAdding(false)}>

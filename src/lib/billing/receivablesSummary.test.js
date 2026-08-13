@@ -77,9 +77,7 @@ describe('summarizeReceivables', () => {
   })
 
   it('handles missing company gracefully', () => {
-    const result = summarizeReceivables([
-      { id: 1, company_id: 99, amount: 100, companies: null },
-    ])
+    const result = summarizeReceivables([{ id: 1, company_id: 99, amount: 100, companies: null }])
     expect(result.byCompany[0]).toMatchObject({
       companyId: 99,
       companyName: '(取引先未設定)',

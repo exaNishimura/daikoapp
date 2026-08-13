@@ -32,7 +32,12 @@ function calcShiftWorkHours(start, end) {
   if (!start || !end) return 0
   const [sh, sm] = String(start).split(':').map(Number)
   const [eh, em] = String(end).split(':').map(Number)
-  if (!Number.isFinite(sh) || !Number.isFinite(sm) || !Number.isFinite(eh) || !Number.isFinite(em)) {
+  if (
+    !Number.isFinite(sh) ||
+    !Number.isFinite(sm) ||
+    !Number.isFinite(eh) ||
+    !Number.isFinite(em)
+  ) {
     return 0
   }
   const startMinutes = sh * 60 + sm
@@ -147,9 +152,7 @@ function formatBreakdownLine(label, total, items) {
   if (validItems.length === 0) {
     return `${label} ${formatYen(total)}`
   }
-  const breakdown = validItems
-    .map((item) => `${item.label} ${formatYen(item.amount)}`)
-    .join('、')
+  const breakdown = validItems.map((item) => `${item.label} ${formatYen(item.amount)}`).join('、')
   return `${label} ${formatYen(total)}（${breakdown}）`
 }
 
@@ -230,14 +233,16 @@ export function buildDailyCloseMessage({
     lines.push('⚠ 稼働号車なし')
   } else {
     for (const carNum of operatingCars) {
-      lines.push(buildVehicleSection({
-        carNum,
-        salesRow,
-        shifts,
-        employees,
-        receivables,
-        companyLookup,
-      }))
+      lines.push(
+        buildVehicleSection({
+          carNum,
+          salesRow,
+          shifts,
+          employees,
+          receivables,
+          companyLookup,
+        })
+      )
       lines.push('')
     }
   }

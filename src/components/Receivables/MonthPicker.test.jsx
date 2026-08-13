@@ -5,12 +5,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ja'
 import { MonthPicker } from './MonthPicker'
-import {
-  toMonthString,
-  fromMonthString,
-  monthRange,
-  dayjsToMonthString,
-} from './monthUtils'
+import { toMonthString, fromMonthString, monthRange, dayjsToMonthString } from './monthUtils'
 
 function renderWithLocale(ui) {
   return render(

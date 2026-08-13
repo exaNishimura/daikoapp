@@ -1,6 +1,11 @@
 import { useState, useRef, useMemo } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import { dateToRowIndex, rowIndexToPixels, minutesToRows, TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
+import {
+  dateToRowIndex,
+  rowIndexToPixels,
+  minutesToRows,
+  TIMELINE_ROW_HEIGHT_PX,
+} from '@/utils/rowUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
 import './SlotComponent.css'
 import Dialog from '@mui/material/Dialog'
@@ -295,10 +300,10 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
               !order.contact_phone &&
               !order.parking_note &&
               !order.buffer_manual && (
-              <Typography variant="body2" color="text.secondary">
-                追加情報はありません
-              </Typography>
-            )}
+                <Typography variant="body2" color="text.secondary">
+                  追加情報はありません
+                </Typography>
+              )}
           </Stack>
         </DialogContent>
         <DialogActions>

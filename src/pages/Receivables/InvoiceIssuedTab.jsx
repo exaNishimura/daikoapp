@@ -43,9 +43,7 @@ function fmtDate(s) {
 function invoiceDisplayName(row, year, month) {
   const ymPrefix = `${year}${String(month).padStart(2, '0')}`
   const baseName =
-    row.companies?.invoice_display_name ||
-    row.companies?.name ||
-    `company-${row.company_id}`
+    row.companies?.invoice_display_name || row.companies?.name || `company-${row.company_id}`
   return `${ymPrefix}_${baseName}様_請求書`
 }
 
@@ -80,7 +78,11 @@ export function InvoiceIssuedTab({ year, month }) {
   }
 
   const handleRevoke = async (row) => {
-    if (!window.confirm(`「${row.companies?.name}」の ${fmtMonth(row.billing_month)} 請求書を取消します。よろしいですか?`)) {
+    if (
+      !window.confirm(
+        `「${row.companies?.name}」の ${fmtMonth(row.billing_month)} 請求書を取消します。よろしいですか?`
+      )
+    ) {
       return
     }
     clearAlerts()
@@ -168,16 +170,12 @@ export function InvoiceIssuedTab({ year, month }) {
           >
             <Typography variant="body2" color="text.secondary">
               {rows.length} 件
-              {downloadableCount < rows.length
-                ? `（うち DL 可 ${downloadableCount} 件）`
-                : null}
+              {downloadableCount < rows.length ? `（うち DL 可 ${downloadableCount} 件）` : null}
             </Typography>
             <Button
               variant="outlined"
               size="small"
-              startIcon={
-                zipBusy ? <CircularProgress size={16} /> : <FolderZipIcon />
-              }
+              startIcon={zipBusy ? <CircularProgress size={16} /> : <FolderZipIcon />}
               onClick={handleZipDownload}
               disabled={zipBusy || downloadableCount === 0}
             >
@@ -227,9 +225,7 @@ export function InvoiceIssuedTab({ year, month }) {
                           <IconButton
                             size="small"
                             onClick={() => handleDownload(r)}
-                            disabled={
-                              !r.file_path || dlInvoice.isPending || zipBusy
-                            }
+                            disabled={!r.file_path || dlInvoice.isPending || zipBusy}
                             aria-label="ダウンロード"
                           >
                             <DownloadIcon fontSize="small" />
@@ -238,9 +234,7 @@ export function InvoiceIssuedTab({ year, month }) {
                       </Tooltip>
                       <Tooltip
                         title={
-                          r.paid_at
-                            ? '入金済みのため修正不可（先に入金解除）'
-                            : '修正して再発行'
+                          r.paid_at ? '入金済みのため修正不可（先に入金解除）' : '修正して再発行'
                         }
                       >
                         <span>
@@ -255,19 +249,13 @@ export function InvoiceIssuedTab({ year, month }) {
                           </IconButton>
                         </span>
                       </Tooltip>
-                      <Tooltip
-                        title={
-                          r.paid_at ? '入金済みのため取消不可' : '取消'
-                        }
-                      >
+                      <Tooltip title={r.paid_at ? '入金済みのため取消不可' : '取消'}>
                         <span>
                           <IconButton
                             size="small"
                             color="error"
                             onClick={() => handleRevoke(r)}
-                            disabled={
-                              !!r.paid_at || revoke.isPending || zipBusy
-                            }
+                            disabled={!!r.paid_at || revoke.isPending || zipBusy}
                             aria-label="取消"
                           >
                             <DeleteOutlineIcon fontSize="small" />

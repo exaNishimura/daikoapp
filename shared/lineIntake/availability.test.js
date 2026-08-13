@@ -130,7 +130,10 @@ describe('checkAvailability', () => {
       baseDurationMin: 20,
       occupiedIntervals: [],
       phoneLocks: [
-        { start_at: pickup.toISOString(), end_at: new Date(pickup.getTime() + 600000).toISOString() },
+        {
+          start_at: pickup.toISOString(),
+          end_at: new Date(pickup.getTime() + 600000).toISOString(),
+        },
       ],
       settings: {},
     })

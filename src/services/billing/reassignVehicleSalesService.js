@@ -80,12 +80,7 @@ export async function reassignVehicleSales({ workDate, fromCar, toCar }) {
     const mode = decideReassignMode({ fromCar, toCar, hasToData })
 
     const shiftUpdates = buildShiftCarUpdates(dayShifts, fromCar, toCar, mode)
-    const receivableUpdates = buildReceivableVehicleNumUpdates(
-      receivableRows,
-      fromCar,
-      toCar,
-      mode
-    )
+    const receivableUpdates = buildReceivableVehicleNumUpdates(receivableRows, fromCar, toCar, mode)
     const swappedDaily = swapVehicleFields(dailyRow, fromCar, toCar, mode)
 
     if (shiftUpdates.length > 0) {
@@ -110,9 +105,7 @@ export async function reassignVehicleSales({ workDate, fromCar, toCar }) {
       employees,
     })
     const hoursByName = new Map(dayStaffHoursRows.map((row) => [row.staff_name, row.hours]))
-    const existingSalesByName = new Map(
-      existingStaffRows.map((r) => [r.staff_name, r.sales ?? 0])
-    )
+    const existingSalesByName = new Map(existingStaffRows.map((r) => [r.staff_name, r.sales ?? 0]))
     const staffNames = new Set([
       ...hoursByName.keys(),
       ...existingStaffRows.map((r) => r.staff_name),

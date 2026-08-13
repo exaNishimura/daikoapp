@@ -30,7 +30,12 @@ export async function callLineIntakeApi(body) {
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      return { data: null, error: new Error(data.error || `HTTP ${res.status}`), status: res.status, raw: data }
+      return {
+        data: null,
+        error: new Error(data.error || `HTTP ${res.status}`),
+        status: res.status,
+        raw: data,
+      }
     }
     return { data, error: null }
   } catch (error) {
@@ -79,8 +84,16 @@ export async function fetchLiffNightOccupancy(nightDate) {
         .in('status', ['HOLDING', 'CONFIRMED'])
         .gte('pickup_at', padStart)
         .lte('pickup_at', padEnd),
-      supabase.from('dispatch_slots').select('start_at, end_at').gte('start_at', padStart).lte('start_at', padEnd),
-      supabase.from('reservations').select('reserved_at').gte('reserved_at', padStart).lte('reserved_at', padEnd),
+      supabase
+        .from('dispatch_slots')
+        .select('start_at, end_at')
+        .gte('start_at', padStart)
+        .lte('start_at', padEnd),
+      supabase
+        .from('reservations')
+        .select('reserved_at')
+        .gte('reserved_at', padStart)
+        .lte('reserved_at', padEnd),
       supabase
         .from('phone_priority_locks')
         .select('start_at, end_at')
@@ -90,7 +103,11 @@ export async function fetchLiffNightOccupancy(nightDate) {
     ])
 
     const error =
-      unitsRes.error || slotsRes.error || reservationsRes.error || locksRes.error || settingsRes.error
+      unitsRes.error ||
+      slotsRes.error ||
+      reservationsRes.error ||
+      locksRes.error ||
+      settingsRes.error
     if (error) throw error
 
     return {
@@ -112,7 +129,11 @@ export async function fetchLiffNightOccupancy(nightDate) {
 export async function getLineIntakeSettings() {
   if (!supabase) return { data: null, error: new Error('Supabase not initialized') }
   try {
-    const { data, error } = await supabase.from('line_intake_settings').select('*').eq('id', 1).single()
+    const { data, error } = await supabase
+      .from('line_intake_settings')
+      .select('*')
+      .eq('id', 1)
+      .single()
     if (error) throw error
     return { data, error: null }
   } catch (error) {

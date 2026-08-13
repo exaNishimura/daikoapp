@@ -24,21 +24,21 @@ export function LineHoldingAlertHost() {
   })
 
   const holding = useMemo(() => {
-    const now = Date.now()
+    const now = query.dataUpdatedAt || 0
     return (query.data || []).filter((unit) => {
       if (unit.status === 'HOLDING') return true
       if (unit.status !== 'CONFIRMED' || !unit.created_at) return false
       return now - new Date(unit.created_at).getTime() < 30 * 60 * 1000
     })
-  }, [query.data])
+  }, [query.data, query.dataUpdatedAt])
 
   const [open, setOpen] = useState(false)
   const seenRef = useRef(null)
-  if (seenRef.current == null) {
-    seenRef.current = loadSeenHoldingIds()
-  }
 
   useEffect(() => {
+    if (seenRef.current == null) {
+      seenRef.current = loadSeenHoldingIds()
+    }
     if (!enabled || query.isLoading || query.isError) return
 
     if (onQueuePage) {
@@ -65,6 +65,10 @@ export function LineHoldingAlertHost() {
   if (!enabled || onQueuePage) return null
 
   return (
-    <LineHoldingAlertDialog open={open && holding.length > 0} units={holding} onClose={handleClose} />
+    <LineHoldingAlertDialog
+      open={open && holding.length > 0}
+      units={holding}
+      onClose={handleClose}
+    />
   )
 }

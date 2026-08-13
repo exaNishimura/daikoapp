@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  daysOverdue,
-  isOverdue60,
-  summarizeUnpaidInvoices,
-} from './invoiceAging'
+import { daysOverdue, isOverdue60, summarizeUnpaidInvoices } from './invoiceAging'
 
 describe('daysOverdue', () => {
   it('returns 0 when issue_date is today', () => {

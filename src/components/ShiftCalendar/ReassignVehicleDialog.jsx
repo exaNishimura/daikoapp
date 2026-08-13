@@ -90,9 +90,7 @@ export function ReassignVehicleDialog({
               ))}
             </Select>
           </FormControl>
-          {modeLabel && (
-            <Alert severity={mode === 'swap' ? 'warning' : 'info'}>{modeLabel}</Alert>
-          )}
+          {modeLabel && <Alert severity={mode === 'swap' ? 'warning' : 'info'}>{modeLabel}</Alert>}
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>

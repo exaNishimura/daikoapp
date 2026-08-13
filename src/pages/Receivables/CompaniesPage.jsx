@@ -45,8 +45,9 @@ import {
 import { CompanyEditDialog } from './CompanyEditDialog'
 
 function SortableRow({ company, onEdit, onToggleActive, disabled }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: company.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: company.id,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -77,12 +78,11 @@ function SortableRow({ company, onEdit, onToggleActive, disabled }) {
         <Typography variant="body2" sx={{ fontWeight: 500 }}>
           {company.name}
         </Typography>
-        {company.invoice_display_name &&
-          company.invoice_display_name !== company.name && (
-            <Typography variant="caption" color="text.secondary">
-              請求書表記: {company.invoice_display_name}
-            </Typography>
-          )}
+        {company.invoice_display_name && company.invoice_display_name !== company.name && (
+          <Typography variant="caption" color="text.secondary">
+            請求書表記: {company.invoice_display_name}
+          </Typography>
+        )}
       </TableCell>
       <TableCell>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -99,9 +99,7 @@ function SortableRow({ company, onEdit, onToggleActive, disabled }) {
           <Chip label="無効" size="small" />
         )}
       </TableCell>
-      <TableCell sx={{ maxWidth: 240, color: 'text.secondary' }}>
-        {company.memo || '—'}
-      </TableCell>
+      <TableCell sx={{ maxWidth: 240, color: 'text.secondary' }}>{company.memo || '—'}</TableCell>
       <TableCell align="center" width={120}>
         <IconButton
           size="small"

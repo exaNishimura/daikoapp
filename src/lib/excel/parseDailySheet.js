@@ -25,12 +25,7 @@
  *   AK=36 現金, AL=37 収益/日
  */
 
-import {
-  parseAmount,
-  parseDay,
-  parseHours,
-  parseKm,
-} from './value-parsers'
+import { parseAmount, parseDay, parseHours, parseKm } from './value-parsers'
 
 /** 列インデックス定数 (0-indexed) */
 export const COL = Object.freeze({

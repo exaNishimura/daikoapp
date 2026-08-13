@@ -69,17 +69,11 @@ export async function updateShift(id, shiftData) {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('shifts')
-      .update(shiftData)
-      .eq('id', id)
-      .select()
+    const { data, error } = await supabase.from('shifts').update(shiftData).eq('id', id).select()
 
     if (error) throw error
     if (!data?.length) {
-      throw new Error(
-        'シフトの更新に失敗しました（権限不足または対象シフトが見つかりません）'
-      )
+      throw new Error('シフトの更新に失敗しました（権限不足または対象シフトが見つかりません）')
     }
     return { data: data[0], error: null }
   } catch (error) {

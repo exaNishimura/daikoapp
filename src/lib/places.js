@@ -31,9 +31,9 @@ export function getMieLocationRestriction() {
 function isGoogleMapsBootstrapReady() {
   return Boolean(
     typeof window !== 'undefined' &&
-      window.google &&
-      window.google.maps &&
-      typeof window.google.maps.importLibrary === 'function'
+    window.google &&
+    window.google.maps &&
+    typeof window.google.maps.importLibrary === 'function'
   )
 }
 

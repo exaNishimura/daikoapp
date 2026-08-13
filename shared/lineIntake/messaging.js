@@ -92,9 +92,7 @@ export function buildAdminDayListMessage({ businessDayLabel, lines }) {
 export async function pushTextWithRetry(opts) {
   const fetchImpl = opts.fetchImpl || fetch
   const maxRetries = opts.maxRetries ?? 3
-  const sleep =
-    opts.sleep ||
-    ((ms) => new Promise((r) => setTimeout(r, ms)))
+  const sleep = opts.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)))
   let last = { ok: false, status: 0, body: '' }
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

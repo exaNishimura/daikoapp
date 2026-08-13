@@ -32,11 +32,39 @@ const COLUMN_GROUPS = [
     label: '1号車',
     tint: 'primary',
     fields: [
-      { key: 'vehicle1_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, width: DIST_COL },
-      { key: 'vehicle1_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
-      { key: 'vehicle1_sales', label: '売上', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      {
+        key: 'vehicle1_distance_km',
+        label: '距離',
+        unit: 'km',
+        type: 'number',
+        step: 0.1,
+        width: DIST_COL,
+      },
+      {
+        key: 'vehicle1_fuel_yen',
+        label: '燃料',
+        unit: '¥',
+        type: 'number',
+        step: 1,
+        width: AMOUNT_COL,
+      },
+      {
+        key: 'vehicle1_sales',
+        label: '売上',
+        unit: '¥',
+        type: 'number',
+        step: 1,
+        width: AMOUNT_COL,
+      },
       { key: 'vehicle1_expense_note', label: '経費内容', type: 'text', minWidth: EXPENSE_NOTE_MIN },
-      { key: 'vehicle1_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      {
+        key: 'vehicle1_expense_amount',
+        label: '経費額',
+        unit: '¥',
+        type: 'number',
+        step: 1,
+        width: AMOUNT_COL,
+      },
     ],
   },
   {
@@ -44,11 +72,39 @@ const COLUMN_GROUPS = [
     label: '2号車',
     tint: 'info',
     fields: [
-      { key: 'vehicle2_distance_km', label: '距離', unit: 'km', type: 'number', step: 0.1, width: DIST_COL },
-      { key: 'vehicle2_fuel_yen', label: '燃料', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
-      { key: 'vehicle2_sales', label: '売上', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      {
+        key: 'vehicle2_distance_km',
+        label: '距離',
+        unit: 'km',
+        type: 'number',
+        step: 0.1,
+        width: DIST_COL,
+      },
+      {
+        key: 'vehicle2_fuel_yen',
+        label: '燃料',
+        unit: '¥',
+        type: 'number',
+        step: 1,
+        width: AMOUNT_COL,
+      },
+      {
+        key: 'vehicle2_sales',
+        label: '売上',
+        unit: '¥',
+        type: 'number',
+        step: 1,
+        width: AMOUNT_COL,
+      },
       { key: 'vehicle2_expense_note', label: '経費内容', type: 'text', minWidth: EXPENSE_NOTE_MIN },
-      { key: 'vehicle2_expense_amount', label: '経費額', unit: '¥', type: 'number', step: 1, width: AMOUNT_COL },
+      {
+        key: 'vehicle2_expense_amount',
+        label: '経費額',
+        unit: '¥',
+        type: 'number',
+        step: 1,
+        width: AMOUNT_COL,
+      },
     ],
   },
   {
@@ -110,7 +166,13 @@ function parseCssColor(color) {
   if (typeof color !== 'string') return [255, 255, 255]
   if (color.startsWith('#')) {
     const h = color.slice(1)
-    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
+    const full =
+      h.length === 3
+        ? h
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : h
     return [
       parseInt(full.slice(0, 2), 16),
       parseInt(full.slice(2, 4), 16),
@@ -148,9 +210,7 @@ function stickyColSx({ left, width, bg, header = false, edge = false, theme }) {
     maxWidth: width,
     bgcolor: bg,
     ...cellBorderSx(theme, { groupEdge: edge, strong: edge }),
-    ...(edge
-      ? { boxShadow: '4px 0 8px -4px rgba(0,0,0,0.12)' }
-      : {}),
+    ...(edge ? { boxShadow: '4px 0 8px -4px rgba(0,0,0,0.12)' } : {}),
   }
 }
 
@@ -552,7 +612,8 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
       </Table>
       <Box sx={{ p: 1, color: 'text.secondary', fontSize: 12 }}>
         <Typography variant="caption">
-          入力は 500ms 静止すると自動保存されます。列は「1号車 / 2号車 / 共通 / 集計」で区分しています。
+          入力は 500ms 静止すると自動保存されます。列は「1号車 / 2号車 / 共通 /
+          集計」で区分しています。
         </Typography>
       </Box>
     </TableContainer>

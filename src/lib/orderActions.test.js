@@ -53,15 +53,15 @@ describe('hasRouteChanged', () => {
   })
 
   it('true when pickup changes', () => {
-    expect(
-      hasRouteChanged(BASE_ORDER, { ...BASE_FORM, pickup_address: '三重県四日市市C' })
-    ).toBe(true)
+    expect(hasRouteChanged(BASE_ORDER, { ...BASE_FORM, pickup_address: '三重県四日市市C' })).toBe(
+      true
+    )
   })
 
   it('true when dropoff changes', () => {
-    expect(
-      hasRouteChanged(BASE_ORDER, { ...BASE_FORM, dropoff_address: '三重県四日市市C' })
-    ).toBe(true)
+    expect(hasRouteChanged(BASE_ORDER, { ...BASE_FORM, dropoff_address: '三重県四日市市C' })).toBe(
+      true
+    )
   })
 
   it('true when a waypoint is added', () => {
@@ -136,12 +136,7 @@ describe('saveOrderEdit', () => {
       deps: deps(),
     })
 
-    expect(estimateDuration).toHaveBeenCalledWith(
-      '三重県四日市市C',
-      '三重県鈴鹿市B',
-      null,
-      null
-    )
+    expect(estimateDuration).toHaveBeenCalledWith('三重県四日市市C', '三重県鈴鹿市B', null, null)
     expect(result.routeRecalculated).toBe(true)
     expect(result.order.base_duration_min).toBe(48)
     expect(result.order.buffer_manual).toBe(false)
@@ -176,12 +171,7 @@ describe('saveOrderEdit', () => {
       deps: deps(),
     })
 
-    expect(estimateDuration).toHaveBeenCalledWith(
-      '三重県鈴鹿市A',
-      '三重県鈴鹿市B',
-      null,
-      null
-    )
+    expect(estimateDuration).toHaveBeenCalledWith('三重県鈴鹿市A', '三重県鈴鹿市B', null, null)
     expect(result.routeRecalculated).toBe(true)
     expect(result.order.base_duration_min).toBe(40)
     expect(result.order.waypoints).toBeNull()

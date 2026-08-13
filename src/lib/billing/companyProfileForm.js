@@ -80,10 +80,7 @@ export function validateCompanyProfileForm(form = {}) {
     }
   }
 
-  if (
-    !errors.bank_account_type &&
-    !BANK_ACCOUNT_TYPES.includes(form.bank_account_type)
-  ) {
+  if (!errors.bank_account_type && !BANK_ACCOUNT_TYPES.includes(form.bank_account_type)) {
     errors.bank_account_type = `口座種別は ${BANK_ACCOUNT_TYPES.join('/')} のいずれかを選んでください`
   }
 

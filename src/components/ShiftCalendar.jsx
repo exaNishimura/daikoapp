@@ -5,7 +5,11 @@ import { useShiftsByMonth } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
 import { useDailySales } from '@/hooks/billing/useDailySales'
 import { useClosuresByDate } from '@/hooks/billing/useDailyClosures'
-import { getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
+import {
+  getDailyTotalSales,
+  indexDailySalesByDate,
+  toWorkDateKey,
+} from '@/lib/billing/dailySalesCalc'
 import { getVehicleFieldKeys } from '@/lib/billing/vehicleSalesFields'
 import { VehicleSalesModal } from '@/components/ShiftCalendar/VehicleSalesModal'
 import { VehicleSalesSummaryModal } from '@/components/ShiftCalendar/VehicleSalesSummaryModal'
@@ -17,10 +21,7 @@ import {
   getStaffDisplayName,
   resolveShiftEmployee,
 } from '@/lib/staffFromEmployees'
-import {
-  computeDayTargetAmount,
-  roundTargetDisplayAmount,
-} from '@/lib/billing/shiftTargetAmount'
+import { computeDayTargetAmount, roundTargetDisplayAmount } from '@/lib/billing/shiftTargetAmount'
 import { getContrastTextColor } from '@/lib/colorContrast'
 import { getActiveWorkDate, formatWorkDateKey } from '@/utils/businessDayUtils'
 import { useReservations, useReservationsByMonth } from '@/hooks/useReservations'
@@ -549,9 +550,7 @@ export function ShiftCalendar() {
                 isDayClosed={Boolean(closuresByDate[date])}
                 isAdmin={isAuthenticated}
                 dayReservations={reservationsByDate[date] ?? []}
-                onOpenVehicleSales={(carNum) =>
-                  setVehicleSalesTarget({ date, carNum })
-                }
+                onOpenVehicleSales={(carNum) => setVehicleSalesTarget({ date, carNum })}
                 onOpenVehicleSummary={(carNum) =>
                   setVehicleSummaryTarget({ date, dow: groupedData[date]?.dow, carNum })
                 }
@@ -592,9 +591,7 @@ export function ShiftCalendar() {
         dow={vehicleSummaryTarget?.dow ?? ''}
         carNum={vehicleSummaryTarget?.carNum ?? null}
         dayShifts={
-          vehicleSummaryTarget?.date
-            ? (groupedData[vehicleSummaryTarget.date]?.shifts ?? [])
-            : []
+          vehicleSummaryTarget?.date ? (groupedData[vehicleSummaryTarget.date]?.shifts ?? []) : []
         }
         employees={employees}
         onClose={() => setVehicleSummaryTarget(null)}
@@ -643,9 +640,7 @@ function DayBlock({
               {dateFormatted}
               <span className="day-dow">({dayData.dow})</span>
             </div>
-            {isClosed && (
-              <div className="status-label closed-day">締め済</div>
-            )}
+            {isClosed && <div className="status-label closed-day">締め済</div>}
             {dayData.status && (
               <div
                 className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}

@@ -109,19 +109,13 @@ describe('applySplitStrategy', () => {
   it('splits into 3 invoices when above MAX*2', () => {
     const lines = makeLines(INVOICE_MAX_LINES * 2 + 10)
     const result = applySplitStrategy(lines)
-    expect(result.map((r) => r.lines.length)).toEqual([
-      INVOICE_MAX_LINES,
-      INVOICE_MAX_LINES,
-      10,
-    ])
+    expect(result.map((r) => r.lines.length)).toEqual([INVOICE_MAX_LINES, INVOICE_MAX_LINES, 10])
   })
 
   it('preserves total amount across split invoices', () => {
     const lines = makeLines(INVOICE_MAX_LINES * 2 + 5)
     const result = applySplitStrategy(lines)
-    const total = result
-      .flatMap((r) => r.lines)
-      .reduce((s, l) => s + l.amount, 0)
+    const total = result.flatMap((r) => r.lines).reduce((s, l) => s + l.amount, 0)
     const originalTotal = lines.reduce((s, l) => s + l.amount, 0)
     expect(total).toBe(originalTotal)
   })

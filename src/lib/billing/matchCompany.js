@@ -89,17 +89,11 @@ export function findCandidateCompanies(input, companies, options = {}) {
     const name = normalize(c.name)
     const aliases = Array.isArray(c.aliases) ? c.aliases.map(normalize) : []
     const display = normalize(c.invoice_display_name)
-    if (
-      name.includes(key) ||
-      display.includes(key) ||
-      aliases.some((a) => a.includes(key))
-    ) {
+    if (name.includes(key) || display.includes(key) || aliases.some((a) => a.includes(key))) {
       result.push(c)
     }
   }
-  return result
-    .sort((a, b) => normalize(a.name).length - normalize(b.name).length)
-    .slice(0, limit)
+  return result.sort((a, b) => normalize(a.name).length - normalize(b.name).length).slice(0, limit)
 }
 
 /**

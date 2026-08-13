@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildLineChannelMarkers, resolveProjectionTarget, toBoardRouteFields } from './projector.js'
+import {
+  buildLineChannelMarkers,
+  resolveProjectionTarget,
+  toBoardRouteFields,
+} from './projector.js'
 
 describe('resolveProjectionTarget', () => {
   it('same business day → BOARD', () => {

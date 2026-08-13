@@ -56,9 +56,7 @@ export async function getInvoice(id) {
   try {
     const { data, error } = await supabase
       .from('invoices')
-      .select(
-        '*, companies(id, name, invoice_display_name), accounts_receivable(*)'
-      )
+      .select('*, companies(id, name, invoice_display_name), accounts_receivable(*)')
       .eq('id', id)
       .single()
     if (error) throw error
@@ -85,9 +83,7 @@ export async function issueInvoice(params) {
   if (!supabase) return NOT_INITIALIZED()
   try {
     const issueDateStr =
-      params.issueDate instanceof Date
-        ? formatIsoDate(params.issueDate)
-        : params.issueDate
+      params.issueDate instanceof Date ? formatIsoDate(params.issueDate) : params.issueDate
     const { data, error } = await supabase.rpc('issue_invoice', {
       p_company_id: params.companyId,
       p_billing_month: toBillingMonth(params.year, params.month),
@@ -142,8 +138,7 @@ export async function revokeInvoice(invoiceId) {
 export async function markInvoicePaid(invoiceId, paidAt) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const paidAtStr =
-      paidAt instanceof Date ? paidAt.toISOString() : paidAt ?? null
+    const paidAtStr = paidAt instanceof Date ? paidAt.toISOString() : (paidAt ?? null)
     const { data, error } = await supabase.rpc('mark_invoice_paid', {
       p_invoice_id: invoiceId,
       ...(paidAtStr ? { p_paid_at: paidAtStr } : {}),

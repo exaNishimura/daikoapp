@@ -69,9 +69,7 @@ describe('decideReassignMode', () => {
   })
 
   it('同じ号車はエラー', () => {
-    expect(() => decideReassignMode({ fromCar: 1, toCar: 1, hasToData: false })).toThrow(
-      /同じ号車/
-    )
+    expect(() => decideReassignMode({ fromCar: 1, toCar: 1, hasToData: false })).toThrow(/同じ号車/)
   })
 })
 
@@ -164,7 +162,13 @@ describe('isVehicleSalesFormDirty', () => {
   }
 
   it('同一なら false', () => {
-    expect(isVehicleSalesFormDirty(base, { ...base, shiftTimes: [...base.shiftTimes], receivables: [...base.receivables] })).toBe(false)
+    expect(
+      isVehicleSalesFormDirty(base, {
+        ...base,
+        shiftTimes: [...base.shiftTimes],
+        receivables: [...base.receivables],
+      })
+    ).toBe(false)
   })
 
   it('売上変更で true', () => {

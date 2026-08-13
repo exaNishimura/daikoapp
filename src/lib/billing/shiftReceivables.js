@@ -25,9 +25,7 @@ export const isShiftDraftReceivable = isShiftEditableReceivable
 export function filterReceivablesByVehicle(rows = [], carNum) {
   if (carNum == null) return rows
   const car = String(carNum)
-  return (rows ?? []).filter(
-    (row) => row.vehicle_num != null && String(row.vehicle_num) === car
-  )
+  return (rows ?? []).filter((row) => row.vehicle_num != null && String(row.vehicle_num) === car)
 }
 
 /**

@@ -62,8 +62,6 @@ export function getSlotConflictTooltip(slotId, slots, vehicles = []) {
 
   if (conflicts.length === 0) return ''
 
-  const ranges = conflicts
-    .map((c) => formatSlotTimeRange(c.start_at, c.end_at))
-    .join('、')
+  const ranges = conflicts.map((c) => formatSlotTimeRange(c.start_at, c.end_at)).join('、')
   return `${vehicleName}: ${ranges} と重複`
 }

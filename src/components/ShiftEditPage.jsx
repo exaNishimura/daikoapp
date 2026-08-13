@@ -782,9 +782,8 @@ export function ShiftEditPage() {
                                                   border: '1px solid #90caf9',
                                                 }}
                                               />
-                                              {shift.role} / {getStaffDisplayName(shift, employees)} /{' '}
-                                              {shift.start} -{' '}
-                                              {shift.end}
+                                              {shift.role} / {getStaffDisplayName(shift, employees)}{' '}
+                                              / {shift.start} - {shift.end}
                                               {shift.note && (
                                                 <Chip
                                                   label={shift.note}

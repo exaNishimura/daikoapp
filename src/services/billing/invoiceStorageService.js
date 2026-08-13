@@ -50,14 +50,10 @@ export function buildInvoicePath({ year, month, companyId, sequence }) {
 export async function uploadInvoiceFile(path, body) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { data, error } = await supabase.storage.from(BUCKET).upload(
-      path,
-      body,
-      {
-        upsert: true,
-        contentType: 'application/pdf',
-      }
-    )
+    const { data, error } = await supabase.storage.from(BUCKET).upload(path, body, {
+      upsert: true,
+      contentType: 'application/pdf',
+    })
     if (error) throw error
     return { data, error: null }
   } catch (error) {

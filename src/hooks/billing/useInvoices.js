@@ -211,11 +211,12 @@ export function useIssueInvoices() {
       ])
 
       // 入力の正規化: targets が無ければ companyIds から normal で生成
-      const normalizedTargets = Array.isArray(targets) && targets.length
-        ? targets
-        : (Array.isArray(companyIds) && companyIds.length
+      const normalizedTargets =
+        Array.isArray(targets) && targets.length
+          ? targets
+          : Array.isArray(companyIds) && companyIds.length
             ? companyIds.map((id) => ({ companyId: id, strategy: STRATEGIES.NORMAL }))
-            : unbilled.map((u) => ({ companyId: u.company_id, strategy: STRATEGIES.NORMAL })))
+            : unbilled.map((u) => ({ companyId: u.company_id, strategy: STRATEGIES.NORMAL }))
 
       const unbilledById = new Map(unbilled.map((u) => [u.company_id, u]))
       const activeTargets = normalizedTargets
@@ -288,9 +289,7 @@ export function usePreviewInvoice() {
       const company = unbilled.find((u) => u.company_id === companyId)
       if (!company) throw new Error('未請求売掛にこの企業がありません')
 
-      const receivables = await unwrap(
-        getReceivables({ year, month, companyId, invoiced: false })
-      )
+      const receivables = await unwrap(getReceivables({ year, month, companyId, invoiced: false }))
       if (!receivables.length) throw new Error('未請求の売掛がありません')
 
       const sortedLines = receivables
@@ -349,7 +348,9 @@ export function useDownloadInvoice() {
     mutationFn: async ({ filePath, displayName }) => {
       if (!filePath) throw new Error('filePath is required')
       const safeName = displayName
-        ? `${String(displayName).replace(/[\\/:*?"<>|]/g, '_').trim()}.pdf`
+        ? `${String(displayName)
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .trim()}.pdf`
         : filePath.slice(filePath.lastIndexOf('/') + 1)
 
       const data = await unwrap(getInvoiceFileUrl(filePath, 300))
@@ -378,8 +379,7 @@ export function useDownloadInvoice() {
 export function useUpdateInvoiceFilePath() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, filePath }) =>
-      unwrap(updateInvoiceFilePath(id, filePath)),
+    mutationFn: ({ id, filePath }) => unwrap(updateInvoiceFilePath(id, filePath)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
     },
@@ -455,8 +455,7 @@ export function useReissueInvoice() {
         const payload = {
           company_id: companyId,
           work_date: workDate,
-          billing_month:
-            toBillingMonthFromWorkDate(workDate) || billingMonth,
+          billing_month: toBillingMonthFromWorkDate(workDate) || billingMonth,
           vehicle_num: line.vehicle_num ?? null,
           departure: line.departure?.trim() || null,
           destination: line.destination?.trim() || null,

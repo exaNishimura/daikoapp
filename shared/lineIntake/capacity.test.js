@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  evaluateOccupancy,
-  getOperatingFleetCount,
-  resolveCapacityForDay,
-} from './capacity.js'
+import { evaluateOccupancy, getOperatingFleetCount, resolveCapacityForDay } from './capacity.js'
 
 describe('getOperatingFleetCount', () => {
   it('weekday = 1, Fri/Sat = 2 by default', () => {

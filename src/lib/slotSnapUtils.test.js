@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { rowIndexToPixels, timeToRowIndex, TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
 import { resolveSlotDropPreview } from './slotSnapUtils'
 
 const order30 = { id: 'o1', base_duration_min: 30, buffer_min: 0 }
 
 describe('resolveSlotDropPreview', () => {
   it('snaps top to peer bottom when within threshold (after)', () => {
+    const peerBottom = rowIndexToPixels(timeToRowIndex(20, 0))
     const result = resolveSlotDropPreview({
-      rawTopPx: 163,
+      rawTopPx: peerBottom + 6,
       dragHeightPx: 40,
       vehicleSlots: [
         {
@@ -20,14 +22,17 @@ describe('resolveSlotDropPreview', () => {
       excludeSlotId: 'dragging',
     })
 
-    expect(result.top).toBe(160)
+    expect(result.top).toBe(peerBottom)
     expect(result.snapGuide).toBe('top')
   })
 
   it('snaps before peer top when within threshold (before)', () => {
+    const peerTop = rowIndexToPixels(timeToRowIndex(20, 0))
+    const dragHeightPx = 40
+    const beforeTop = peerTop - Math.max(dragHeightPx, TIMELINE_ROW_HEIGHT_PX)
     const result = resolveSlotDropPreview({
-      rawTopPx: 125,
-      dragHeightPx: 40,
+      rawTopPx: beforeTop + 4,
+      dragHeightPx,
       vehicleSlots: [
         {
           id: 'peer',
@@ -40,7 +45,7 @@ describe('resolveSlotDropPreview', () => {
       excludeSlotId: 'dragging',
     })
 
-    expect(result.top).toBe(120)
+    expect(result.top).toBe(beforeTop)
     expect(result.snapGuide).toBe('bottom')
   })
 

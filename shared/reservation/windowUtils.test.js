@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  formatDateInJst,
-  getCalendarDayRange,
-  getReceptionNightWindow,
-} from './windowUtils.js'
+import { formatDateInJst, getCalendarDayRange, getReceptionNightWindow } from './windowUtils.js'
 
 describe('getReceptionNightWindow', () => {
   it('returns [D 19:00, (D+1) 06:00) in Asia/Tokyo as UTC instants', () => {

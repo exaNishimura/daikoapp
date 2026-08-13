@@ -9,9 +9,7 @@ import {
 
 describe('buildOperationStatusesFromShifts', () => {
   it('シフトの出勤時刻のみを稼働開始にする（終了は設定しない）', () => {
-    const statuses = buildOperationStatusesFromShifts([
-      { start: '20:00', end: '02:00' },
-    ])
+    const statuses = buildOperationStatusesFromShifts([{ start: '20:00', end: '02:00' }])
 
     expect(statuses).toEqual([
       { type: 'DAY_OFF', time: null },
@@ -20,9 +18,7 @@ describe('buildOperationStatusesFromShifts', () => {
   })
 
   it('18:00出勤でもSTARTを明示する', () => {
-    const statuses = buildOperationStatusesFromShifts([
-      { start: '18:00', end: '06:00' },
-    ])
+    const statuses = buildOperationStatusesFromShifts([{ start: '18:00', end: '06:00' }])
 
     expect(statuses).toEqual([
       { type: 'DAY_OFF', time: null },
@@ -85,9 +81,7 @@ describe('buildTimelinePlacementBands', () => {
 
 describe('buildOperationalWindowsFromStatuses', () => {
   it('DEFAULTのみなら終日稼働', () => {
-    const windows = buildOperationalWindowsFromStatuses([
-      { type: 'DEFAULT', time: null },
-    ])
+    const windows = buildOperationalWindowsFromStatuses([{ type: 'DEFAULT', time: null }])
     expect(windows).toEqual([{ startRow: 0, endRow: 48 }])
   })
 })

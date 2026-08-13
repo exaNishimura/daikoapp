@@ -35,10 +35,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { sumShiftTimesHours } from '@/lib/billing/shiftStaffHours'
 import { sumReceivableAmounts, isShiftEditableReceivable } from '@/lib/billing/shiftReceivables'
-import {
-  buildVehicleSalesSavePayload,
-  readVehicleSalesForm,
-} from '@/lib/billing/vehicleSalesForm'
+import { buildVehicleSalesSavePayload, readVehicleSalesForm } from '@/lib/billing/vehicleSalesForm'
 import { isVehicleSalesFormDirty } from '@/lib/billing/reassignVehicleSales'
 import { useReassignVehicleSales } from '@/hooks/billing/useReassignVehicleSales'
 import { ReassignVehicleDialog } from '@/components/ShiftCalendar/ReassignVehicleDialog'
@@ -176,10 +173,7 @@ export function VehicleSalesModal({
       })
       setReassignOpen(false)
       const modeLabel = result?.mode === 'swap' ? '入れ替え' : '付け替え'
-      showToast(
-        `${modeLabel}しました（${carNum}号車 → ${toCar}号車）`,
-        'success'
-      )
+      showToast(`${modeLabel}しました（${carNum}号車 → ${toCar}号車）`, 'success')
       onClose()
     } catch (err) {
       setReassignError(err.message || '号車変更に失敗しました')
@@ -367,7 +361,12 @@ export function VehicleSalesModal({
                   >
                     <Typography variant="body2" fontWeight={600}>
                       {row.staffName}
-                      <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ ml: 1 }}
+                      >
                         {row.role}
                       </Typography>
                     </Typography>
@@ -384,9 +383,7 @@ export function VehicleSalesModal({
                       <ShiftTimeField
                         label="終了"
                         value={row.end}
-                        onChange={(e) =>
-                          handleShiftTimeChange(row.shiftId, 'end', e.target.value)
-                        }
+                        onChange={(e) => handleShiftTimeChange(row.shiftId, 'end', e.target.value)}
                         disabled={formDisabled}
                         fullWidth
                       />
@@ -475,7 +472,10 @@ export function VehicleSalesModal({
                 const trimmed = name.trim()
                 const findExisting = (list) =>
                   (list ?? []).find(
-                    (c) => String(c.name ?? '').trim().toLowerCase() === trimmed.toLowerCase()
+                    (c) =>
+                      String(c.name ?? '')
+                        .trim()
+                        .toLowerCase() === trimmed.toLowerCase()
                   )
                 const existing = findExisting(companiesQuery.data)
                 if (existing) return existing
@@ -506,8 +506,7 @@ export function VehicleSalesModal({
               {receivablesQuery.data?.length > 0 && (
                 <>
                   {' '}
-                  当日合計: ¥
-                  {sumReceivableAmounts(receivablesQuery.data).toLocaleString('ja-JP')}
+                  当日合計: ¥{sumReceivableAmounts(receivablesQuery.data).toLocaleString('ja-JP')}
                 </>
               )}
             </Typography>
@@ -541,7 +540,12 @@ export function VehicleSalesModal({
         <Button onClick={handleClose} disabled={saving} fullWidth={isMobile}>
           閉じる
         </Button>
-        <Button variant="contained" onClick={handleSave} disabled={formDisabled} fullWidth={isMobile}>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={formDisabled}
+          fullWidth={isMobile}
+        >
           保存
         </Button>
       </DialogActions>

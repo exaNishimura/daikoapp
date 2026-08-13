@@ -126,10 +126,7 @@ export async function upsertFixedExpensesBulk(rows) {
 export async function deleteFixedExpense(id) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { error } = await supabase
-      .from('monthly_fixed_expenses')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('monthly_fixed_expenses').delete().eq('id', id)
     if (error) throw error
     return { data: { id }, error: null }
   } catch (error) {

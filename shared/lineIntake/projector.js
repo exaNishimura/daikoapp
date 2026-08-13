@@ -29,7 +29,8 @@ export const DISPATCH_FALLBACK_DURATION_MIN = 30
 export function toBoardRouteFields(unit) {
   const base = Number(unit?.base_duration_min)
   return {
-    base_duration_min: Number.isFinite(base) && base > 0 ? Math.round(base) : DISPATCH_FALLBACK_DURATION_MIN,
+    base_duration_min:
+      Number.isFinite(base) && base > 0 ? Math.round(base) : DISPATCH_FALLBACK_DURATION_MIN,
     buffer_min: 0,
   }
 }

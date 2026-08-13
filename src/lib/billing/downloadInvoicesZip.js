@@ -2,7 +2,9 @@ import JSZip from 'jszip'
 import { getInvoiceFileUrl } from '@/services/billing/invoiceStorageService'
 
 function safeFileName(s) {
-  return String(s ?? '').replace(/[\\/:*?"<>|]/g, '_').trim()
+  return String(s ?? '')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .trim()
 }
 
 function baseName(filePath) {

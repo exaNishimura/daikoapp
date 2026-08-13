@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  normalizeAlias,
-  normalizeAliases,
-  validateCompanyForm,
-} from './companyForm'
+import { normalizeAlias, normalizeAliases, validateCompanyForm } from './companyForm'
 
 describe('normalizeAlias', () => {
   it('trims leading/trailing whitespace', () => {
@@ -56,7 +52,14 @@ describe('validateCompanyForm', () => {
 
   it('returns no errors for a valid new company', () => {
     const result = validateCompanyForm(
-      { name: '新規会社', invoice_display_name: '', aliases: [], display_order: 10, is_active: true, memo: '' },
+      {
+        name: '新規会社',
+        invoice_display_name: '',
+        aliases: [],
+        display_order: 10,
+        is_active: true,
+        memo: '',
+      },
       existing,
       null
     )
@@ -65,57 +68,33 @@ describe('validateCompanyForm', () => {
   })
 
   it('flags missing name', () => {
-    const result = validateCompanyForm(
-      { name: '', aliases: [] },
-      existing,
-      null
-    )
+    const result = validateCompanyForm({ name: '', aliases: [] }, existing, null)
     expect(result.errors.name).toBeTruthy()
     expect(result.isValid).toBe(false)
   })
 
   it('flags whitespace-only name as missing', () => {
-    const result = validateCompanyForm(
-      { name: '   ', aliases: [] },
-      existing,
-      null
-    )
+    const result = validateCompanyForm({ name: '   ', aliases: [] }, existing, null)
     expect(result.errors.name).toBeTruthy()
   })
 
   it('flags duplicate name against existing companies', () => {
-    const result = validateCompanyForm(
-      { name: '鈴友', aliases: [] },
-      existing,
-      null
-    )
+    const result = validateCompanyForm({ name: '鈴友', aliases: [] }, existing, null)
     expect(result.errors.name).toContain('重複')
   })
 
   it('allows same name when editing the same company', () => {
-    const result = validateCompanyForm(
-      { name: '鈴友', aliases: [] },
-      existing,
-      1
-    )
+    const result = validateCompanyForm({ name: '鈴友', aliases: [] }, existing, 1)
     expect(result.errors).toEqual({})
   })
 
   it('detects duplicate even against inactive companies', () => {
-    const result = validateCompanyForm(
-      { name: '休業中', aliases: [] },
-      existing,
-      null
-    )
+    const result = validateCompanyForm({ name: '休業中', aliases: [] }, existing, null)
     expect(result.errors.name).toContain('重複')
   })
 
   it('treats name comparison as trim-aware', () => {
-    const result = validateCompanyForm(
-      { name: '  鈴友  ', aliases: [] },
-      existing,
-      null
-    )
+    const result = validateCompanyForm({ name: '  鈴友  ', aliases: [] }, existing, null)
     expect(result.errors.name).toContain('重複')
   })
 

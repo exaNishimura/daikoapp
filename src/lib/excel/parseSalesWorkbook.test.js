@@ -10,10 +10,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseSalesWorkbook } from './parseSalesWorkbook'
 
-const SAMPLE_PATH = resolve(
-  process.cwd(),
-  'excel-imports/sales/202605稼働管理表new.xlsx'
-)
+const SAMPLE_PATH = resolve(process.cwd(), 'excel-imports/sales/202605稼働管理表new.xlsx')
 
 const sum = (arr, key) => arr.reduce((s, x) => s + (key ? x[key] : x), 0)
 

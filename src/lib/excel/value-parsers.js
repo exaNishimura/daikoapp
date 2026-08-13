@@ -170,11 +170,7 @@ function makeDate(year, month, day) {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null
   // ローカルタイムゾーンの 00:00 を作る。Excel データは日本時間想定。
   const dt = new Date(year, month - 1, day)
-  if (
-    dt.getFullYear() !== year ||
-    dt.getMonth() !== month - 1 ||
-    dt.getDate() !== day
-  ) {
+  if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) {
     return null
   }
   return dt

@@ -117,10 +117,7 @@ function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
         />
       </TableCell>
       <TableCell align="right" sx={{ minWidth: 140 }}>
-        <AmountInput
-          value={form.amount}
-          onChange={(v) => setForm({ ...form, amount: v })}
-        />
+        <AmountInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} />
       </TableCell>
       <TableCell>
         <TextField
@@ -224,14 +221,7 @@ function DisplayRow({ row, onEdit, onDelete, disabled }) {
  * @param {(row: Object) => void} props.onDelete
  * @param {boolean} [props.isSaving]
  */
-export function ReceivablesTable({
-  rows,
-  companies,
-  options,
-  onUpdate,
-  onDelete,
-  isSaving,
-}) {
+export function ReceivablesTable({ rows, companies, options, onUpdate, onDelete, isSaving }) {
   const [editingId, setEditingId] = useState(null)
 
   const handleStartEdit = (row) => {

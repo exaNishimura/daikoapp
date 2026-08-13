@@ -154,8 +154,7 @@ export function EmployeeManagement() {
           employeeData,
           legacyStaffName: legacyStaffName.trim() || undefined,
         })
-        const nameChanged =
-          originalName.trim() && employeeData.name.trim() !== originalName.trim()
+        const nameChanged = originalName.trim() && employeeData.name.trim() !== originalName.trim()
         const legacySync = Boolean(legacyStaffName.trim())
         setSuccess(
           nameChanged || legacySync

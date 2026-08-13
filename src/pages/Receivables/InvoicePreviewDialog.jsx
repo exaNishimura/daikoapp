@@ -43,20 +43,14 @@ export function InvoicePreviewDialog({ open, onClose, companyName, previews }) {
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
         プレビュー：{companyName}
-        {current?.sequence
-          ? `（${current.sequence.index} / ${current.sequence.total} 枚目）`
-          : ''}
+        {current?.sequence ? `（${current.sequence.index} / ${current.sequence.total} 枚目）` : ''}
       </DialogTitle>
       {previews.length > 1 && (
         <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3 }}>
           {previews.map((p, idx) => (
             <Tab
               key={idx}
-              label={
-                p.sequence
-                  ? `${p.sequence.index} / ${p.sequence.total}`
-                  : `${idx + 1}`
-              }
+              label={p.sequence ? `${p.sequence.index} / ${p.sequence.total}` : `${idx + 1}`}
             />
           ))}
         </Tabs>

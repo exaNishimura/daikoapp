@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase'
 function monthRange(year, month) {
   const m = String(month).padStart(2, '0')
   const start = `${year}-${m}-01`
-  const next = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`
+  const next =
+    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`
   return { start, next }
 }
 

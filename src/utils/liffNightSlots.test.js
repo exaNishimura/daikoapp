@@ -15,7 +15,9 @@ describe('occupiedFromSources', () => {
       reservations: [{ reserved_at: '2025-08-13T12:00:00.000Z' }],
     })
     expect(occupied).toHaveLength(2)
-    expect(new Date(occupied[1].end).getTime() - new Date(occupied[1].start).getTime()).toBe(30 * 60 * 1000)
+    expect(new Date(occupied[1].end).getTime() - new Date(occupied[1].start).getTime()).toBe(
+      30 * 60 * 1000
+    )
   })
 })
 

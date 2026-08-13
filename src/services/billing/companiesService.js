@@ -50,11 +50,7 @@ export async function getCompanies(options = {}) {
 export async function getCompany(id) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { data, error } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('id', id)
-      .single()
+    const { data, error } = await supabase.from('companies').select('*').eq('id', id).single()
     if (error) throw error
     return { data, error: null }
   } catch (error) {
@@ -69,11 +65,7 @@ export async function getCompany(id) {
 export async function createCompany(payload) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { data, error } = await supabase
-      .from('companies')
-      .insert(payload)
-      .select()
-      .single()
+    const { data, error } = await supabase.from('companies').insert(payload).select().single()
     if (error) throw error
     return { data, error: null }
   } catch (error) {
@@ -124,12 +116,7 @@ export async function reorderCompanies(orderedRows) {
     // → Promise.all で個別 update する (件数は最大数十件想定なので問題なし)。
     const results = await Promise.all(
       orderedRows.map(({ id, display_order }) =>
-        supabase
-          .from('companies')
-          .update({ display_order })
-          .eq('id', id)
-          .select()
-          .single()
+        supabase.from('companies').update({ display_order }).eq('id', id).select().single()
       )
     )
     const firstError = results.find((r) => r.error)?.error

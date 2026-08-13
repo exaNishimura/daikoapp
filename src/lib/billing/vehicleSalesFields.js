@@ -1,13 +1,13 @@
 /** 号車番号 → daily_sales カラム */
 export const VEHICLE_FIELD_MAP = Object.freeze({
-  '1': {
+  1: {
     distance_km: 'vehicle1_distance_km',
     fuel_yen: 'vehicle1_fuel_yen',
     sales: 'vehicle1_sales',
     expense_note: 'vehicle1_expense_note',
     expense_amount: 'vehicle1_expense_amount',
   },
-  '2': {
+  2: {
     distance_km: 'vehicle2_distance_km',
     fuel_yen: 'vehicle2_fuel_yen',
     sales: 'vehicle2_sales',

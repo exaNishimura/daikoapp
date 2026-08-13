@@ -76,16 +76,13 @@ describe('buildDailyCloseMessage', () => {
     const message = buildDailyCloseMessage({
       workDate: '2026-07-09',
       salesRow: { vehicle1_sales: 10000, vehicle1_fuel_yen: 0 },
-      shifts: [
-        { car: '1', employee_id: 'e1', start: '20:00', end: '04:00', staff: '西村' },
-      ],
+      shifts: [{ car: '1', employee_id: 'e1', start: '20:00', end: '04:00', staff: '西村' }],
       employees,
       receivables: [],
     })
 
     expect(message).toContain('走行距離 —')
   })
-
 
   it('builds vehicle sections without daily summary', () => {
     const message = buildDailyCloseMessage({

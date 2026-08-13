@@ -88,7 +88,10 @@ describe('buildShiftReceivableInsertPayloads', () => {
   it('金額0の行は除外する', () => {
     const rows = buildShiftReceivableInsertPayloads(
       '2026-07-01',
-      [{ company_id: 3, amount: '5000', note: ' テスト ' }, { amount: '', note: '' }],
+      [
+        { company_id: 3, amount: '5000', note: ' テスト ' },
+        { amount: '', note: '' },
+      ],
       '1'
     )
     expect(rows).toHaveLength(1)

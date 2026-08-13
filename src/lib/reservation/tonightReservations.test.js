@@ -56,9 +56,7 @@ describe('tonight dismiss storage', () => {
   })
 
   it('uses versioned key and round-trips dismiss', () => {
-    expect(tonightDismissStorageKey('2026-08-12')).toBe(
-      'reservationTonightDismissed:v1:2026-08-12'
-    )
+    expect(tonightDismissStorageKey('2026-08-12')).toBe('reservationTonightDismissed:v1:2026-08-12')
     expect(wasTonightDialogDismissed('2026-08-12')).toBe(false)
     markTonightDialogDismissed('2026-08-12')
     expect(wasTonightDialogDismissed('2026-08-12')).toBe(true)

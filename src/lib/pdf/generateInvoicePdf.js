@@ -455,10 +455,7 @@ export async function generateInvoicePdf(data, options) {
   }
 
   const tAssets = performance.now()
-  const [vfs, sealDataUri] = await Promise.all([
-    loadJapaneseFontVfs(),
-    loadSealDataUri(),
-  ])
+  const [vfs, sealDataUri] = await Promise.all([loadJapaneseFontVfs(), loadSealDataUri()])
   console.log(`[generateInvoicePdf] assets ready in ${Math.round(performance.now() - tAssets)}ms`)
 
   // pdfmake 0.3.x API: vfs/fonts はメソッド経由で登録する
@@ -484,9 +481,6 @@ export async function generateInvoicePdf(data, options) {
     throw new Error('generateInvoicePdf: getBuffer returned empty')
   }
   return buffer.buffer instanceof ArrayBuffer
-    ? buffer.buffer.slice(
-        buffer.byteOffset ?? 0,
-        (buffer.byteOffset ?? 0) + buffer.byteLength
-      )
+    ? buffer.buffer.slice(buffer.byteOffset ?? 0, (buffer.byteOffset ?? 0) + buffer.byteLength)
     : buffer
 }

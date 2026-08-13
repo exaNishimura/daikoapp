@@ -11,7 +11,10 @@ const DEFAULT_BASE_MIN = 20
 const RESERVATION_FALLBACK_MIN = 30
 
 function intervalsOverlap(a, b) {
-  return new Date(a.start).getTime() < new Date(b.end).getTime() && new Date(a.end).getTime() > new Date(b.start).getTime()
+  return (
+    new Date(a.start).getTime() < new Date(b.end).getTime() &&
+    new Date(a.end).getTime() > new Date(b.start).getTime()
+  )
 }
 
 function countOverlapping(window, occupied) {
@@ -19,12 +22,18 @@ function countOverlapping(window, occupied) {
 }
 
 function lineBufferMin(baseDurationMin) {
-  const base = Number.isFinite(Number(baseDurationMin)) && Number(baseDurationMin) > 0 ? Number(baseDurationMin) : DEFAULT_BASE_MIN
+  const base =
+    Number.isFinite(Number(baseDurationMin)) && Number(baseDurationMin) > 0
+      ? Number(baseDurationMin)
+      : DEFAULT_BASE_MIN
   return Math.max(5, Math.ceil(base * 0.15)) + 5
 }
 
 function totalWindowMin(baseDurationMin) {
-  const base = Number.isFinite(Number(baseDurationMin)) && Number(baseDurationMin) > 0 ? Number(baseDurationMin) : DEFAULT_BASE_MIN
+  const base =
+    Number.isFinite(Number(baseDurationMin)) && Number(baseDurationMin) > 0
+      ? Number(baseDurationMin)
+      : DEFAULT_BASE_MIN
   return base + lineBufferMin(base)
 }
 
@@ -34,7 +43,9 @@ function totalWindowMin(baseDurationMin) {
 export function occupiedFromSources({ units = [], slots = [], reservations = [] } = {}) {
   const occupied = []
   for (const u of units) {
-    const dur = (u.base_duration_min || DEFAULT_BASE_MIN) + (u.buffer_min ?? lineBufferMin(u.base_duration_min))
+    const dur =
+      (u.base_duration_min || DEFAULT_BASE_MIN) +
+      (u.buffer_min ?? lineBufferMin(u.base_duration_min))
     const start = new Date(u.pickup_at)
     occupied.push({ start, end: new Date(start.getTime() + dur * 60 * 1000) })
   }
@@ -54,7 +65,10 @@ function nightCapacity(nightDate, now, settings = {}) {
   const weekday = nightStart.getDay()
   const isWeekend = weekday === 5 || weekday === 6
   const fleet = Math.min(
-    Math.max(1, isWeekend ? settings.weekend_fleet_count ?? 2 : settings.weekday_fleet_count ?? 1),
+    Math.max(
+      1,
+      isWeekend ? (settings.weekend_fleet_count ?? 2) : (settings.weekday_fleet_count ?? 1)
+    ),
     settings.max_fleet_count ?? 3
   )
   const extraMax = Math.min(Math.max(0, Number(settings.extra_capacity_max) || 2), 2)

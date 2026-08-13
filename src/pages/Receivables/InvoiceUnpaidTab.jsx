@@ -47,10 +47,7 @@ export function InvoiceUnpaidTab() {
   const summary = useMemo(() => summarizeUnpaidInvoices(rows, today), [rows, today])
 
   const sortedRows = useMemo(
-    () =>
-      [...rows].sort(
-        (a, b) => new Date(a.billing_month) - new Date(b.billing_month)
-      ),
+    () => [...rows].sort((a, b) => new Date(a.billing_month) - new Date(b.billing_month)),
     [rows]
   )
 
@@ -72,8 +69,7 @@ export function InvoiceUnpaidTab() {
     try {
       await dlInvoice.mutateAsync({
         filePath: row.file_path,
-        displayName:
-          row.companies?.invoice_display_name || row.companies?.name || null,
+        displayName: row.companies?.invoice_display_name || row.companies?.name || null,
       })
     } catch (err) {
       setError(`ダウンロードに失敗: ${err.message}`)

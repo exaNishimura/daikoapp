@@ -11,11 +11,7 @@
 import { describe, expect, it } from 'vitest'
 
 // 取引先
-import {
-  normalizeAlias,
-  normalizeAliases,
-  validateCompanyForm,
-} from '@/lib/billing/companyForm'
+import { normalizeAlias, normalizeAliases, validateCompanyForm } from '@/lib/billing/companyForm'
 
 // 売掛
 import {
@@ -44,9 +40,7 @@ import { buildReceivablesCsv } from '@/lib/billing/exportReceivablesCsv'
 describe('Receivable Billing スモーク結合', () => {
   it('取引先追加 → 売掛入力 → 月次サマリ → 請求書発行 → 入金済 の全フローが整合する', () => {
     // ===== 1. 取引先追加 =====
-    const existingCompanies = [
-      { id: 1, name: '田中商事', aliases: ['田中'], is_active: true },
-    ]
+    const existingCompanies = [{ id: 1, name: '田中商事', aliases: ['田中'], is_active: true }]
     const newCompanyForm = {
       name: '  鈴友  ',
       invoice_display_name: '株式会社 鈴友',
@@ -129,15 +123,13 @@ describe('Receivable Billing スモーク結合', () => {
     expect(csv).toContain('鈴友')
 
     // ===== 5. 請求書発行戦略 (鈴友 2 行 → normal) =====
-    const suzutomoReceivables = receivables.filter(
-      (r) => r.company_id === newCompany.id
-    )
+    const suzutomoReceivables = receivables.filter((r) => r.company_id === newCompany.id)
     expect(suzutomoReceivables.length).toBeLessThanOrEqual(INVOICE_MAX_LINES)
     expect(recommendedStrategy(suzutomoReceivables.length)).toBe('normal')
 
     // INVOICE_MAX_LINES 件超を仮定して合算/分割の整合性確認
     const heavy = Array.from({ length: INVOICE_MAX_LINES + 5 }, (_, i) => ({
-      work_date: `2026-${String(((i % 12) + 1)).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+      work_date: `2026-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
       departure: '出',
       destination: '着',
       amount: 1000 + i,
@@ -149,16 +141,12 @@ describe('Receivable Billing スモーク結合', () => {
     expect(merged).toHaveLength(1)
     expect(merged[0].lines).toHaveLength(INVOICE_MAX_LINES)
     const heavyTotal = heavy.reduce((s, l) => s + l.amount, 0)
-    expect(
-      merged[0].lines.reduce((s, l) => s + l.amount, 0)
-    ).toBe(heavyTotal)
+    expect(merged[0].lines.reduce((s, l) => s + l.amount, 0)).toBe(heavyTotal)
 
     const split = applySplitStrategy(heavy)
     expect(split.length).toBeGreaterThan(1)
     expect(split[0].sequence).toEqual({ index: 1, total: split.length })
-    expect(split.flatMap((s) => s.lines).reduce((s, l) => s + l.amount, 0)).toBe(
-      heavyTotal
-    )
+    expect(split.flatMap((s) => s.lines).reduce((s, l) => s + l.amount, 0)).toBe(heavyTotal)
 
     // ===== 6. 入金管理（未入金 / 滞留日数）=====
     const issueDate = '2026-05-31'
@@ -202,9 +190,7 @@ describe('Receivable Billing スモーク結合', () => {
     const { findDuplicates } = await import('@/lib/billing/duplicateReceivables')
     const { buildImportPlan } = await import('@/lib/billing/buildImportPlan')
 
-    const companies = [
-      { id: 1, name: '鈴友', aliases: ['鈴友(株)'], is_active: true },
-    ]
+    const companies = [{ id: 1, name: '鈴友', aliases: ['鈴友(株)'], is_active: true }]
     const parsed = {
       period: { year: 2026, month: 5 },
       sourceFile: '202605稼働管理表new.xlsx',
@@ -241,7 +227,7 @@ describe('Receivable Billing スモーク結合', () => {
     const companyMap = resolveCompanyMap({
       companyNames: Array.from(parsed.seenCompanies),
       companies,
-      decisions: { '謎の新規': 'skip' },
+      decisions: { 謎の新規: 'skip' },
     })
     expect(companyMap).toEqual({ '鈴友(株)': 1 })
 

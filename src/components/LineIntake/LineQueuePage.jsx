@@ -10,11 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import {
-  useAdminLineUnitAction,
-  useApproveLineUnit,
-  useLineQueue,
-} from '@/hooks/useLineIntake'
+import { useAdminLineUnitAction, useApproveLineUnit, useLineQueue } from '@/hooks/useLineIntake'
 import './LineQueuePage.css'
 
 function holdRemainingLabel(holdUntil) {
@@ -106,10 +102,18 @@ export function LineQueuePage() {
               }}
             >
               <Stack direction="row" spacing={1} flexWrap="wrap" mb={1}>
-                <Chip size="small" label={unit.status} color={unit.status === 'HOLDING' ? 'warning' : 'default'} />
+                <Chip
+                  size="small"
+                  label={unit.status}
+                  color={unit.status === 'HOLDING' ? 'warning' : 'default'}
+                />
                 {unit.uses_extra_capacity && <Chip size="small" color="error" label="要手配" />}
                 {unit.status === 'HOLDING' && (
-                  <Chip size="small" variant="outlined" label={holdRemainingLabel(unit.hold_until)} />
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={holdRemainingLabel(unit.hold_until)}
+                  />
                 )}
                 {discount?.applied && <Chip size="small" color="success" label={discount.label} />}
               </Stack>
@@ -139,9 +143,7 @@ export function LineQueuePage() {
                 {selected.pickup_address} → {selected.dropoff_address}
               </Typography>
               <Typography variant="body2">車両: {selected.vehicle_info || '—'}</Typography>
-              <Typography variant="body2">
-                電話: {selected.line_bookings?.contact_phone}
-              </Typography>
+              <Typography variant="body2">電話: {selected.line_bookings?.contact_phone}</Typography>
               <Typography variant="body2">LINE: {selected.line_bookings?.line_user_id}</Typography>
               <Typography variant="body2">
                 割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}

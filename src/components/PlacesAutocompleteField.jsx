@@ -51,7 +51,6 @@ export function PlacesAutocompleteField({
     let cancelled = false
     let selectListener
     let inputListener
-
     ;(async () => {
       const places = await importPlacesLibrary()
       if (cancelled || !places || !containerRef.current) return

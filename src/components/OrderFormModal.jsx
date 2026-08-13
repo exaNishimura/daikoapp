@@ -164,7 +164,10 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
             </Box>
             <Stack spacing={1.5}>
               {formData.waypoints.map((waypoint, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flex: 1 }}>
+                <Box
+                  key={index}
+                  sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flex: 1 }}
+                >
                   <Box sx={{ flex: 1 }}>
                     <PlacesAutocompleteField
                       label={`経由地 ${index + 1}`}
@@ -173,11 +176,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                       placeholder="例: 三重県鈴鹿市..."
                     />
                   </Box>
-                  <IconButton
-                    onClick={() => removeWaypoint(index)}
-                    sx={{ mt: 0.5 }}
-                    color="error"
-                  >
+                  <IconButton onClick={() => removeWaypoint(index)} sx={{ mt: 0.5 }} color="error">
                     <DeleteIcon />
                   </IconButton>
                 </Box>

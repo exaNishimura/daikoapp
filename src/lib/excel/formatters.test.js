@@ -93,32 +93,20 @@ describe('formatIsoDate', () => {
 
 describe('resolveIssueDate', () => {
   it('returns today when issuing mid-month of the target month', () => {
-    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 15))).toEqual(
-      new Date(2026, 4, 15)
-    )
-    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 1))).toEqual(
-      new Date(2026, 4, 1)
-    )
-    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 30))).toEqual(
-      new Date(2026, 4, 30)
-    )
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 15))).toEqual(new Date(2026, 4, 15))
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 1))).toEqual(new Date(2026, 4, 1))
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 30))).toEqual(new Date(2026, 4, 30))
   })
 
   it('returns month end on the last day of the target month', () => {
-    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 31))).toEqual(
-      new Date(2026, 4, 31)
-    )
+    expect(resolveIssueDate(2026, 5, new Date(2026, 4, 31))).toEqual(new Date(2026, 4, 31))
   })
 
   it('returns month end when issuing after the target month', () => {
-    expect(resolveIssueDate(2026, 5, new Date(2026, 5, 3))).toEqual(
-      new Date(2026, 4, 31)
-    )
+    expect(resolveIssueDate(2026, 5, new Date(2026, 5, 3))).toEqual(new Date(2026, 4, 31))
   })
 
   it('returns month end when issuing before the target month', () => {
-    expect(resolveIssueDate(2026, 5, new Date(2026, 3, 20))).toEqual(
-      new Date(2026, 4, 31)
-    )
+    expect(resolveIssueDate(2026, 5, new Date(2026, 3, 20))).toEqual(new Date(2026, 4, 31))
   })
 })

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { calcDailyDerived, calcMonthlySalesSummary, computeCashForVehicle, computeCashFromShiftSales, getDailyTotalSales, indexDailySalesByDate, toWorkDateKey } from './dailySalesCalc'
+import {
+  calcDailyDerived,
+  calcMonthlySalesSummary,
+  computeCashForVehicle,
+  computeCashFromShiftSales,
+  getDailyTotalSales,
+  indexDailySalesByDate,
+  toWorkDateKey,
+} from './dailySalesCalc'
 
 describe('calcDailyDerived', () => {
   it('returns zero-filled derived values for null/empty row', () => {
@@ -143,9 +151,9 @@ describe('computeCashForVehicle', () => {
     }
     expect(computeCashForVehicle(row, '1', 12000)).toBe(30000)
     expect(computeCashForVehicle(row, '2', 5000)).toBe(20000)
-    expect(
-      computeCashForVehicle(row, '1', 12000) + computeCashForVehicle(row, '2', 5000)
-    ).toBe(computeCashFromShiftSales({ ...row, receivable_total: 17000 }))
+    expect(computeCashForVehicle(row, '1', 12000) + computeCashForVehicle(row, '2', 5000)).toBe(
+      computeCashFromShiftSales({ ...row, receivable_total: 17000 })
+    )
   })
 })
 

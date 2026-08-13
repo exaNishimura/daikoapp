@@ -7,7 +7,12 @@ export function calcShiftWorkHours(start, end) {
   if (!start || !end) return 0
   const [sh, sm] = start.split(':').map(Number)
   const [eh, em] = end.split(':').map(Number)
-  if (!Number.isFinite(sh) || !Number.isFinite(sm) || !Number.isFinite(eh) || !Number.isFinite(em)) {
+  if (
+    !Number.isFinite(sh) ||
+    !Number.isFinite(sm) ||
+    !Number.isFinite(eh) ||
+    !Number.isFinite(em)
+  ) {
     return 0
   }
   const startMinutes = sh * 60 + sm
@@ -19,7 +24,9 @@ export function calcShiftWorkHours(start, end) {
 /** TIME / HH:MM / HH:MM:SS を type="time" 用 HH:MM に正規化 */
 export function normalizeTimeForInput(value) {
   if (value == null || value === '') return ''
-  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/)
+  const match = String(value)
+    .trim()
+    .match(/^(\d{1,2}):(\d{2})/)
   if (!match) return ''
   return `${match[1].padStart(2, '0')}:${match[2]}`
 }
@@ -94,9 +101,7 @@ export function buildShiftTimeRows(shifts, employees, carNum) {
  */
 export function applyShiftTimeUpdates(dayShifts, shiftTimeUpdates = []) {
   const updatesById = new Map(
-    (shiftTimeUpdates ?? [])
-      .filter((row) => row?.shiftId)
-      .map((row) => [row.shiftId, row])
+    (shiftTimeUpdates ?? []).filter((row) => row?.shiftId).map((row) => [row.shiftId, row])
   )
   if (updatesById.size === 0) return dayShifts ?? []
 
@@ -157,11 +162,7 @@ export function buildShiftUpdatePayloads(shiftTimeUpdates = [], dayShifts = []) 
 /**
  * 当日の total_hours（全号車合算）を算出。
  */
-export function computeDayStaffHoursRows({
-  dayShifts,
-  employees,
-  shiftTimeUpdates = [],
-}) {
+export function computeDayStaffHoursRows({ dayShifts, employees, shiftTimeUpdates = [] }) {
   const effective = applyShiftTimeUpdates(dayShifts, shiftTimeUpdates)
   const map = computeStaffHoursFromShifts(effective, employees)
   return [...map.entries()]
@@ -186,12 +187,10 @@ export function computeLaborCostFromStaffHours(staffRows, employees) {
 }
 
 export function computeDayTotalHours(params) {
-  return roundHours(
-    computeDayStaffHoursRows(params).reduce((sum, row) => sum + row.hours, 0)
-  )
+  return roundHours(computeDayStaffHoursRows(params).reduce((sum, row) => sum + row.hours, 0))
 }
 
-/** 表示用: "西村　8h" */
+/** 表示用: "西村 8h" */
 export function formatStaffHoursLabel(name, hours) {
   const h = roundHours(hours)
   const text = Number.isInteger(h) ? String(h) : h.toFixed(1)

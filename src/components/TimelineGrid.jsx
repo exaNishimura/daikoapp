@@ -1,7 +1,11 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SlotComponent } from './SlotComponent'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { isVehicleOperational, buildTimelinePlacementBands, getOperationalVehicles } from '@/utils/operationStatusUtils'
+import {
+  isVehicleOperational,
+  buildTimelinePlacementBands,
+  getOperationalVehicles,
+} from '@/utils/operationStatusUtils'
 import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUtils'
 import { TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
 import IconButton from '@mui/material/IconButton'
@@ -122,9 +126,7 @@ export function TimelineGrid({
 
   const displayVehicles = useMemo(
     () =>
-      focusedVehicleId
-        ? vehicles.filter((vehicle) => vehicle.id === focusedVehicleId)
-        : vehicles,
+      focusedVehicleId ? vehicles.filter((vehicle) => vehicle.id === focusedVehicleId) : vehicles,
     [vehicles, focusedVehicleId]
   )
 
@@ -330,7 +332,9 @@ export function TimelineGrid({
             </div>
 
             {/* 車両列 */}
-            <div className={`vehicles-columns${focusedVehicleId ? ' vehicles-columns--focused' : ''}`}>
+            <div
+              className={`vehicles-columns${focusedVehicleId ? ' vehicles-columns--focused' : ''}`}
+            >
               {displayVehicles.map((vehicle) => {
                 const isFocused = focusedVehicleId === vehicle.id
 

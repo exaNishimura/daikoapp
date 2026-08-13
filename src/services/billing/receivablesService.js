@@ -85,9 +85,7 @@ export async function getUnbilledByCompany(year, month) {
       map.set(key, existing)
     }
     return {
-      data: Array.from(map.values()).sort(
-        (a, b) => b.total_amount - a.total_amount
-      ),
+      data: Array.from(map.values()).sort((a, b) => b.total_amount - a.total_amount),
       error: null,
     }
   } catch (error) {
@@ -132,10 +130,7 @@ export async function updateReceivable(id, payload) {
 export async function deleteReceivable(id) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const { error } = await supabase
-      .from('accounts_receivable')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('accounts_receivable').delete().eq('id', id)
     if (error) throw error
     return { data: { id }, error: null }
   } catch (error) {
@@ -213,9 +208,7 @@ export async function replaceShiftReceivables(workDate, lines = [], carNum = nul
 
     const payloads = buildShiftReceivableInsertPayloads(workDate, lines, carNum)
     if (payloads.length > 0) {
-      const { error: insertError } = await supabase
-        .from('accounts_receivable')
-        .insert(payloads)
+      const { error: insertError } = await supabase.from('accounts_receivable').insert(payloads)
       if (insertError) throw insertError
     }
 

@@ -47,7 +47,11 @@ function formatDistance(value) {
 function SummaryRow({ label, value, valueSx }) {
   return (
     <TableRow>
-      <TableCell component="th" scope="row" sx={{ width: 120, color: 'text.secondary', border: 0, py: 1 }}>
+      <TableCell
+        component="th"
+        scope="row"
+        sx={{ width: 120, color: 'text.secondary', border: 0, py: 1 }}
+      >
         {label}
       </TableCell>
       <TableCell sx={{ border: 0, py: 1, fontVariantNumeric: 'tabular-nums', ...valueSx }}>
@@ -75,8 +79,7 @@ export function VehicleSalesSummaryModal({
     [companiesQuery.data]
   )
 
-  const loading =
-    saleQuery.isLoading || receivablesQuery.isLoading || companiesQuery.isLoading
+  const loading = saleQuery.isLoading || receivablesQuery.isLoading || companiesQuery.isLoading
   const salesRow = saleQuery.data ?? null
   const receivables = filterReceivablesByVehicle(
     enrichReceivablesWithCompanies(receivablesQuery.data ?? [], companiesQuery.data ?? []),

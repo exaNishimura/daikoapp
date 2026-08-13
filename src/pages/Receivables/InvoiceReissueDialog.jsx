@@ -117,9 +117,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
 
   const companyId = invoice?.company_id
   const companyName =
-    invoice?.companies?.invoice_display_name ||
-    invoice?.companies?.name ||
-    `企業 #${companyId}`
+    invoice?.companies?.invoice_display_name || invoice?.companies?.name || `企業 #${companyId}`
 
   // 明細ロード完了時にドラフト初期化
   // 発行済み明細 + 同月同社の未請求 (発行後に追加された行) をマージ
@@ -130,7 +128,6 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
 
     let cancelled = false
     setInitBusy(true)
-
     ;(async () => {
       try {
         const linked = detailQuery.data.accounts_receivable ?? []
@@ -201,23 +198,18 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
     [lines, companyId, options]
   )
 
-  const allValid =
-    lines.length > 0 && lineValidations.every((v) => v.isValid)
+  const allValid = lines.length > 0 && lineValidations.every((v) => v.isValid)
   const totalAmount = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)
   const isOverflow = lines.length > INVOICE_MAX_LINES
 
   const updateLine = (key, patch) => {
-    setLines((prev) =>
-      prev.map((l) => (l.key === key ? { ...l, ...patch } : l))
-    )
+    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)))
   }
 
   const handleDeleteLine = (line) => {
     setLines((prev) => prev.filter((l) => l.key !== line.key))
     if (line.id != null) {
-      setDeletedIds((prev) =>
-        prev.includes(line.id) ? prev : [...prev, line.id]
-      )
+      setDeletedIds((prev) => (prev.includes(line.id) ? prev : [...prev, line.id]))
     }
   }
 
@@ -255,18 +247,13 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
       const previews = []
 
       for (const chunk of chunks) {
-        const chunkTotal = chunk.lines.reduce(
-          (s, x) => s + (Number(x.amount) || 0),
-          0
-        )
+        const chunkTotal = chunk.lines.reduce((s, x) => s + (Number(x.amount) || 0), 0)
         const pdfBuf = await generateInvoicePdf(
           {
             issueDate,
             companyDisplayName:
               companyName +
-              (chunk.sequence
-                ? ` (${chunk.sequence.index}/${chunk.sequence.total})`
-                : ''),
+              (chunk.sequence ? ` (${chunk.sequence.index}/${chunk.sequence.total})` : ''),
             totalAmount: chunkTotal,
             lines: chunk.lines.map((x) => ({
               workDate: new Date(x.work_date),
@@ -301,9 +288,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
       return
     }
     if (
-      !window.confirm(
-        `「${companyName}」の請求書を取消し、編集内容で再発行します。よろしいですか?`
-      )
+      !window.confirm(`「${companyName}」の請求書を取消し、編集内容で再発行します。よろしいですか?`)
     ) {
       return
     }
@@ -335,8 +320,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
     onClose({ reissued: false })
   }
 
-  const loading =
-    open && !!invoice?.id && (detailQuery.isLoading || initBusy)
+  const loading = open && !!invoice?.id && (detailQuery.isLoading || initBusy)
 
   return (
     <>
@@ -347,9 +331,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         fullWidth
         aria-labelledby="invoice-reissue-title"
       >
-        <DialogTitle id="invoice-reissue-title">
-          請求書を修正して再発行
-        </DialogTitle>
+        <DialogTitle id="invoice-reissue-title">請求書を修正して再発行</DialogTitle>
         <DialogContent dividers>
           {loading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -364,11 +346,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
           )}
 
           {error && (
-            <Alert
-              severity="error"
-              sx={{ mb: 2 }}
-              onClose={() => setError(null)}
-            >
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
               {error}
             </Alert>
           )}
@@ -408,8 +386,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                   件数: <strong>{lines.length}</strong>
                 </Typography>
                 <Typography variant="body2">
-                  合計:{' '}
-                  <strong>¥{totalAmount.toLocaleString('ja-JP')}</strong>
+                  合計: <strong>¥{totalAmount.toLocaleString('ja-JP')}</strong>
                 </Typography>
               </Box>
 
@@ -477,9 +454,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                           <TableCell>
                             <VehicleNumSelect
                               value={line.vehicle_num}
-                              onChange={(vehicle_num) =>
-                                updateLine(line.key, { vehicle_num })
-                              }
+                              onChange={(vehicle_num) => updateLine(line.key, { vehicle_num })}
                             />
                           </TableCell>
                           <TableCell>
@@ -509,18 +484,14 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                           <TableCell align="right">
                             <AmountInput
                               value={line.amount}
-                              onChange={(amount) =>
-                                updateLine(line.key, { amount })
-                              }
+                              onChange={(amount) => updateLine(line.key, { amount })}
                             />
                           </TableCell>
                           <TableCell>
                             <TextField
                               size="small"
                               value={line.note}
-                              onChange={(e) =>
-                                updateLine(line.key, { note: e.target.value })
-                              }
+                              onChange={(e) => updateLine(line.key, { note: e.target.value })}
                               placeholder="備考"
                             />
                           </TableCell>
@@ -553,11 +524,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
               </TableContainer>
 
               <Box sx={{ mt: 1.5 }}>
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddLine}
-                >
+                <Button size="small" startIcon={<AddIcon />} onClick={handleAddLine}>
                   行を追加
                 </Button>
               </Box>
@@ -570,13 +537,9 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
           </Button>
           <Box sx={{ flex: 1 }} />
           <Button
-            startIcon={
-              previewBusy ? <CircularProgress size={16} /> : <VisibilityIcon />
-            }
+            startIcon={previewBusy ? <CircularProgress size={16} /> : <VisibilityIcon />}
             onClick={handlePreview}
-            disabled={
-              loading || previewBusy || reissue.isPending || !allValid
-            }
+            disabled={loading || previewBusy || reissue.isPending || !allValid}
           >
             プレビュー
           </Button>
@@ -584,11 +547,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
             variant="contained"
             color="primary"
             startIcon={
-              reissue.isPending ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <ReplayIcon />
-              )
+              reissue.isPending ? <CircularProgress size={16} color="inherit" /> : <ReplayIcon />
             }
             onClick={handleReissue}
             disabled={loading || reissue.isPending || !allValid}
