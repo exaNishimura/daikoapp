@@ -141,16 +141,25 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
   const handleSave = useCallback(async () => {
     setLoading(true)
     try {
-      const updatedOrder = await saveOrderEdit({ order, formData, deps: actionDeps })
-      onUpdate?.(updatedOrder)
+      const result = await saveOrderEdit({
+        order,
+        formData,
+        relatedVehicle,
+        deps: actionDeps,
+      })
+      setFormData(buildInitialFormData(result.order))
+      onUpdate?.(result.order)
       setEditing(false)
+      if (result.routeRecalcError) {
+        showToast('住所は更新しましたが、所要時間の再計算に失敗しました', 'warning')
+      }
     } catch (error) {
       console.error('Error updating order:', error)
       showToast('更新に失敗しました', 'error')
     } finally {
       setLoading(false)
     }
-  }, [order, formData, actionDeps, onUpdate])
+  }, [order, formData, relatedVehicle, actionDeps, onUpdate, showToast])
 
   const handleRecalculateRoute = useCallback(async () => {
     setRecalculating(true)

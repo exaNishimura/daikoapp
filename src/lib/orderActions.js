@@ -13,20 +13,119 @@
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { getRevertStatus } from '@/utils/orderStatusUtils'
 
+export function normalizeWaypoints(waypoints) {
+  return (waypoints || [])
+    .map((wp) => (typeof wp === 'string' ? wp.trim() : ''))
+    .filter((wp) => wp.length > 0)
+}
+
+/**
+ * 出発地・目的地・経由地のいずれかが変わったか。
+ */
+export function hasRouteChanged(order, formData) {
+  const nextWaypoints = normalizeWaypoints(formData.waypoints)
+  const prevWaypoints = normalizeWaypoints(order.waypoints)
+
+  if ((formData.pickup_address || '').trim() !== (order.pickup_address || '').trim()) {
+    return true
+  }
+  if ((formData.dropoff_address || '').trim() !== (order.dropoff_address || '').trim()) {
+    return true
+  }
+  if (nextWaypoints.length !== prevWaypoints.length) {
+    return true
+  }
+  return nextWaypoints.some((wp, i) => wp !== prevWaypoints[i])
+}
+
+async function resolveWaitingLocationAddress(relatedVehicle, getVehicles) {
+  let waitingLocationAddress = relatedVehicle?.waiting_location_address || null
+  if (waitingLocationAddress || !getVehicles) {
+    return waitingLocationAddress
+  }
+  try {
+    const { data: vehicles } = await getVehicles()
+    if (Array.isArray(vehicles) && vehicles.length > 0) {
+      return vehicles[0].waiting_location_address || null
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      console.error('Error fetching vehicles for waiting location:', e)
+    }
+  }
+  return null
+}
+
+/**
+ * ルート所要時間を計算する。失敗時は duration=null。
+ */
+export async function computeRouteDuration({
+  pickupAddress,
+  dropoffAddress,
+  waypoints,
+  relatedVehicle,
+  deps,
+}) {
+  const { estimateDuration, calculateBuffer, getVehicles } = deps
+  const waitingLocationAddress = await resolveWaitingLocationAddress(relatedVehicle, getVehicles)
+  const normalizedWaypoints = normalizeWaypoints(waypoints)
+
+  const { duration, error } = await estimateDuration(
+    pickupAddress,
+    dropoffAddress,
+    normalizedWaypoints.length > 0 ? normalizedWaypoints : null,
+    waitingLocationAddress
+  )
+
+  if (error || !duration) {
+    return {
+      duration: null,
+      buffer: null,
+      error: error || 'ルート計算の結果が取得できませんでした',
+    }
+  }
+
+  return { duration, buffer: calculateBuffer(duration), error: null }
+}
+
 /**
  * 編集保存。
+ * - 出発地・目的地・経由地が変わっていれば estimateDuration で所要時間を再計算
  * - 関連する dispatch_slots のうち TENTATIVE のものだけ end_at を再計算
  * - 最後に order を update
  *
- * @returns {Promise<Object>} 更新後の order
+ * @returns {Promise<{ order: Object, routeRecalculated: boolean, routeRecalcError: unknown }>}
  */
-export async function saveOrderEdit({ order, formData, deps }) {
+export async function saveOrderEdit({ order, formData, relatedVehicle = null, deps }) {
   const { supabase, updateOrder } = deps
 
-  const baseDurationMin = parseInt(formData.base_duration_min, 10)
-  const bufferMin = parseInt(formData.buffer_min, 10)
+  let baseDurationMin = parseInt(formData.base_duration_min, 10)
+  let bufferMin = parseInt(formData.buffer_min, 10)
+  let bufferManual = true
+  let routeRecalculated = false
+  let routeRecalcError = null
 
-  const waypoints = (formData.waypoints || []).map((wp) => wp.trim()).filter((wp) => wp.length > 0)
+  const waypoints = normalizeWaypoints(formData.waypoints)
+  const pickupAddress = (formData.pickup_address || '').trim()
+  const dropoffAddress = (formData.dropoff_address || '').trim()
+
+  if (hasRouteChanged(order, formData) && pickupAddress && dropoffAddress) {
+    const result = await computeRouteDuration({
+      pickupAddress,
+      dropoffAddress,
+      waypoints,
+      relatedVehicle,
+      deps,
+    })
+    if (result.duration) {
+      baseDurationMin = result.duration
+      bufferMin = result.buffer
+      bufferManual = false
+      routeRecalculated = true
+    } else {
+      routeRecalcError = result.error
+    }
+  }
 
   const updates = {
     pickup_location: formData.pickup_location?.trim() || null,
@@ -40,7 +139,7 @@ export async function saveOrderEdit({ order, formData, deps }) {
     parking_note: formData.parking_note || null,
     base_duration_min: baseDurationMin,
     buffer_min: bufferMin,
-    buffer_manual: true,
+    buffer_manual: bufferManual,
   }
 
   const { data: existingSlots } = await supabase
@@ -64,7 +163,7 @@ export async function saveOrderEdit({ order, formData, deps }) {
 
   const { data: updatedOrder, error } = await updateOrder(order.id, updates)
   if (error) throw error
-  return updatedOrder
+  return { order: updatedOrder, routeRecalculated, routeRecalcError }
 }
 
 /**
@@ -73,7 +172,7 @@ export async function saveOrderEdit({ order, formData, deps }) {
  * @returns {Promise<{ order: Object, duration: number, buffer: number }>}
  */
 export async function recalculateOrderRoute({ order, formData, relatedVehicle, deps }) {
-  const { estimateDuration, calculateBuffer, getVehicles, updateOrder } = deps
+  const { updateOrder } = deps
 
   if (!formData.pickup_address?.trim()) {
     throw new Error('出発地を入力してください')
@@ -82,49 +181,28 @@ export async function recalculateOrderRoute({ order, formData, relatedVehicle, d
     throw new Error('目的地を入力してください')
   }
 
-  const waypoints = (formData.waypoints || []).map((wp) => wp.trim()).filter((wp) => wp.length > 0)
+  const result = await computeRouteDuration({
+    pickupAddress: formData.pickup_address.trim(),
+    dropoffAddress: formData.dropoff_address.trim(),
+    waypoints: formData.waypoints,
+    relatedVehicle,
+    deps,
+  })
 
-  let waitingLocationAddress = relatedVehicle?.waiting_location_address || null
-  if (!waitingLocationAddress) {
-    try {
-      const { data: vehicles } = await getVehicles()
-      if (Array.isArray(vehicles) && vehicles.length > 0) {
-        waitingLocationAddress = vehicles[0].waiting_location_address || null
-      }
-    } catch (e) {
-      if (import.meta.env.DEV) {
-        console.error('Error fetching vehicles for waiting location:', e)
-      }
-    }
-  }
-
-  const { duration, error } = await estimateDuration(
-    formData.pickup_address.trim(),
-    formData.dropoff_address.trim(),
-    waypoints.length > 0 ? waypoints : null,
-    waitingLocationAddress
-  )
-
-  if (error) {
-    // 呼び出し側で formatRouteCalculationError に通せるように、
-    // ここでは生の文字列を throw する
-    const err = new Error(typeof error === 'string' ? error : error.message)
-    err.cause = error
+  if (result.error) {
+    const err = new Error(typeof result.error === 'string' ? result.error : result.error.message)
+    err.cause = result.error
     throw err
   }
-  if (!duration) {
-    throw new Error('ルート計算の結果が取得できませんでした')
-  }
 
-  const buffer = calculateBuffer(duration)
   const { data: updatedOrder, error: updateError } = await updateOrder(order.id, {
-    base_duration_min: duration,
-    buffer_min: buffer,
+    base_duration_min: result.duration,
+    buffer_min: result.buffer,
     buffer_manual: false,
   })
   if (updateError) throw updateError
 
-  return { order: updatedOrder, duration, buffer }
+  return { order: updatedOrder, duration: result.duration, buffer: result.buffer }
 }
 
 /**
