@@ -9,6 +9,8 @@ import {
   formatWorkDateKey,
   getMinBusinessDateTime,
   snapDateTimeTo15Minutes,
+  normalizeTimeInput,
+  combineDateAndTime,
 } from './businessDayUtils'
 
 describe('constants', () => {
@@ -149,5 +151,44 @@ describe('snapDateTimeTo15Minutes', () => {
 
   it('returns garbage input unchanged', () => {
     expect(snapDateTimeTo15Minutes('not-a-date')).toBe('not-a-date')
+  })
+})
+
+describe('normalizeTimeInput', () => {
+  it('keeps HH:MM as-is', () => {
+    expect(normalizeTimeInput('19:30')).toBe('19:30')
+  })
+
+  it('strips seconds from HH:MM:SS', () => {
+    expect(normalizeTimeInput('19:30:00')).toBe('19:30')
+  })
+
+  it('pads a single-digit hour', () => {
+    expect(normalizeTimeInput('9:15')).toBe('09:15')
+  })
+
+  it('returns empty for missing or invalid values', () => {
+    expect(normalizeTimeInput('')).toBe('')
+    expect(normalizeTimeInput(null)).toBe('')
+    expect(normalizeTimeInput('abc')).toBe('')
+  })
+})
+
+describe('combineDateAndTime', () => {
+  it('joins date and time into datetime-local format', () => {
+    expect(combineDateAndTime('2025-06-01', '19:30')).toBe('2025-06-01T19:30')
+  })
+
+  it('snaps to 15 minutes', () => {
+    expect(combineDateAndTime('2025-06-01', '19:07')).toBe('2025-06-01T19:00')
+  })
+
+  it('normalizes HH:MM:SS before combining', () => {
+    expect(combineDateAndTime('2025-06-01', '20:00:00')).toBe('2025-06-01T20:00')
+  })
+
+  it('returns empty when either part is missing', () => {
+    expect(combineDateAndTime('', '19:30')).toBe('')
+    expect(combineDateAndTime('2025-06-01', '')).toBe('')
   })
 })

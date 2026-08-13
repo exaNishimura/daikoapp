@@ -39,11 +39,11 @@ export function useLineIntakeSettings() {
 export function useApproveLineUnit() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ unitId, pin }) => {
+    mutationFn: async ({ unitId, pin } = {}) => {
       const { data, error, raw } = await callLineIntakeApi({
         action: 'approve',
         unit_id: unitId,
-        pin,
+        ...(pin ? { pin } : {}),
       })
       if (error) throw Object.assign(error, { raw })
       return data

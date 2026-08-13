@@ -17,6 +17,23 @@ export function resolveProjectionTarget(pickupAt, now = new Date()) {
   return pickupDay === today ? 'BOARD' : 'LEDGER'
 }
 
+/** 配車ボードのルート未計算時と同じ仮値（`orderSubmission` DEFAULT_DURATION_MIN） */
+export const DISPATCH_FALLBACK_DURATION_MIN = 30
+
+/**
+ * LINE 台の Maps 所要を配車 `orders` 向けに正規化する。
+ * 配車 SPA の `calculateBuffer` は一律 0。LINE 可否用バッファは orders に載せない。
+ * @param {{ base_duration_min?: number|null }} unit
+ * @returns {{ base_duration_min: number, buffer_min: number }}
+ */
+export function toBoardRouteFields(unit) {
+  const base = Number(unit?.base_duration_min)
+  return {
+    base_duration_min: Number.isFinite(base) && base > 0 ? Math.round(base) : DISPATCH_FALLBACK_DURATION_MIN,
+    buffer_min: 0,
+  }
+}
+
 /**
  * orders / reservations へ載せる識別用メモ断片
  * @param {{ lineUserId: string, unitId: string, discountLabel?: string }} meta

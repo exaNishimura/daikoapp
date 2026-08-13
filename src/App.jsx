@@ -11,6 +11,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { LineQueuePage } from '@/components/LineIntake/LineQueuePage'
 import { LineSettingsPage } from '@/components/LineIntake/LineSettingsPage'
 import { LineHoldingAlertHost } from '@/components/LineIntake/LineHoldingAlertHost'
+import { DispatchPinGate } from '@/components/LineIntake/DispatchPinGate'
 import { LiffOrderForm } from '@/components/Liff/LiffOrderForm'
 import { CompaniesPage } from '@/pages/Receivables/CompaniesPage'
 import { CompanyProfilePage } from '@/pages/Receivables/CompanyProfilePage'
@@ -406,7 +407,14 @@ function AppRoutes() {
   return (
     <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <Routes>
-        <Route path="/" element={<DispatchBoard />} />
+        <Route
+          path="/"
+          element={
+            <DispatchPinGate>
+              <DispatchBoard />
+            </DispatchPinGate>
+          }
+        />
         <Route path="/shift" element={<ShiftCalendar />} />
         <Route path="/reservations" element={<ReservationLedgerPage />} />
         <Route path="/liff/order" element={<LiffOrderForm />} />

@@ -18,6 +18,20 @@
   padding: 12px;
 }
 
+.liff-order-form__pickup-note {
+  margin: 0;
+  color: #c62828;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.liff-order-form__pickup-preview {
+  margin: 0;
+  color: #c62828;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .liff-order-form__my-unit {
   display: flex;
   justify-content: space-between;

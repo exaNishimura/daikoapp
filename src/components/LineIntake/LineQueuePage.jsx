@@ -30,7 +30,6 @@ export function LineQueuePage() {
   const approve = useApproveLineUnit()
   const adminAction = useAdminLineUnitAction()
   const [selected, setSelected] = useState(null)
-  const [pin, setPin] = useState('')
   const [newPickup, setNewPickup] = useState('')
   const [actionError, setActionError] = useState('')
 
@@ -38,7 +37,6 @@ export function LineQueuePage() {
 
   const openDetail = (unit) => {
     setSelected(unit)
-    setPin('')
     setNewPickup(unit.pickup_at ? unit.pickup_at.slice(0, 16) : '')
     setActionError('')
   }
@@ -46,7 +44,7 @@ export function LineQueuePage() {
   const handleApprove = async () => {
     setActionError('')
     try {
-      await approve.mutateAsync({ unitId: selected.id, pin })
+      await approve.mutateAsync({ unitId: selected.id })
       setSelected(null)
     } catch (e) {
       setActionError(e?.raw?.error || e.message || '承認に失敗しました')
@@ -59,7 +57,6 @@ export function LineQueuePage() {
       await adminAction.mutateAsync({
         action: 'admin_reschedule',
         unit_id: selected.id,
-        pin,
         pickup_at: new Date(newPickup).toISOString(),
       })
       setSelected(null)
@@ -74,7 +71,6 @@ export function LineQueuePage() {
       await adminAction.mutateAsync({
         action: 'admin_delete',
         unit_id: selected.id,
-        pin,
       })
       setSelected(null)
     } catch (e) {
@@ -135,7 +131,7 @@ export function LineQueuePage() {
       </Stack>
 
       <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} fullWidth maxWidth="sm">
-        <DialogTitle>台詳細・承認</DialogTitle>
+        <DialogTitle>台詳細</DialogTitle>
         <DialogContent>
           {selected && (
             <Stack spacing={1.5} mt={1}>
@@ -154,13 +150,6 @@ export function LineQueuePage() {
                 <Alert severity="warning">投影エラー: {selected.projection_error}</Alert>
               )}
               <TextField
-                label="承認 PIN（6桁）"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                inputProps={{ inputMode: 'numeric', maxLength: 6 }}
-                fullWidth
-              />
-              <TextField
                 label="お迎え日時変更"
                 type="datetime-local"
                 value={newPickup}
@@ -174,15 +163,15 @@ export function LineQueuePage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelected(null)}>閉じる</Button>
-          <Button color="error" onClick={handleDelete} disabled={!pin}>
+          <Button color="error" onClick={handleDelete} disabled={adminAction.isPending}>
             削除
           </Button>
-          <Button onClick={handleReschedule} disabled={!pin || !newPickup}>
+          <Button onClick={handleReschedule} disabled={!newPickup || adminAction.isPending}>
             時間変更
           </Button>
           {selected?.status === 'HOLDING' && (
-            <Button variant="contained" onClick={handleApprove} disabled={!pin || approve.isPending}>
-              PIN承認
+            <Button variant="contained" onClick={handleApprove} disabled={approve.isPending}>
+              確定にする
             </Button>
           )}
         </DialogActions>

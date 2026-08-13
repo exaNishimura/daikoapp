@@ -8,6 +8,8 @@ import { evaluateOccupancy, resolveCapacityForDay } from './capacity.js'
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const PHONE_INTAKE_HOUR = 19
 const BUSINESS_END_HOUR = 6
+/** LIFF 顧客が選べる最初の時（20:00 JST） */
+const LIFF_PICKUP_START_HOUR = 20
 
 /**
  * @param {Date} date
@@ -48,6 +50,25 @@ export function getLineBusinessDayKey(at) {
 export function isPhoneIntakeOpen(now) {
   const { hour } = jstParts(now)
   return hour >= PHONE_INTAKE_HOUR || hour < BUSINESS_END_HOUR
+}
+
+/**
+ * 「今すぐ」不可時に案内する最短お迎え（次の 20:00 JST）
+ * @param {Date} now
+ * @returns {Date}
+ */
+export function nextLiffPickupAt(now) {
+  const p = jstParts(now)
+  let y = p.y
+  let month = p.month
+  let d = p.d
+  if (p.hour >= LIFF_PICKUP_START_HOUR) {
+    const next = new Date(Date.UTC(y, month - 1, d + 1))
+    y = next.getUTCFullYear()
+    month = next.getUTCMonth() + 1
+    d = next.getUTCDate()
+  }
+  return new Date(Date.UTC(y, month - 1, d, LIFF_PICKUP_START_HOUR - 9, 0, 0, 0))
 }
 
 /**
@@ -101,16 +122,11 @@ export function checkAvailability(input) {
   const unitCount = Math.max(1, Number(input.unitCount) || 1)
   const totalDurationMin = totalDurationWithBuffer(input.baseDurationMin)
 
-  if (input.orderType === 'NOW' && !isPhoneIntakeOpen(now)) {
-    return {
-      ok: false,
-      reason: 'REQUIRE_SCHEDULED',
-      usesExtraCapacity: false,
-    }
-  }
+  const nowOutsideHours = input.orderType === 'NOW' && !isPhoneIntakeOpen(now)
 
-  const pickupAt =
-    input.orderType === 'NOW' || !input.desiredPickupAt
+  const pickupAt = nowOutsideHours
+    ? nextLiffPickupAt(now)
+    : input.orderType === 'NOW' || !input.desiredPickupAt
       ? now
       : input.desiredPickupAt instanceof Date
         ? input.desiredPickupAt
@@ -162,6 +178,17 @@ export function checkAvailability(input) {
     start: window.start.toISOString(),
     end: window.end.toISOString(),
   }))
+
+  if (nowOutsideHours) {
+    return {
+      ok: false,
+      reason: 'REQUIRE_SCHEDULED',
+      earliestHint: pickupAt.toISOString(),
+      usesExtraCapacity: occupancy.usesExtraCapacity,
+      perUnitWindows,
+      totalDurationMin,
+    }
+  }
 
   return {
     ok: true,

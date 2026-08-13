@@ -10,20 +10,23 @@
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { checkAvailability } from '../../../shared/lineIntake/availability.js'
+import {
+  checkAvailability,
+  isPhoneIntakeOpen,
+  nextLiffPickupAt,
+} from '../../../shared/lineIntake/availability.js'
 import { calculateLineBuffer } from '../../../shared/lineIntake/buffer.js'
 import { snapshotDiscount } from '../../../shared/lineIntake/discount.js'
-import { computeHoldUntil } from '../../../shared/lineIntake/holdDeadline.js'
 import { fetchDirectionsDurationMinutes } from '../../../shared/lineIntake/mapsDirections.js'
 import {
   buildConfirmedCustomerMessage,
-  buildTentativeCustomerMessage,
   pushTextWithRetry,
 } from '../../../shared/lineIntake/messaging.js'
-import { applyPinAttempt, hashPin, verifyPin } from '../../../shared/lineIntake/pin.js'
+import { applyPinAttempt, hashPin, isValidPinFormat, verifyPin } from '../../../shared/lineIntake/pin.js'
 import {
   buildLineChannelMarkers,
   resolveProjectionTarget,
+  toBoardRouteFields,
 } from '../../../shared/lineIntake/projector.js'
 
 const corsHeaders = {
@@ -45,10 +48,77 @@ function getSupabase() {
   return createClient(url, key)
 }
 
+async function getStaffUser(req, supabase) {
+  const header = req.headers.get('Authorization') || ''
+  const token = header.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return null
+  const anon = Deno.env.get('SUPABASE_ANON_KEY')
+  if (anon && token === anon) return null
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data?.user) return null
+  return data.user
+}
+
+async function consumePinAttempt(supabase, pin) {
+  const settings = await loadSettings(supabase)
+  const pinState = {
+    failures: settings.pin_failure_count || 0,
+    lockedUntil: settings.pin_locked_until,
+  }
+  const lockCheck = applyPinAttempt(pinState, true)
+  if (!lockCheck.ok && lockCheck.reason === 'LOCKED') {
+    return { ok: false, status: 423, error: 'PIN temporarily locked', reason: 'LOCKED' }
+  }
+  const valid = await verifyPin(pin, settings.approval_pin_hash)
+  const after = applyPinAttempt(
+    { failures: settings.pin_failure_count || 0, lockedUntil: settings.pin_locked_until },
+    valid
+  )
+  await supabase
+    .from('line_intake_settings')
+    .update({
+      pin_failure_count: after.failures,
+      pin_locked_until: after.lockedUntil,
+    })
+    .eq('id', 1)
+  if (!valid) {
+    return { ok: false, status: 400, error: 'Invalid PIN', reason: after.reason || 'INVALID_PIN' }
+  }
+  return { ok: true }
+}
+
 async function loadSettings(supabase) {
   const { data, error } = await supabase.from('line_intake_settings').select('*').eq('id', 1).single()
   if (error) throw error
   return data
+}
+
+async function loadWaitingLocation(supabase) {
+  const { data } = await supabase
+    .from('vehicles')
+    .select('waiting_location_address')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return data?.waiting_location_address || null
+}
+
+function mapsApiKey() {
+  return Deno.env.get('GOOGLE_MAPS_API_KEY') || Deno.env.get('VITE_GOOGLE_MAPS_API_KEY')
+}
+
+async function resolveMapsDuration(pickupAddress, dropoffAddress, options = {}) {
+  if (options.baseOverride != null && Number(options.baseOverride) > 0) {
+    return Number(options.baseOverride)
+  }
+  const dir = await fetchDirectionsDurationMinutes({
+    origin: pickupAddress,
+    destination: dropoffAddress,
+    waitingLocationAddress: options.waitingLocationAddress,
+    apiKey: mapsApiKey(),
+  })
+  return dir.duration
 }
 
 async function loadOccupiedIntervals(supabase, pickupAt, durationMin) {
@@ -113,6 +183,7 @@ async function projectUnit(supabase, booking, unit, statusForOrder = 'TENTATIVE'
   const target = resolveProjectionTarget(unit.pickup_at, new Date())
   try {
     if (target === 'BOARD') {
+      const route = toBoardRouteFields(unit)
       const orderPayload = {
         order_type: 'SCHEDULED',
         scheduled_at: unit.pickup_at,
@@ -121,8 +192,8 @@ async function projectUnit(supabase, booking, unit, statusForOrder = 'TENTATIVE'
         contact_phone: booking.contact_phone,
         car_model: unit.vehicle_info || null,
         parking_note: markers.memo_prefix,
-        base_duration_min: unit.base_duration_min,
-        buffer_min: unit.buffer_min,
+        base_duration_min: route.base_duration_min,
+        buffer_min: route.buffer_min,
         status: statusForOrder === 'CONFIRMED' ? 'CONFIRMED' : 'TENTATIVE',
       }
       let orderId = unit.order_id
@@ -180,24 +251,24 @@ async function notify(to, text) {
 
 async function handleCheck(supabase, body) {
   const settings = await loadSettings(supabase)
-  const mapsKey = Deno.env.get('GOOGLE_MAPS_API_KEY') || Deno.env.get('VITE_GOOGLE_MAPS_API_KEY')
-  let baseDuration = body.base_duration_min ?? null
-  if (baseDuration == null && body.pickup_address && body.dropoff_address) {
-    const dir = await fetchDirectionsDurationMinutes({
-      origin: body.pickup_address,
-      destination: body.dropoff_address,
-      apiKey: mapsKey,
-    })
-    baseDuration = dir.duration
+  const waitingLocationAddress = await loadWaitingLocation(supabase)
+  const baseDuration = await resolveMapsDuration(body.pickup_address, body.dropoff_address, {
+    baseOverride: body.base_duration_min,
+    waitingLocationAddress,
+  })
+  const now = new Date()
+  const orderType = body.order_type || 'SCHEDULED'
+  let pickupAt = body.pickup_at ? new Date(body.pickup_at) : now
+  if (orderType === 'NOW' && !isPhoneIntakeOpen(now)) {
+    pickupAt = nextLiffPickupAt(now)
   }
-  const pickupAt = body.pickup_at ? new Date(body.pickup_at) : new Date()
   const durationMin = (baseDuration || 20) + calculateLineBuffer(baseDuration)
   const occupiedIntervals = await loadOccupiedIntervals(supabase, pickupAt, durationMin)
   const phoneLocks = await loadPhoneLocks(supabase, pickupAt)
   const result = checkAvailability({
-    now: new Date(),
+    now,
     desiredPickupAt: pickupAt,
-    orderType: body.order_type || 'SCHEDULED',
+    orderType,
     unitCount: body.unit_count || 1,
     baseDurationMin: baseDuration,
     occupiedIntervals,
@@ -225,22 +296,23 @@ async function handleSubmit(supabase, body) {
   }
 
   const settings = await loadSettings(supabase)
-  const mapsKey = Deno.env.get('GOOGLE_MAPS_API_KEY') || Deno.env.get('VITE_GOOGLE_MAPS_API_KEY')
   const discount = snapshotDiscount(settings.discount_config)
   const orderType = body.order_type || 'SCHEDULED'
   const now = new Date()
+  const waitingLocationAddress = await loadWaitingLocation(supabase)
 
-  // 代表ユニットで可否（複数台は同一枠想定）
+  // 代表ユニットで可否（複数台は同一枠想定）。所要は台ごとに Maps。
   const first = unitsInput[0]
-  let baseDuration = first.base_duration_min ?? null
-  if (baseDuration == null) {
-    const dir = await fetchDirectionsDurationMinutes({
-      origin: first.pickup_address,
-      destination: first.dropoff_address,
-      apiKey: mapsKey,
-    })
-    baseDuration = dir.duration
-  }
+  const unitDurations = await Promise.all(
+    unitsInput.map((u) =>
+      resolveMapsDuration(u.pickup_address, u.dropoff_address, {
+        baseOverride: u.base_duration_min,
+        waitingLocationAddress,
+      })
+    )
+  )
+  const mapped = unitDurations.filter((d) => d != null && d > 0)
+  const baseDuration = mapped.length ? Math.max(...mapped) : unitDurations[0] ?? null
   const pickupAt = orderType === 'NOW' ? now : new Date(first.pickup_at)
   const durationMin = (baseDuration || 20) + calculateLineBuffer(baseDuration)
   const occupiedIntervals = await loadOccupiedIntervals(supabase, pickupAt, durationMin)
@@ -260,8 +332,7 @@ async function handleSubmit(supabase, body) {
     return json({ ok: false, ...availability, discount })
   }
 
-  const holdUntil = computeHoldUntil(now)
-  const bufferMin = calculateLineBuffer(baseDuration)
+  const nowIso = now.toISOString()
 
   const { data: booking, error: bookingError } = await supabase
     .from('line_bookings')
@@ -271,26 +342,30 @@ async function handleSubmit(supabase, body) {
         contact_phone: contactPhone,
         channel: 'LINE',
         discount_snapshot: discount,
-        status: 'PENDING',
+        status: 'CONFIRMED',
       },
     ])
     .select('*')
     .single()
   if (bookingError) return json({ error: bookingError.message }, 500)
 
-  const unitRows = unitsInput.map((u, i) => ({
-    booking_id: booking.id,
-    sequence: i + 1,
-    pickup_at: (orderType === 'NOW' ? now : new Date(u.pickup_at || first.pickup_at)).toISOString(),
-    pickup_address: u.pickup_address,
-    dropoff_address: u.dropoff_address,
-    vehicle_info: u.vehicle_info || '',
-    status: 'HOLDING',
-    hold_until: holdUntil.toISOString(),
-    uses_extra_capacity: availability.usesExtraCapacity,
-    base_duration_min: baseDuration,
-    buffer_min: bufferMin,
-  }))
+  const unitRows = unitsInput.map((u, i) => {
+    const unitBase = unitDurations[i]
+    return {
+      booking_id: booking.id,
+      sequence: i + 1,
+      pickup_at: (orderType === 'NOW' ? now : new Date(u.pickup_at || first.pickup_at)).toISOString(),
+      pickup_address: u.pickup_address,
+      dropoff_address: u.dropoff_address,
+      vehicle_info: u.vehicle_info || '',
+      status: 'CONFIRMED',
+      confirmed_at: nowIso,
+      hold_until: null,
+      uses_extra_capacity: availability.usesExtraCapacity,
+      base_duration_min: unitBase,
+      buffer_min: calculateLineBuffer(unitBase),
+    }
+  })
 
   const { data: units, error: unitsError } = await supabase
     .from('line_booking_units')
@@ -299,18 +374,15 @@ async function handleSubmit(supabase, body) {
   if (unitsError) return json({ error: unitsError.message }, 500)
 
   for (const unit of units) {
-    await projectUnit(supabase, booking, unit, 'TENTATIVE')
+    await projectUnit(supabase, booking, unit, 'CONFIRMED')
   }
 
   const pickupLabel = new Date(units[0].pickup_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-  const holdLabel = holdUntil.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-
   await notify(
     lineUserId,
-    buildTentativeCustomerMessage({
+    buildConfirmedCustomerMessage({
       pickupAtLabel: pickupLabel,
-      holdUntilLabel: holdLabel,
-      discountLabel: discount.applied ? discount.label : null,
+      sequence: units.length > 1 ? null : units[0].sequence,
     })
   )
 
@@ -318,42 +390,26 @@ async function handleSubmit(supabase, body) {
     ok: true,
     booking,
     units,
-    hold_until: holdUntil.toISOString(),
     uses_extra_capacity: availability.usesExtraCapacity,
     discount,
   })
 }
 
-async function handleApprove(supabase, body) {
-  const unitId = body.unit_id
+async function handleVerifyPin(supabase, body) {
   const pin = body.pin
-  if (!unitId || !pin) return json({ error: 'unit_id and pin required' }, 400)
+  if (!isValidPinFormat(pin)) return json({ error: 'PIN must be 6 digits' }, 400)
+  const result = await consumePinAttempt(supabase, pin)
+  if (!result.ok) return json({ error: result.error, reason: result.reason }, result.status)
+  return json({ ok: true })
+}
 
-  const settings = await loadSettings(supabase)
-  const pinState = {
-    failures: settings.pin_failure_count || 0,
-    lockedUntil: settings.pin_locked_until,
-  }
-  const lockCheck = applyPinAttempt(pinState, true)
-  if (!lockCheck.ok && lockCheck.reason === 'LOCKED') {
-    return json({ error: 'PIN temporarily locked', reason: 'LOCKED' }, 423)
-  }
-
-  const valid = await verifyPin(pin, settings.approval_pin_hash)
-  const after = applyPinAttempt(
-    { failures: settings.pin_failure_count || 0, lockedUntil: settings.pin_locked_until },
-    valid
-  )
-  await supabase
-    .from('line_intake_settings')
-    .update({
-      pin_failure_count: after.failures,
-      pin_locked_until: after.lockedUntil,
-    })
-    .eq('id', 1)
-
-  if (!valid) {
-    return json({ error: 'Invalid PIN', reason: after.reason }, 400)
+async function handleApprove(supabase, body, staffUser = null) {
+  const unitId = body.unit_id
+  if (!unitId) return json({ error: 'unit_id required' }, 400)
+  if (!staffUser) {
+    if (!isValidPinFormat(body.pin)) return json({ error: 'unit_id and pin required' }, 400)
+    const pinResult = await consumePinAttempt(supabase, body.pin)
+    if (!pinResult.ok) return json({ error: pinResult.error, reason: pinResult.reason }, pinResult.status)
   }
 
   const { data: unit, error } = await supabase
@@ -425,14 +481,13 @@ async function handleCancel(supabase, body) {
   return json({ ok: true })
 }
 
-async function handleAdminUpdate(supabase, body) {
+async function handleAdminUpdate(supabase, body, staffUser = null) {
   const unitId = body.unit_id
-  const pin = body.pin
-  if (!unitId || !pin) return json({ error: 'unit_id and pin required' }, 400)
-
-  const settings = await loadSettings(supabase)
-  if (!(await verifyPin(pin, settings.approval_pin_hash))) {
-    return json({ error: 'Invalid PIN' }, 400)
+  if (!unitId) return json({ error: 'unit_id required' }, 400)
+  if (!staffUser) {
+    if (!isValidPinFormat(body.pin)) return json({ error: 'unit_id and pin required' }, 400)
+    const pinResult = await consumePinAttempt(supabase, body.pin)
+    if (!pinResult.ok) return json({ error: pinResult.error, reason: pinResult.reason }, pinResult.status)
   }
 
   const { data: unit } = await supabase
@@ -553,13 +608,15 @@ Deno.serve(async (req) => {
     const supabase = getSupabase()
     const body = req.method === 'GET' ? {} : await req.json().catch(() => ({}))
     const action = body.action || new URL(req.url).searchParams.get('action')
+    const staffUser = await getStaffUser(req, supabase)
 
     if (action === 'check' || action === 'availability') return await handleCheck(supabase, body)
     if (action === 'submit') return await handleSubmit(supabase, body)
-    if (action === 'approve') return await handleApprove(supabase, body)
+    if (action === 'verify_pin') return await handleVerifyPin(supabase, body)
+    if (action === 'approve') return await handleApprove(supabase, body, staffUser)
     if (action === 'cancel') return await handleCancel(supabase, body)
     if (action === 'admin_delete' || action === 'admin_reschedule') {
-      return await handleAdminUpdate(supabase, { ...body, action })
+      return await handleAdminUpdate(supabase, { ...body, action }, staffUser)
     }
     if (action === 'set_pin') return await handleSetPin(supabase, body)
     if (action === 'update_settings') return await handleUpdateSettings(supabase, body)

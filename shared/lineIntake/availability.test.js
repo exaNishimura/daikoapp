@@ -3,6 +3,7 @@ import {
   checkAvailability,
   getLineBusinessDayKey,
   intervalsOverlap,
+  nextLiffPickupAt,
 } from './availability.js'
 
 describe('getLineBusinessDayKey', () => {
@@ -32,7 +33,7 @@ describe('intervalsOverlap', () => {
 })
 
 describe('checkAvailability', () => {
-  it('rejects NOW outside phone intake hours', () => {
+  it('rejects NOW outside phone intake hours but still hints next 20:00', () => {
     const result = checkAvailability({
       now: new Date('2026-08-11T05:00:00.000Z'), // 14:00 JST
       orderType: 'NOW',
@@ -44,6 +45,13 @@ describe('checkAvailability', () => {
     })
     expect(result.ok).toBe(false)
     expect(result.reason).toBe('REQUIRE_SCHEDULED')
+    expect(result.earliestHint).toBe('2026-08-11T11:00:00.000Z') // 20:00 JST
+  })
+
+  it('nextLiffPickupAt is today 20:00 JST during daytime', () => {
+    expect(nextLiffPickupAt(new Date('2026-08-11T05:00:00.000Z')).toISOString()).toBe(
+      '2026-08-11T11:00:00.000Z'
+    )
   })
 
   it('rejects when phone priority lock overlaps', () => {

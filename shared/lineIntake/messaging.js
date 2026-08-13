@@ -38,7 +38,7 @@ export function buildApprovalRequestGroupMessage({
     `お迎え: ${pickupAtLabel}`,
     customerPhone ? `電話: ${customerPhone}` : null,
     usesExtraCapacity ? '⚠ 要手配（仮想余裕枠）' : null,
-    '管理画面で PIN 承認してください。',
+    '配車画面を確認してください。',
   ].filter(Boolean)
   return lines.join('\n')
 }

@@ -144,3 +144,27 @@ export function snapDateTimeTo15Minutes(dateTimeString) {
   const mi = String(snapped.getMinutes()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
 }
+
+/**
+ * type="time" の値を HH:MM に正規化（iOS は HH:MM:SS を返すことがある）
+ * @param {string} value
+ * @returns {string}
+ */
+export function normalizeTimeInput(value) {
+  if (value == null || value === '') return ''
+  const match = String(value).trim().match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return ''
+  return `${match[1].padStart(2, '0')}:${match[2]}`
+}
+
+/**
+ * 日付と時刻を datetime-local 形式に結合し、15分刻みにスナップする
+ * @param {string} date - "YYYY-MM-DD"
+ * @param {string} time - "HH:MM" または "HH:MM:SS"
+ * @returns {string} "YYYY-MM-DDTHH:MM"（未入力なら空文字）
+ */
+export function combineDateAndTime(date, time) {
+  const normalizedTime = normalizeTimeInput(time)
+  if (!date || !normalizedTime) return ''
+  return snapDateTimeTo15Minutes(`${date}T${normalizedTime}`)
+}

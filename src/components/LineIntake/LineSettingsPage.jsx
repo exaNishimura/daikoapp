@@ -92,13 +92,13 @@ export function LineSettingsPage() {
           onChange={(e) => setField('discount_amount', e.target.value)}
         />
         <TextField
-          label="承認 PIN 変更（6桁・空なら変更なし）"
+          label="配車画面 PIN 変更（6桁・空なら変更なし）"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           inputProps={{ maxLength: 6, inputMode: 'numeric' }}
         />
         <Typography variant="caption" color="text.secondary">
-          PIN はハッシュ化して保存されます。平文は保存しません。
+          配車画面を開くときに1回入力します。予約ごとの承認には使いません。ハッシュ化して保存します。
         </Typography>
         {message && <Alert severity="success">{message}</Alert>}
         {err && <Alert severity="error">{err}</Alert>}
