@@ -171,7 +171,9 @@ export function DispatchBoard() {
   }
 
   const autoPlaceOrderRef = useRef(autoPlaceOrder)
-  autoPlaceOrderRef.current = autoPlaceOrder
+  useEffect(() => {
+    autoPlaceOrderRef.current = autoPlaceOrder
+  })
 
   useEffect(() => {
     if (loading || vehicles.length === 0) return
