@@ -595,7 +595,10 @@ export function ShiftCalendar() {
         }
         employees={employees}
         isDayClosed={
-          vehicleSalesTarget?.date ? Boolean(closuresByDate[vehicleSalesTarget.date]) : false
+          vehicleSalesTarget?.date
+            ? Boolean(closuresByDate[vehicleSalesTarget.date]) ||
+              Boolean(salesByDate[toWorkDateKey(vehicleSalesTarget.date)]?.closed_at)
+            : false
         }
         isAdmin={isAuthenticated}
         onClose={() => setVehicleSalesTarget(null)}

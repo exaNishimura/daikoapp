@@ -38,6 +38,7 @@ import { sumReceivableAmounts, isShiftEditableReceivable } from '@/lib/billing/s
 import { buildVehicleSalesSavePayload, readVehicleSalesForm } from '@/lib/billing/vehicleSalesForm'
 import { isVehicleSalesFormDirty } from '@/lib/billing/reassignVehicleSales'
 import { useReassignVehicleSales } from '@/hooks/billing/useReassignVehicleSales'
+import { useResendDailyClose } from '@/hooks/billing/useDailyClosures'
 import { ReassignVehicleDialog } from '@/components/ShiftCalendar/ReassignVehicleDialog'
 
 const EMPTY_FORM = {
@@ -100,6 +101,7 @@ export function VehicleSalesModal({
   const replaceReceivablesMutation = useReplaceShiftReceivables()
   const updateShiftsMutation = useUpdateShiftsBulk()
   const reassignMutation = useReassignVehicleSales()
+  const resendCloseMutation = useResendDailyClose()
 
   const dataLoading =
     saleQuery.isLoading ||
@@ -111,7 +113,8 @@ export function VehicleSalesModal({
     upsertStaffMutation.isPending ||
     replaceReceivablesMutation.isPending ||
     updateShiftsMutation.isPending ||
-    reassignMutation.isPending
+    reassignMutation.isPending ||
+    resendCloseMutation.isPending
   const loading = dataLoading || saving
   const isDirty = isVehicleSalesFormDirty(form, initialForm)
 
@@ -177,6 +180,21 @@ export function VehicleSalesModal({
       onClose()
     } catch (err) {
       setReassignError(err.message || '号車変更に失敗しました')
+    }
+  }
+
+  const handleResendCloseReport = async () => {
+    if (!workDate || !isDayClosed || !adminCanEdit) return
+    if (!window.confirm(`${workDate} の日次締め報告を LINE に再送しますか？`)) return
+    setError(null)
+    try {
+      await resendCloseMutation.mutateAsync(workDate)
+      showToast('日次締め報告を再送しました', 'success')
+      setSuccess('LINE へ再送しました')
+    } catch (err) {
+      const msg = err?.message || '再送に失敗しました'
+      setError(msg)
+      showToast(msg, 'error')
     }
   }
 
@@ -286,7 +304,7 @@ export function VehicleSalesModal({
             {isDayClosed && (
               <Alert severity={adminCanEdit ? 'info' : 'warning'}>
                 {adminCanEdit
-                  ? '締め済みです。ログイン中のため管理者として編集できます。修正後はシフト表の「締め報告を再送」で LINE に送れます。'
+                  ? '締め済みです。下の「締め報告を再送」で最新内容を LINE に送れます。'
                   : '締め済みのため編集できません。'}
               </Alert>
             )}
@@ -535,6 +553,17 @@ export function VehicleSalesModal({
             sx={isMobile ? undefined : { mr: 'auto' }}
           >
             号車変更
+          </Button>
+        )}
+        {isDayClosed && adminCanEdit && (
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={handleResendCloseReport}
+            disabled={loading || !workDate}
+            fullWidth={isMobile}
+          >
+            {resendCloseMutation.isPending ? '再送中…' : '締め報告を再送'}
           </Button>
         )}
         <Button onClick={handleClose} disabled={saving} fullWidth={isMobile}>
