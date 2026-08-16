@@ -43,12 +43,8 @@ export function buildApprovalRequestGroupMessage({
   return lines.join('\n')
 }
 
-export function buildConfirmedCustomerMessage({ pickupAtLabel, sequence }) {
-  return [
-    '【予約完了】',
-    sequence != null ? `${sequence}台目の予約が確定しました。` : '予約が確定しました。',
-    `お迎え: ${pickupAtLabel}`,
-  ].join('\n')
+export function buildConfirmedCustomerMessage({ pickupAtLabel }) {
+  return ['【予約完了】', '予約が確定しました。', `お迎え: ${pickupAtLabel}`].join('\n')
 }
 
 export function buildHoldExpiredCustomerMessage({ pickupAtLabel }) {

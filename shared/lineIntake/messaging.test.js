@@ -18,7 +18,7 @@ describe('messaging builders', () => {
   it('includes 要手配 when extra capacity', () => {
     const text = buildApprovalRequestGroupMessage({
       bookingId: 'b1',
-      unitCount: 2,
+      unitCount: 1,
       pickupAtLabel: '8/12 20:00',
       usesExtraCapacity: true,
       customerPhone: '090',

@@ -14,11 +14,15 @@ const RETRY_DELAY_MS = 2000
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    },
   })
 }
 
-function authorizeRequest(req) {
+function authorizeCron(req) {
   const cronSecret = Deno.env.get('CRON_SECRET')
   const auth = req.headers.get('Authorization') ?? ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
@@ -26,6 +30,17 @@ function authorizeRequest(req) {
     return false
   }
   return true
+}
+
+async function getStaffUser(req, supabase) {
+  const auth = req.headers.get('Authorization') ?? ''
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+  if (!token) return null
+  const anon = Deno.env.get('SUPABASE_ANON_KEY')
+  if (anon && token === anon) return null
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data?.user) return null
+  return data.user
 }
 
 function sleep(ms) {
@@ -94,12 +109,17 @@ function buildCompanyLookup(companies) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405)
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+    })
   }
 
-  if (!authorizeRequest(req)) {
-    return jsonResponse({ error: 'Unauthorized' }, 401)
+  if (req.method !== 'POST') {
+    return jsonResponse({ error: 'Method not allowed' }, 405)
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -114,6 +134,13 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Missing LINE env' }, 500)
   }
 
+  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const isCron = authorizeCron(req)
+  const staffUser = isCron ? null : await getStaffUser(req, supabase)
+  if (!isCron && !staffUser) {
+    return jsonResponse({ error: 'Unauthorized' }, 401)
+  }
+
   let body = {}
   try {
     body = await req.json()
@@ -122,7 +149,11 @@ Deno.serve(async (req) => {
   }
 
   const workDate = body.work_date || getCloseTargetWorkDate(new Date())
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const force = Boolean(body.force)
+  // スタッフ手動は再送専用（初回締めは cron のみ）
+  if (staffUser && !force) {
+    return jsonResponse({ error: 'Staff may only resend with force=true' }, 400)
+  }
 
   const { data: existingClosure } = await supabase
     .from('daily_day_closures')
@@ -130,8 +161,14 @@ Deno.serve(async (req) => {
     .eq('work_date', workDate)
     .maybeSingle()
 
-  if (existingClosure && !body.force) {
+  if (existingClosure && !force) {
     return jsonResponse({ ok: true, skipped: true, reason: 'already_closed', work_date: workDate })
+  }
+  if (staffUser && force && !existingClosure) {
+    return jsonResponse(
+      { error: 'まだ締められていません。初回締めは自動実行を待ってください', work_date: workDate },
+      409
+    )
   }
 
   const { data: shifts, error: shiftsError } = await supabase
@@ -171,6 +208,10 @@ Deno.serve(async (req) => {
 
   const dow = activeShifts[0]?.dow ?? dayStatusRow?.dow ?? ''
   const closedAtLabel = formatJstDateTime(new Date())
+  const isResend = Boolean(existingClosure && force)
+  const closedBy =
+    body.closed_by ??
+    (staffUser ? `staff:${staffUser.email || staffUser.id}` : 'system')
   const message = buildDailyCloseMessage({
     workDate,
     dow,
@@ -181,6 +222,7 @@ Deno.serve(async (req) => {
     receivables: receivables ?? [],
     companyLookup: buildCompanyLookup(companies),
     closedAtLabel,
+    isResend,
   })
 
   let lineStatus = null
@@ -236,7 +278,7 @@ Deno.serve(async (req) => {
     {
       work_date: workDate,
       closed_at: closedAt,
-      closed_by: body.closed_by ?? 'system',
+      closed_by: closedBy,
     },
     { onConflict: 'work_date' }
   )
@@ -256,7 +298,7 @@ Deno.serve(async (req) => {
   if (salesRow) {
     await supabase
       .from('daily_sales')
-      .update({ closed_at: closedAt, closed_by: body.closed_by ?? 'system' })
+      .update({ closed_at: closedAt, closed_by: closedBy })
       .eq('work_date', workDate)
   }
 
@@ -265,5 +307,6 @@ Deno.serve(async (req) => {
     work_date: workDate,
     line_status: lineStatus,
     message_length: message.length,
+    resent: isResend,
   })
 })

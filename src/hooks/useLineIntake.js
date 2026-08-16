@@ -58,8 +58,8 @@ export function useAdminLineUnitAction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload) => {
-      const { data, error } = await callLineIntakeApi(payload)
-      if (error) throw error
+      const { data, error, raw } = await callLineIntakeApi(payload)
+      if (error) throw Object.assign(error, { raw })
       return data
     },
     onSuccess: () => {

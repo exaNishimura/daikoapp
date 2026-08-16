@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { TimelineGrid } from './TimelineGrid'
 import { OrderDetailPanel } from './OrderDetailPanel'
@@ -12,7 +12,7 @@ import { useDispatchData } from '@/hooks/useDispatchData'
 import { useDispatchDnD } from '@/hooks/useDispatchDnD'
 import { useToast } from '@/contexts/ToastContext'
 import { getOrderById } from '@/services/orderService'
-import { createSlot } from '@/services/slotService'
+import { createSlot, getSlotsByOrderId } from '@/services/slotService'
 import { findAutoPlacementSlot } from '@/lib/orderPlacement'
 import { detectAllConflicts } from '@/lib/slotConflictUtils'
 import Box from '@mui/material/Box'
@@ -76,73 +76,120 @@ export function DispatchBoard() {
     handleDragCancel,
   } = useDispatchDnD({ vehicles, slots, orders, operationStatuses, setSlots, setOrders })
 
-  const handleOrderCreated = async (newOrder) => {
-    setOrders((prev) => [newOrder, ...prev])
-    setIsModalOpen(false)
+  const autoPlaceAttemptedRef = useRef(new Set())
 
-    // すべての依頼を即座にタイムラインに自動配置
-    if (vehicles.length > 0) {
-      try {
-        const { data: latestOrder, error: orderError } = await getOrderById(newOrder.id)
-        if (orderError) {
+  const autoPlaceOrder = async (order, { silent = false } = {}) => {
+    if (vehicles.length === 0) return false
+    try {
+      const { data: existingSlots } = await getSlotsByOrderId(order.id)
+      if (existingSlots?.length) {
+        setSlots((prev) => {
+          const next = [...prev]
+          for (const slot of existingSlots) {
+            if (!next.some((row) => row.id === slot.id)) next.push(slot)
+          }
+          return next
+        })
+        return true
+      }
+
+      const { data: latestOrder, error: orderError } = await getOrderById(order.id)
+      if (orderError) {
+        if (!silent) {
           console.error('Error fetching latest order for auto-placement:', orderError)
           showToast('依頼データの取得に失敗しました。未確定一覧から手動配置してください。', 'error')
-          return
         }
+        return false
+      }
 
-        const { availableSlot, totalDuration } = findAutoPlacementSlot({
-          order: latestOrder ?? newOrder,
-          vehicles,
-          slots,
-          operationStatuses,
-        })
+      const { availableSlot, totalDuration } = findAutoPlacementSlot({
+        order: latestOrder ?? order,
+        vehicles,
+        slots,
+        operationStatuses,
+      })
 
-        if (availableSlot) {
-          const endAt = new Date(availableSlot.startAt)
-          endAt.setMinutes(endAt.getMinutes() + totalDuration)
-
-          const { data: slot, error } = await createSlot({
-            order_id: newOrder.id,
-            vehicle_id: availableSlot.vehicleId,
-            start_at: availableSlot.startAt.toISOString(),
-            end_at: endAt.toISOString(),
-            status: 'TENTATIVE',
-          })
-
-          if (error) {
-            if (import.meta.env.DEV) {
-              console.error('Error auto-placing order:', error)
-            }
-            showToast('自動配置に失敗しました。未確定一覧から手動配置してください。', 'error')
-          } else if (slot) {
-            setSlots((prev) => {
-              const existingIndex = prev.findIndex((s) => s.id === slot.id)
-              if (existingIndex >= 0) {
-                const updated = [...prev]
-                updated[existingIndex] = slot
-                return updated
-              }
-              return [...prev, slot]
-            })
-
-            if (latestOrder) {
-              handleOrderUpdate(latestOrder)
-            }
-            showToast('依頼をタイムラインに仮配置しました', 'success')
-          }
-        } else {
+      if (!availableSlot) {
+        if (!silent) {
           showToast(
             '配置可能な時間が見つかりませんでした。未確定一覧から手動で配置してください。',
             'warning'
           )
         }
-      } catch (autoPlaceError) {
+        return false
+      }
+
+      const endAt = new Date(availableSlot.startAt)
+      endAt.setMinutes(endAt.getMinutes() + totalDuration)
+
+      const { data: slot, error } = await createSlot({
+        order_id: order.id,
+        vehicle_id: availableSlot.vehicleId,
+        start_at: availableSlot.startAt.toISOString(),
+        end_at: endAt.toISOString(),
+        status: 'TENTATIVE',
+      })
+
+      if (error) {
         if (import.meta.env.DEV) {
-          console.error('Error in auto-placement:', autoPlaceError)
+          console.error('Error auto-placing order:', error)
         }
+        if (!silent) {
+          showToast('自動配置に失敗しました。未確定一覧から手動配置してください。', 'error')
+        }
+        return false
+      }
+      if (!slot) return false
+
+      setSlots((prev) => {
+        const existingIndex = prev.findIndex((row) => row.id === slot.id)
+        if (existingIndex >= 0) {
+          const updated = [...prev]
+          updated[existingIndex] = slot
+          return updated
+        }
+        return [...prev, slot]
+      })
+      if (latestOrder) {
+        setOrders((prev) =>
+          prev.map((row) =>
+            row.id === latestOrder.id ? { ...latestOrder, status: 'TENTATIVE' } : row
+          )
+        )
+      }
+      if (!silent) showToast('依頼をタイムラインに仮配置しました', 'success')
+      return true
+    } catch (autoPlaceError) {
+      if (import.meta.env.DEV) {
+        console.error('Error in auto-placement:', autoPlaceError)
+      }
+      if (!silent) {
         showToast('自動配置中にエラーが発生しました。未確定一覧を確認してください。', 'error')
       }
+      return false
     }
+  }
+
+  const autoPlaceOrderRef = useRef(autoPlaceOrder)
+  autoPlaceOrderRef.current = autoPlaceOrder
+
+  useEffect(() => {
+    if (loading || vehicles.length === 0) return
+    const slotted = new Set(slots.map((slot) => slot.order_id))
+    for (const order of orders) {
+      if (slotted.has(order.id)) continue
+      if (autoPlaceAttemptedRef.current.has(order.id)) continue
+      if (order.status !== 'UNASSIGNED' && order.status !== 'CONFIRMED') continue
+      if (typeof order.parking_note !== 'string' || !order.parking_note.includes('[LINE]')) continue
+      autoPlaceAttemptedRef.current.add(order.id)
+      void autoPlaceOrderRef.current(order, { silent: true })
+    }
+  }, [loading, vehicles.length, orders, slots])
+
+  const handleOrderCreated = async (newOrder) => {
+    setOrders((prev) => [newOrder, ...prev])
+    setIsModalOpen(false)
+    await autoPlaceOrder(newOrder)
   }
 
   const handleOrderSelect = (order) => {

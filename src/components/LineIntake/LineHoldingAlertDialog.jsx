@@ -42,7 +42,7 @@ export function LineHoldingAlertDialog({ open, units, onClose }) {
       fullWidth
       maxWidth="sm"
     >
-      <DialogTitle id="line-holding-alert-title">LINE新規予約 {count}件</DialogTitle>
+      <DialogTitle id="line-holding-alert-title">LINE仮受付 {count}件</DialogTitle>
       <DialogContent>
         <Stack spacing={1.25} sx={{ mt: 0.5 }}>
           {(units ?? []).map((unit) => {
@@ -85,8 +85,8 @@ export function LineHoldingAlertDialog({ open, units, onClose }) {
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>閉じる</Button>
-        <Button component={RouterLink} to="/" variant="contained" onClick={onClose}>
-          配車画面へ
+        <Button component={RouterLink} to="/line-queue" variant="contained" onClick={onClose}>
+          LINE仮受付へ
         </Button>
       </DialogActions>
     </Dialog>

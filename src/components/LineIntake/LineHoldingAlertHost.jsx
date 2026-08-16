@@ -23,14 +23,10 @@ export function LineHoldingAlertHost() {
     refetchInterval: enabled ? POLL_MS : false,
   })
 
-  const holding = useMemo(() => {
-    const now = query.dataUpdatedAt || 0
-    return (query.data || []).filter((unit) => {
-      if (unit.status === 'HOLDING') return true
-      if (unit.status !== 'CONFIRMED' || !unit.created_at) return false
-      return now - new Date(unit.created_at).getTime() < 30 * 60 * 1000
-    })
-  }, [query.data, query.dataUpdatedAt])
+  const holding = useMemo(
+    () => (query.data || []).filter((unit) => unit.status === 'HOLDING'),
+    [query.data]
+  )
 
   const [open, setOpen] = useState(false)
   const seenRef = useRef(null)

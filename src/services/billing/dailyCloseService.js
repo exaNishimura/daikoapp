@@ -35,3 +35,56 @@ export function indexClosuresByDate(rows) {
   }
   return map
 }
+
+/**
+ * 締め済み日の LINE 報告を最新入力で再送する（管理者セッション必須）
+ * @param {string} workDate YYYY-MM-DD
+ */
+export async function resendDailyCloseReport(workDate) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+  if (!workDate) {
+    return { data: null, error: new Error('workDate required') }
+  }
+
+  const functionsBase = import.meta.env.VITE_SUPABASE_URL
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
+    : ''
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (!functionsBase) {
+    return { data: null, error: new Error('VITE_SUPABASE_URL not configured') }
+  }
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      return { data: null, error: new Error('ログインが必要です') }
+    }
+
+    const res = await fetch(`${functionsBase}/daily-close`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: anon,
+      },
+      body: JSON.stringify({ work_date: workDate, force: true }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return {
+        data: null,
+        error: new Error(data.error || `HTTP ${res.status}`),
+        status: res.status,
+        raw: data,
+      }
+    }
+    return { data, error: null }
+  } catch (error) {
+    console.error('resendDailyCloseReport error:', error)
+    return { data: null, error }
+  }
+}

@@ -34,7 +34,6 @@ describe('buildLiffNightSlots', () => {
       nightDate,
       now,
       occupiedIntervals,
-      unitCount: 1,
       settings: { weekday_fleet_count: 1, extra_capacity_max: 0 },
     })
     const at2000 = slots.find((s) => s.hour === 20 && s.minute === 0)

@@ -1,6 +1,26 @@
 import { supabase } from '@/lib/supabase'
 
 /**
+ * 依頼に紐づくスロット
+ */
+export async function getSlotsByOrderId(orderId) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+  try {
+    const { data, error } = await supabase
+      .from('dispatch_slots')
+      .select('*')
+      .eq('order_id', orderId)
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (error) {
+    console.error('Error fetching slots by order:', error)
+    return { data: null, error }
+  }
+}
+
+/**
  * スロット作成
  */
 export async function createSlot(slotData) {

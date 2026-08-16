@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { useShiftsByMonth } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
 import { useDailySales } from '@/hooks/billing/useDailySales'
-import { useClosuresByDate } from '@/hooks/billing/useDailyClosures'
+import { useClosuresByDate, useResendDailyClose } from '@/hooks/billing/useDailyClosures'
 import {
   getDailyTotalSales,
   indexDailySalesByDate,
@@ -100,6 +101,8 @@ function groupByDate(data) {
 export function ShiftCalendar() {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
+  const { showToast } = useToast()
+  const resendCloseMutation = useResendDailyClose()
   const [visibleEmployeeIds, setVisibleEmployeeIds] = useState([])
   const [searchText, setSearchText] = useState('')
   // 締め時刻（08:00）までは前日を営業当日として初期年月を設定
@@ -116,6 +119,17 @@ export function ShiftCalendar() {
   const tonightPromptedRef = useRef(false)
   const tonightWorkDate = useMemo(() => formatWorkDateKey(getActiveWorkDate()), [])
   const tonightFilters = useMemo(() => getTonightListFilters(tonightWorkDate), [tonightWorkDate])
+
+  const handleResendCloseReport = async (workDate) => {
+    if (!workDate) return
+    if (!window.confirm(`${workDate} の日次締め報告を LINE に再送しますか？`)) return
+    try {
+      await resendCloseMutation.mutateAsync(workDate)
+      showToast('日次締め報告を再送しました', 'success')
+    } catch (err) {
+      showToast(err?.message || '再送に失敗しました', 'error')
+    }
+  }
 
   const shiftsQuery = useShiftsByMonth(selectedYear, selectedMonth)
   const employeesQuery = useEmployees()
@@ -550,6 +564,8 @@ export function ShiftCalendar() {
                 isDayClosed={Boolean(closuresByDate[date])}
                 isAdmin={isAuthenticated}
                 dayReservations={reservationsByDate[date] ?? []}
+                resendPending={resendCloseMutation.isPending}
+                onResendCloseReport={handleResendCloseReport}
                 onOpenVehicleSales={(carNum) => setVehicleSalesTarget({ date, carNum })}
                 onOpenVehicleSummary={(carNum) =>
                   setVehicleSummaryTarget({ date, dow: groupedData[date]?.dow, carNum })
@@ -609,6 +625,8 @@ function DayBlock({
   isDayClosed = false,
   isAdmin = false,
   dayReservations = [],
+  resendPending = false,
+  onResendCloseReport,
   onOpenVehicleSales,
   onOpenVehicleSummary,
 }) {
@@ -641,6 +659,17 @@ function DayBlock({
               <span className="day-dow">({dayData.dow})</span>
             </div>
             {isClosed && <div className="status-label closed-day">締め済</div>}
+            {isClosed && isAdmin && (
+              <Button
+                size="small"
+                variant="outlined"
+                className="day-resend-close-btn"
+                disabled={resendPending}
+                onClick={() => onResendCloseReport?.(dayData.date)}
+              >
+                {resendPending ? '再送中…' : '締め報告を再送'}
+              </Button>
+            )}
             {dayData.status && (
               <div
                 className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}

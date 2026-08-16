@@ -286,7 +286,7 @@ export function VehicleSalesModal({
             {isDayClosed && (
               <Alert severity={adminCanEdit ? 'info' : 'warning'}>
                 {adminCanEdit
-                  ? '締め済みです。ログイン中のため管理者として編集できます。'
+                  ? '締め済みです。ログイン中のため管理者として編集できます。修正後はシフト表の「締め報告を再送」で LINE に送れます。'
                   : '締め済みのため編集できません。'}
               </Alert>
             )}

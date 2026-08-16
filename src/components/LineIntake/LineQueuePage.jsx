@@ -8,10 +8,27 @@ import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useAdminLineUnitAction, useApproveLineUnit, useLineQueue } from '@/hooks/useLineIntake'
 import './LineQueuePage.css'
+
+const UNIT_STATUS_LABELS = {
+  HOLDING: '仮受付',
+  CONFIRMED: '確定',
+  EXPIRED: '期限切れ',
+  CANCELLED: 'キャンセル',
+}
+
+const UNIT_STATUS_COLORS = {
+  HOLDING: 'warning',
+  CONFIRMED: 'success',
+  EXPIRED: 'default',
+  CANCELLED: 'default',
+}
+
+function unitStatusLabel(status) {
+  return UNIT_STATUS_LABELS[status] || status
+}
 
 function holdRemainingLabel(holdUntil) {
   if (!holdUntil) return '—'
@@ -26,14 +43,12 @@ export function LineQueuePage() {
   const approve = useApproveLineUnit()
   const adminAction = useAdminLineUnitAction()
   const [selected, setSelected] = useState(null)
-  const [newPickup, setNewPickup] = useState('')
   const [actionError, setActionError] = useState('')
 
   const rows = useMemo(() => data || [], [data])
 
   const openDetail = (unit) => {
     setSelected(unit)
-    setNewPickup(unit.pickup_at ? unit.pickup_at.slice(0, 16) : '')
     setActionError('')
   }
 
@@ -47,21 +62,9 @@ export function LineQueuePage() {
     }
   }
 
-  const handleReschedule = async () => {
-    setActionError('')
-    try {
-      await adminAction.mutateAsync({
-        action: 'admin_reschedule',
-        unit_id: selected.id,
-        pickup_at: new Date(newPickup).toISOString(),
-      })
-      setSelected(null)
-    } catch (e) {
-      setActionError(e.message || '変更に失敗しました')
-    }
-  }
-
   const handleDelete = async () => {
+    if (!selected) return
+    if (!window.confirm('この仮受付を削除しますか？枠も解放されます。')) return
     setActionError('')
     try {
       await adminAction.mutateAsync({
@@ -70,7 +73,7 @@ export function LineQueuePage() {
       })
       setSelected(null)
     } catch (e) {
-      setActionError(e.message || '削除に失敗しました')
+      setActionError(e?.raw?.error || e.message || '削除に失敗しました')
     }
   }
 
@@ -104,8 +107,8 @@ export function LineQueuePage() {
               <Stack direction="row" spacing={1} flexWrap="wrap" mb={1}>
                 <Chip
                   size="small"
-                  label={unit.status}
-                  color={unit.status === 'HOLDING' ? 'warning' : 'default'}
+                  label={unitStatusLabel(unit.status)}
+                  color={UNIT_STATUS_COLORS[unit.status] || 'default'}
                 />
                 {unit.uses_extra_capacity && <Chip size="small" color="error" label="要手配" />}
                 {unit.status === 'HOLDING' && (
@@ -146,19 +149,14 @@ export function LineQueuePage() {
               <Typography variant="body2">電話: {selected.line_bookings?.contact_phone}</Typography>
               <Typography variant="body2">LINE: {selected.line_bookings?.line_user_id}</Typography>
               <Typography variant="body2">
+                状態: {unitStatusLabel(selected.status)}
+              </Typography>
+              <Typography variant="body2">
                 割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}
               </Typography>
               {selected.projection_error && (
                 <Alert severity="warning">投影エラー: {selected.projection_error}</Alert>
               )}
-              <TextField
-                label="お迎え日時変更"
-                type="datetime-local"
-                value={newPickup}
-                onChange={(e) => setNewPickup(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
               {actionError && <Alert severity="error">{actionError}</Alert>}
             </Stack>
           )}
@@ -167,9 +165,6 @@ export function LineQueuePage() {
           <Button onClick={() => setSelected(null)}>閉じる</Button>
           <Button color="error" onClick={handleDelete} disabled={adminAction.isPending}>
             削除
-          </Button>
-          <Button onClick={handleReschedule} disabled={!newPickup || adminAction.isPending}>
-            時間変更
           </Button>
           {selected?.status === 'HOLDING' && (
             <Button variant="contained" onClick={handleApprove} disabled={approve.isPending}>

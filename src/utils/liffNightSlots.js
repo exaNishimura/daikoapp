@@ -37,9 +37,7 @@ function totalWindowMin(baseDurationMin) {
   return base + lineBufferMin(base)
 }
 
-/**
- * 配車スロット・予約台帳・LINE仮受付から占用区間を作る（Edge の loadOccupiedIntervals と同じ規則）
- */
+/** 配車スロット・予約台帳・LINE仮受付から占用区間を作る */
 export function occupiedFromSources({ units = [], slots = [], reservations = [] } = {}) {
   const occupied = []
   for (const u of units) {
@@ -86,12 +84,10 @@ export function buildLiffNightSlots({
   occupiedIntervals = [],
   phoneLocks = [],
   settings = {},
-  unitCount = 1,
 } = {}) {
   if (!nightDate) return []
   const capacity = nightCapacity(nightDate, now, settings)
   const windowMin = totalWindowMin(DEFAULT_BASE_MIN)
-  const count = Math.max(1, Number(unitCount) || 1)
   const locks = (phoneLocks || []).map((l) => ({
     start: l.start_at ?? l.start,
     end: l.end_at ?? l.end,
@@ -109,7 +105,7 @@ export function buildLiffNightSlots({
       }
       const locked = locks.some((l) => intervalsOverlap(window, l))
       const overlapping = countOverlapping(window, occupiedIntervals)
-      const booked = locked || overlapping + count > capacity
+      const booked = locked || overlapping + 1 > capacity
       slots.push({
         hour,
         minute,

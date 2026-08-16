@@ -8,7 +8,6 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import IconButton from '@mui/material/IconButton'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Radio from '@mui/material/Radio'
@@ -17,8 +16,6 @@ import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import AddIcon from '@mui/icons-material/Add'
-import RemoveIcon from '@mui/icons-material/Remove'
 import {
   callLineIntakeApi,
   fetchLiffNightOccupancy,
@@ -147,7 +144,7 @@ export function LiffOrderForm() {
   const nowAvailable = isLiffNowAvailable()
   const [orderType, setOrderType] = useState(() => (isLiffNowAvailable() ? 'NOW' : 'SCHEDULED'))
   const [phone, setPhone] = useState('')
-  const [units, setUnits] = useState([emptyUnit()])
+  const [unit, setUnit] = useState(emptyUnit)
   const [hint, setHint] = useState(null)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -155,10 +152,21 @@ export function LiffOrderForm() {
   const [submitting, setSubmitting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmMessage, setConfirmMessage] = useState('')
-  const [nightSlots, setNightSlots] = useState([])
-  const pickupRefs = useRef([])
-  const dropoffRefs = useRef([])
-  const nightDate = units[0]?.pickup_date || ''
+  const [occupancy, setOccupancy] = useState({
+    occupiedIntervals: [],
+    phoneLocks: [],
+    settings: {},
+  })
+  const pickupRef = useRef(null)
+  const dropoffRef = useRef(null)
+  const nightDate = unit.pickup_date || ''
+
+  const nightSlots = buildLiffNightSlots({
+    nightDate,
+    occupiedIntervals: occupancy.occupiedIntervals,
+    phoneLocks: occupancy.phoneLocks,
+    settings: occupancy.settings,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -187,39 +195,42 @@ export function LiffOrderForm() {
       if (cancelled) return
       if (occErr) {
         console.error(occErr)
-        setNightSlots(buildLiffNightSlots({ nightDate, unitCount: units.length }))
+        setOccupancy({ occupiedIntervals: [], phoneLocks: [], settings: {} })
         return
       }
-      const slots = buildLiffNightSlots({
-        nightDate,
+      setOccupancy({
         occupiedIntervals: occupiedFromSources(data),
-        phoneLocks: data.phoneLocks,
-        settings: data.settings,
-        unitCount: units.length,
+        phoneLocks: data.phoneLocks || [],
+        settings: data.settings || {},
       })
-      setNightSlots(slots)
-      const first = firstAvailableSlot(slots)
-      if (!first) return
-      setUnits((prev) =>
-        prev.map((u) => {
-          if (u.pickup_date && u.pickup_date !== nightDate) return u
-          const current = slots.find(
-            (s) => s.hour === u.pickup_hour && s.minute === u.pickup_minute
-          )
-          if (current?.available) return u
-          return {
-            ...u,
-            pickup_date: nightDate,
-            pickup_hour: first.hour,
-            pickup_minute: first.minute,
-          }
-        })
-      )
     })()
     return () => {
       cancelled = true
     }
-  }, [nightDate, units.length])
+  }, [nightDate])
+
+  useEffect(() => {
+    if (!nightDate) return
+    setUnit((prev) => {
+      const slots = buildLiffNightSlots({
+        nightDate: prev.pickup_date || nightDate,
+        occupiedIntervals: occupancy.occupiedIntervals,
+        phoneLocks: occupancy.phoneLocks,
+        settings: occupancy.settings,
+      })
+      const current = slots.find(
+        (s) => s.hour === prev.pickup_hour && s.minute === prev.pickup_minute
+      )
+      if (current?.available) return prev
+      const first = firstAvailableSlot(slots)
+      if (!first) return prev
+      return {
+        ...prev,
+        pickup_hour: first.hour,
+        pickup_minute: first.minute,
+      }
+    })
+  }, [nightDate, occupancy])
 
   useEffect(() => {
     if (!userId) return
@@ -229,55 +240,37 @@ export function LiffOrderForm() {
   useEffect(() => {
     ensureMapsScript()
       .then(() => {
-        units.forEach((_, i) => {
-          if (pickupRefs.current[i]) {
-            loadPlacesAutocomplete(pickupRefs.current[i], (text) => {
-              setUnits((prev) => {
-                const next = [...prev]
-                next[i] = { ...next[i], pickup_address: text }
-                return next
-              })
-            })
-          }
-          if (dropoffRefs.current[i]) {
-            loadPlacesAutocomplete(dropoffRefs.current[i], (text) => {
-              setUnits((prev) => {
-                const next = [...prev]
-                next[i] = { ...next[i], dropoff_address: text }
-                return next
-              })
-            })
-          }
-        })
+        if (pickupRef.current) {
+          loadPlacesAutocomplete(pickupRef.current, (text) => {
+            setUnit((prev) => ({ ...prev, pickup_address: text }))
+          })
+        }
+        if (dropoffRef.current) {
+          loadPlacesAutocomplete(dropoffRef.current, (text) => {
+            setUnit((prev) => ({ ...prev, dropoff_address: text }))
+          })
+        }
       })
       .catch(() => {
         /* Places なしでも手入力可 */
       })
-    // 台数変更時のみ Autocomplete を付け直す（入力中の units 全体依存は避ける）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [units.length])
+  }, [])
 
-  const updateUnit = (index, patch) => {
-    setUnits((prev) => {
-      const next = [...prev]
-      next[index] = { ...next[index], ...patch }
-      return next
-    })
+  const updateUnit = (patch) => {
+    setUnit((prev) => ({ ...prev, ...patch }))
   }
 
-  const updateUnitHour = (index, hour) => {
+  const updateUnitHour = (hour) => {
     const minutes = nightSlots.filter((s) => s.hour === hour && s.available)
-    const currentMinute = units[index]?.pickup_minute
-    const minute = minutes.some((s) => s.minute === currentMinute)
-      ? currentMinute
+    const minute = minutes.some((s) => s.minute === unit.pickup_minute)
+      ? unit.pickup_minute
       : (minutes[0]?.minute ?? '')
-    updateUnit(index, { pickup_hour: hour, pickup_minute: minute })
+    updateUnit({ pickup_hour: hour, pickup_minute: minute })
   }
 
   const checkHint = async () => {
     setError('')
-    const u = units[0]
-    const pickupAt = orderType === 'SCHEDULED' ? unitPickupAt(u) : null
+    const pickupAt = orderType === 'SCHEDULED' ? unitPickupAt(unit) : null
     if (orderType === 'SCHEDULED' && !pickupAt) {
       setError('希望日・時・分を指定してください')
       return
@@ -286,9 +279,9 @@ export function LiffOrderForm() {
       action: 'check',
       order_type: orderType,
       pickup_at: pickupAt ? pickupAt.toISOString() : undefined,
-      pickup_address: u.pickup_address,
-      dropoff_address: u.dropoff_address,
-      unit_count: units.length,
+      pickup_address: unit.pickup_address,
+      dropoff_address: unit.dropoff_address,
+      unit_count: 1,
     })
     if (apiErr) {
       setError(apiErr.message)
@@ -300,15 +293,13 @@ export function LiffOrderForm() {
   const validateBeforeSubmit = () => {
     if (!userId) throw new Error('LINE userId を取得できません')
     if (!phone) throw new Error('連絡先電話番号は必須です')
-    for (const u of units) {
-      if (!u.pickup_address || !u.dropoff_address || !u.vehicle_info) {
-        throw new Error('住所・車両情報は必須です')
-      }
-      if (orderType === 'SCHEDULED') {
-        const pickupAt = unitPickupAt(u)
-        if (!pickupAt) throw new Error('希望日・時・分を指定してください')
-        if (pickupAt.getTime() <= Date.now()) throw new Error('過去の日時は指定できません')
-      }
+    if (!unit.pickup_address || !unit.dropoff_address || !unit.vehicle_info) {
+      throw new Error('住所・車両情報は必須です')
+    }
+    if (orderType === 'SCHEDULED') {
+      const pickupAt = unitPickupAt(unit)
+      if (!pickupAt) throw new Error('希望日・時・分を指定してください')
+      if (pickupAt.getTime() <= Date.now()) throw new Error('過去の日時は指定できません')
     }
   }
 
@@ -317,7 +308,7 @@ export function LiffOrderForm() {
     setResult(null)
     try {
       validateBeforeSubmit()
-      const pickupAt = orderType === 'SCHEDULED' ? unitPickupAt(units[0]) : null
+      const pickupAt = orderType === 'SCHEDULED' ? unitPickupAt(unit) : null
       const message = formatLiffPickupConfirmMessage(pickupAt, { orderType })
       if (!message) throw new Error('希望日時を確認できません')
       setConfirmMessage(message)
@@ -343,13 +334,15 @@ export function LiffOrderForm() {
         line_user_id: userId,
         contact_phone: phone,
         order_type: orderType,
-        units: units.map((u) => ({
-          pickup_address: u.pickup_address,
-          dropoff_address: u.dropoff_address,
-          vehicle_info: u.vehicle_info,
-          pickup_at:
-            orderType === 'SCHEDULED' ? unitPickupAt(u).toISOString() : new Date().toISOString(),
-        })),
+        units: [
+          {
+            pickup_address: unit.pickup_address,
+            dropoff_address: unit.dropoff_address,
+            vehicle_info: unit.vehicle_info,
+            pickup_at:
+              orderType === 'SCHEDULED' ? unitPickupAt(unit).toISOString() : new Date().toISOString(),
+          },
+        ],
       })
       if (apiErr) throw new Error(raw?.reason || raw?.error || apiErr.message)
 
@@ -365,7 +358,7 @@ export function LiffOrderForm() {
       } else {
         setResult({
           type: 'tentative',
-          message: '受付が完了しました。',
+          message: '仮受付が完了しました。運営の承認をお待ちください。',
           discount: data.discount,
         })
       }
@@ -402,6 +395,10 @@ export function LiffOrderForm() {
         24時間受付 / LINE割引あり
         {hint?.discount?.applied ? `（${hint.discount.label}）` : '（500円引き）'}
       </Typography>
+
+      <Alert severity="info" sx={{ mb: 2 }}>
+        1回の予約は1台までです。2台以上ご利用の場合は、それぞれの車の持ち主がLINEから予約してください。
+      </Alert>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -440,136 +437,101 @@ export function LiffOrderForm() {
         sx={{ mb: 2 }}
       />
 
-      {units.map((unit, index) => (
-        <Stack key={index} spacing={1.5} className="liff-order-form__unit" mb={2}>
-          <Stack direction="row" alignItems="center" spacing={0.5}>
-            <Typography fontWeight={600}>{index + 1}台目</Typography>
-            {index === 0 ? (
-              <IconButton
-                size="small"
-                aria-label="車を追加"
-                title="車を追加"
-                onClick={() => setUnits((u) => [...u, emptyUnit()])}
-              >
-                <AddIcon />
-              </IconButton>
-            ) : null}
-            {index === units.length - 1 && units.length > 1 ? (
-              <IconButton
-                size="small"
-                aria-label="末尾の車を削除"
-                title="末尾の車を削除"
-                onClick={() => setUnits((u) => u.slice(0, -1))}
-              >
-                <RemoveIcon />
-              </IconButton>
+      <Stack spacing={1.5} className="liff-order-form__unit" mb={2}>
+        {orderType === 'SCHEDULED' ? (
+          <Stack spacing={1}>
+            <TextField
+              label="希望日（その夜）"
+              type="date"
+              value={unit.pickup_date}
+              onChange={(e) => updateUnit({ pickup_date: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: getMinLiffPickupDate() }}
+              fullWidth
+              required
+            />
+            <Stack direction="row" spacing={1.5} useFlexGap>
+              <FormControl sx={{ flex: 1 }} required>
+                <InputLabel id="liff-hour">時</InputLabel>
+                <Select
+                  labelId="liff-hour"
+                  label="時"
+                  value={unit.pickup_hour === '' || unit.pickup_hour == null ? '' : unit.pickup_hour}
+                  onChange={(e) =>
+                    updateUnitHour(e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                >
+                  {LIFF_PICKUP_HOURS.map((hour) => (
+                    <MenuItem key={hour} value={hour} disabled={!hourHasAvailable(nightSlots, hour)}>
+                      {formatLiffHourOptionLabel(hour, nightSlots)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl sx={{ flex: 1 }} required>
+                <InputLabel id="liff-minute">分</InputLabel>
+                <Select
+                  labelId="liff-minute"
+                  label="分"
+                  value={
+                    unit.pickup_minute === '' || unit.pickup_minute == null
+                      ? ''
+                      : unit.pickup_minute
+                  }
+                  onChange={(e) =>
+                    updateUnit({
+                      pickup_minute: e.target.value === '' ? '' : Number(e.target.value),
+                    })
+                  }
+                >
+                  {LIFF_PICKUP_MINUTES.map((minute) => {
+                    const slot = nightSlots.find(
+                      (s) => s.hour === unit.pickup_hour && s.minute === minute
+                    ) || { minute, past: false, booked: false, available: true }
+                    return (
+                      <MenuItem key={minute} value={minute} disabled={!slot.available}>
+                        {formatLiffMinuteOptionLabel(slot)}
+                      </MenuItem>
+                    )
+                  })}
+                </Select>
+              </FormControl>
+            </Stack>
+            <Typography className="liff-order-form__pickup-note" component="p">
+              ※ 0時〜5時は翌朝です。日付は「お酒を飲む夜」を選んでください
+            </Typography>
+            {unitPickupAt(unit) ? (
+              <Typography className="liff-order-form__pickup-preview" component="p">
+                {formatLiffPickupPreview(unitPickupAt(unit))}
+              </Typography>
             ) : null}
           </Stack>
-          {orderType === 'SCHEDULED' ? (
-            <Stack spacing={1}>
-              <TextField
-                label="希望日（その夜）"
-                type="date"
-                value={unit.pickup_date}
-                onChange={(e) => updateUnit(index, { pickup_date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: getMinLiffPickupDate() }}
-                fullWidth
-                required
-              />
-              <Stack direction="row" spacing={1.5} useFlexGap>
-                <FormControl sx={{ flex: 1 }} required>
-                  <InputLabel id={`liff-hour-${index}`}>時</InputLabel>
-                  <Select
-                    labelId={`liff-hour-${index}`}
-                    label="時"
-                    value={
-                      unit.pickup_hour === '' || unit.pickup_hour == null ? '' : unit.pickup_hour
-                    }
-                    onChange={(e) =>
-                      updateUnitHour(index, e.target.value === '' ? '' : Number(e.target.value))
-                    }
-                  >
-                    {LIFF_PICKUP_HOURS.map((hour) => (
-                      <MenuItem
-                        key={hour}
-                        value={hour}
-                        disabled={!hourHasAvailable(nightSlots, hour)}
-                      >
-                        {formatLiffHourOptionLabel(hour, nightSlots)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl sx={{ flex: 1 }} required>
-                  <InputLabel id={`liff-minute-${index}`}>分</InputLabel>
-                  <Select
-                    labelId={`liff-minute-${index}`}
-                    label="分"
-                    value={
-                      unit.pickup_minute === '' || unit.pickup_minute == null
-                        ? ''
-                        : unit.pickup_minute
-                    }
-                    onChange={(e) =>
-                      updateUnit(index, {
-                        pickup_minute: e.target.value === '' ? '' : Number(e.target.value),
-                      })
-                    }
-                  >
-                    {LIFF_PICKUP_MINUTES.map((minute) => {
-                      const slot = nightSlots.find(
-                        (s) => s.hour === unit.pickup_hour && s.minute === minute
-                      ) || { minute, past: false, booked: false, available: true }
-                      return (
-                        <MenuItem key={minute} value={minute} disabled={!slot.available}>
-                          {formatLiffMinuteOptionLabel(slot)}
-                        </MenuItem>
-                      )
-                    })}
-                  </Select>
-                </FormControl>
-              </Stack>
-              <Typography className="liff-order-form__pickup-note" component="p">
-                ※ 0時〜5時は翌朝です。日付は「お酒を飲む夜」を選んでください
-              </Typography>
-              {unitPickupAt(unit) ? (
-                <Typography className="liff-order-form__pickup-preview" component="p">
-                  {formatLiffPickupPreview(unitPickupAt(unit))}
-                </Typography>
-              ) : null}
-            </Stack>
-          ) : null}
-          <TextField
-            label="お迎え先"
-            value={unit.pickup_address}
-            onChange={(e) => updateUnit(index, { pickup_address: e.target.value })}
-            inputRef={(el) => {
-              pickupRefs.current[index] = el
-            }}
-            fullWidth
-            required
-          />
-          <TextField
-            label="お帰り先"
-            value={unit.dropoff_address}
-            onChange={(e) => updateUnit(index, { dropoff_address: e.target.value })}
-            inputRef={(el) => {
-              dropoffRefs.current[index] = el
-            }}
-            fullWidth
-            required
-          />
-          <TextField
-            label="車両情報"
-            value={unit.vehicle_info}
-            onChange={(e) => updateUnit(index, { vehicle_info: e.target.value })}
-            fullWidth
-            required
-            placeholder="車種・色・ナンバー等"
-          />
-        </Stack>
-      ))}
+        ) : null}
+        <TextField
+          label="お迎え先"
+          value={unit.pickup_address}
+          onChange={(e) => updateUnit({ pickup_address: e.target.value })}
+          inputRef={pickupRef}
+          fullWidth
+          required
+        />
+        <TextField
+          label="お帰り先"
+          value={unit.dropoff_address}
+          onChange={(e) => updateUnit({ dropoff_address: e.target.value })}
+          inputRef={dropoffRef}
+          fullWidth
+          required
+        />
+        <TextField
+          label="車両情報"
+          value={unit.vehicle_info}
+          onChange={(e) => updateUnit({ vehicle_info: e.target.value })}
+          fullWidth
+          required
+          placeholder="車種・色・ナンバー等"
+        />
+      </Stack>
 
       <Stack direction="row" spacing={1} mb={2} flexWrap="wrap">
         <Button onClick={checkHint}>最短目安・可否を確認</Button>

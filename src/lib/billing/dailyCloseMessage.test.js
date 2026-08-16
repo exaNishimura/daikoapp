@@ -123,6 +123,19 @@ describe('buildDailyCloseMessage', () => {
     expect(message).toContain('締め時刻: 2026/07/10 08:00')
   })
 
+  it('marks resend in title', () => {
+    const message = buildDailyCloseMessage({
+      workDate: '2026-07-09',
+      dow: '木',
+      salesRow: { vehicle1_sales: 10000 },
+      shifts: [{ car: '1', employee_id: 'e1', start: '20:00', end: '04:00', staff: '西村' }],
+      employees,
+      receivables: [],
+      isResend: true,
+    })
+    expect(message).toContain('【7/9(木) 日次締め報告・再送】')
+  })
+
   it('warns when operating car has no sales input', () => {
     const message = buildDailyCloseMessage({
       workDate: '2026-07-09',

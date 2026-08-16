@@ -87,6 +87,18 @@ Invoke-RestMethod -Method Post `
   -Body '{"work_date":"2026-07-09"}'
 ```
 
+締め済み日の再送（最新入力で LINE 再送）:
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri "https://ltwekvgqfawkykpvviyx.supabase.co/functions/v1/daily-close" `
+  -Headers @{ Authorization = "Bearer your_cron_secret" } `
+  -ContentType "application/json" `
+  -Body '{"work_date":"2026-07-09","force":true}'
+```
+
+アプリ: ログイン後、シフト表の締め済日ヘッダ **「締め報告を再送」**（スタッフ JWT + `force: true`）。
+
 ## Resend（失敗メール）
 
 https://resend.com で API Key 発行・送信ドメイン検証が必要。

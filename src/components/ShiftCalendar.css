@@ -337,6 +337,13 @@
   color: #3949ab;
 }
 
+.day-resend-close-btn {
+  flex-shrink: 0;
+  text-transform: none !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+
 .status-label.closed {
   background: #ffcccc;
   color: #cc0000;

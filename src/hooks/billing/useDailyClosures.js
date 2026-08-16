@@ -1,5 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
-import { getDailyClosuresByMonth, indexClosuresByDate } from '@/services/billing/dailyCloseService'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  getDailyClosuresByMonth,
+  indexClosuresByDate,
+  resendDailyCloseReport,
+} from '@/services/billing/dailyCloseService'
 import { queryKeys } from '@/lib/queryClient'
 
 async function unwrap(promise) {
@@ -22,4 +26,14 @@ export function useClosuresByDate(year, month) {
     ...query,
     closuresByDate: indexClosuresByDate(query.data),
   }
+}
+
+export function useResendDailyClose() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (workDate) => unwrap(resendDailyCloseReport(workDate)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.dailyClosures.all })
+    },
+  })
 }

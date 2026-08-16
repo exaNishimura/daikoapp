@@ -17,9 +17,11 @@ import {
 } from '../../../shared/lineIntake/availability.js'
 import { calculateLineBuffer } from '../../../shared/lineIntake/buffer.js'
 import { snapshotDiscount } from '../../../shared/lineIntake/discount.js'
+import { computeHoldUntil } from '../../../shared/lineIntake/holdDeadline.js'
 import { fetchDirectionsDurationMinutes } from '../../../shared/lineIntake/mapsDirections.js'
 import {
   buildConfirmedCustomerMessage,
+  buildTentativeCustomerMessage,
   pushTextWithRetry,
 } from '../../../shared/lineIntake/messaging.js'
 import { applyPinAttempt, hashPin, isValidPinFormat, verifyPin } from '../../../shared/lineIntake/pin.js'
@@ -174,6 +176,60 @@ async function loadPhoneLocks(supabase, pickupAt) {
   return data || []
 }
 
+function clipDbText(value, max) {
+  const text = String(value || '').trim()
+  if (!text) return null
+  return text.length > max ? text.slice(0, max) : text
+}
+
+/**
+ * 配車ボードは CONFIRMED の未割当 order を出さない。スロットが無いとタイムラインにも出ない。
+ * LINE 承認後は UNASSIGNED → 空き号車へ TENTATIVE スロット。
+ */
+async function ensureBoardSlot(supabase, orderId, unit, route) {
+  const { data: existing } = await supabase
+    .from('dispatch_slots')
+    .select('id')
+    .eq('order_id', orderId)
+    .limit(1)
+  if (existing?.length) return { placed: true, existing: true }
+
+  const start = new Date(unit.pickup_at)
+  if (Number.isNaN(start.getTime())) return { placed: false, reason: 'invalid pickup_at' }
+  const durMin = Math.max(15, Number(route.base_duration_min) || 30)
+  const end = new Date(start.getTime() + durMin * 60 * 1000)
+
+  const { data: vehicles, error: vehicleError } = await supabase
+    .from('vehicles')
+    .select('id')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+  if (vehicleError) throw vehicleError
+  if (!vehicles?.length) return { placed: false, reason: 'no vehicles' }
+
+  const { data: overlaps } = await supabase
+    .from('dispatch_slots')
+    .select('vehicle_id')
+    .lt('start_at', end.toISOString())
+    .gt('end_at', start.toISOString())
+  const busy = new Set((overlaps || []).map((slot) => slot.vehicle_id))
+  const vehicle = vehicles.find((row) => !busy.has(row.id))
+  if (!vehicle) return { placed: false, reason: 'no free vehicle' }
+
+  const { error: slotError } = await supabase.from('dispatch_slots').insert([
+    {
+      order_id: orderId,
+      vehicle_id: vehicle.id,
+      start_at: start.toISOString(),
+      end_at: end.toISOString(),
+      status: 'TENTATIVE',
+    },
+  ])
+  if (slotError) throw slotError
+  await supabase.from('orders').update({ status: 'TENTATIVE' }).eq('id', orderId)
+  return { placed: true }
+}
+
 async function projectUnit(supabase, booking, unit, statusForOrder = 'TENTATIVE') {
   const markers = buildLineChannelMarkers({
     lineUserId: booking.line_user_id,
@@ -181,34 +237,52 @@ async function projectUnit(supabase, booking, unit, statusForOrder = 'TENTATIVE'
     discountLabel: booking.discount_snapshot?.label,
   })
   const target = resolveProjectionTarget(unit.pickup_at, new Date())
+  const approved = statusForOrder === 'CONFIRMED'
   try {
     if (target === 'BOARD') {
+      if (!unit.order_id && !approved) {
+        return { target, skipped: true }
+      }
       const route = toBoardRouteFields(unit)
       const orderPayload = {
         order_type: 'SCHEDULED',
         scheduled_at: unit.pickup_at,
         pickup_address: unit.pickup_address,
         dropoff_address: unit.dropoff_address,
-        contact_phone: booking.contact_phone,
-        car_model: unit.vehicle_info || null,
+        contact_phone: clipDbText(booking.contact_phone, 20),
+        car_model: clipDbText(unit.vehicle_info, 50),
         parking_note: markers.memo_prefix,
         base_duration_min: route.base_duration_min,
         buffer_min: route.buffer_min,
-        status: statusForOrder === 'CONFIRMED' ? 'CONFIRMED' : 'TENTATIVE',
       }
       let orderId = unit.order_id
       if (orderId) {
-        await supabase.from('orders').update(orderPayload).eq('id', orderId)
+        const { error } = await supabase.from('orders').update(orderPayload).eq('id', orderId)
+        if (error) throw error
       } else {
-        const { data, error } = await supabase.from('orders').insert([orderPayload]).select('id').single()
+        const { data, error } = await supabase
+          .from('orders')
+          .insert([{ ...orderPayload, status: 'UNASSIGNED' }])
+          .select('id')
+          .single()
         if (error) throw error
         orderId = data.id
+      }
+      if (approved) {
+        const slotResult = await ensureBoardSlot(supabase, orderId, unit, route)
+        if (!slotResult.placed) {
+          await supabase.from('orders').update({ status: 'UNASSIGNED' }).eq('id', orderId)
+        }
       }
       await supabase
         .from('line_booking_units')
         .update({ order_id: orderId, reservation_id: null, projection_error: null })
         .eq('id', unit.id)
       return { target, orderId }
+    }
+
+    if (!unit.reservation_id && !approved) {
+      return { target, skipped: true }
     }
 
     const reservationPayload = {
@@ -246,7 +320,50 @@ async function projectUnit(supabase, booking, unit, statusForOrder = 'TENTATIVE'
 async function notify(to, text) {
   const token = Deno.env.get('LINE_CHANNEL_ACCESS_TOKEN')
   if (!token || !to) return { ok: false, skipped: true }
-  return pushTextWithRetry({ to, text, accessToken: token })
+  try {
+    return await pushTextWithRetry({ to, text, accessToken: token })
+  } catch (error) {
+    console.error('LINE notify failed:', error)
+    return { ok: false, error: error?.message || 'notify failed' }
+  }
+}
+
+/** 投影先の枠を解放（スロット削除・依頼キャンセル・予約台帳削除） */
+async function releaseUnitCapacity(supabase, unit) {
+  if (unit.order_id) {
+    await supabase.from('dispatch_slots').delete().eq('order_id', unit.order_id)
+    await supabase.from('orders').update({ status: 'CANCELLED' }).eq('id', unit.order_id)
+  }
+  if (unit.reservation_id) {
+    await supabase.from('reservations').delete().eq('id', unit.reservation_id)
+  }
+}
+
+async function markUnitCancelled(supabase, unitId) {
+  const { error } = await supabase
+    .from('line_booking_units')
+    .update({ status: 'CANCELLED', cancelled_at: new Date().toISOString(), hold_until: null })
+    .eq('id', unitId)
+  if (error) throw error
+}
+
+async function syncBookingStatus(supabase, bookingId) {
+  if (!bookingId) return
+  const { data: siblings } = await supabase
+    .from('line_booking_units')
+    .select('status')
+    .eq('booking_id', bookingId)
+  const statuses = (siblings || []).map((row) => row.status)
+  const anyHolding = statuses.includes('HOLDING')
+  const anyConfirmed = statuses.includes('CONFIRMED')
+  const next = anyHolding
+    ? anyConfirmed
+      ? 'PARTIAL'
+      : 'PENDING'
+    : anyConfirmed
+      ? 'CONFIRMED'
+      : 'CANCELLED'
+  await supabase.from('line_bookings').update({ status: next }).eq('id', bookingId)
 }
 
 async function handleCheck(supabase, body) {
@@ -269,7 +386,7 @@ async function handleCheck(supabase, body) {
     now,
     desiredPickupAt: pickupAt,
     orderType,
-    unitCount: body.unit_count || 1,
+    unitCount: 1,
     baseDurationMin: baseDuration,
     occupiedIntervals,
     phoneLocks,
@@ -294,45 +411,47 @@ async function handleSubmit(supabase, body) {
   if (!lineUserId || !contactPhone || !unitsInput?.length) {
     return json({ error: 'line_user_id, contact_phone, units required' }, 400)
   }
+  if (unitsInput.length !== 1) {
+    return json(
+      { error: '1回の予約は1台までです。他の車は持ち主がそれぞれLINE予約してください' },
+      400
+    )
+  }
 
   const settings = await loadSettings(supabase)
   const discount = snapshotDiscount(settings.discount_config)
   const orderType = body.order_type || 'SCHEDULED'
   const now = new Date()
   const waitingLocationAddress = await loadWaitingLocation(supabase)
-
-  // 代表ユニットで可否（複数台は同一枠想定）。所要は台ごとに Maps。
-  const first = unitsInput[0]
-  const unitDurations = await Promise.all(
-    unitsInput.map((u) =>
-      resolveMapsDuration(u.pickup_address, u.dropoff_address, {
-        baseOverride: u.base_duration_min,
-        waitingLocationAddress,
-      })
-    )
-  )
-  const mapped = unitDurations.filter((d) => d != null && d > 0)
-  const baseDuration = mapped.length ? Math.max(...mapped) : unitDurations[0] ?? null
-  const pickupAt = orderType === 'NOW' ? now : new Date(first.pickup_at)
-  const durationMin = (baseDuration || 20) + calculateLineBuffer(baseDuration)
+  const u = unitsInput[0]
+  const unitBase = await resolveMapsDuration(u.pickup_address, u.dropoff_address, {
+    baseOverride: u.base_duration_min,
+    waitingLocationAddress,
+  })
+  const pickupAt = orderType === 'NOW' ? now : new Date(u.pickup_at)
+  if (Number.isNaN(pickupAt.getTime())) {
+    return json({ ok: false, reason: 'INVALID_PICKUP', discount })
+  }
+  const durationMin = (unitBase || 20) + calculateLineBuffer(unitBase)
   const occupiedIntervals = await loadOccupiedIntervals(supabase, pickupAt, durationMin)
   const phoneLocks = await loadPhoneLocks(supabase, pickupAt)
   const availability = checkAvailability({
     now,
     desiredPickupAt: pickupAt,
     orderType,
-    unitCount: unitsInput.length,
-    baseDurationMin: baseDuration,
+    unitCount: 1,
+    baseDurationMin: unitBase,
     occupiedIntervals,
     phoneLocks,
     settings,
   })
-
   if (!availability.ok) {
     return json({ ok: false, ...availability, discount })
   }
+  const usesExtraCapacity = Boolean(availability.usesExtraCapacity)
 
-  const nowIso = now.toISOString()
+  const holdUntil = computeHoldUntil(now)
+  const holdUntilIso = holdUntil.toISOString()
 
   const { data: booking, error: bookingError } = await supabase
     .from('line_bookings')
@@ -342,30 +461,29 @@ async function handleSubmit(supabase, body) {
         contact_phone: contactPhone,
         channel: 'LINE',
         discount_snapshot: discount,
-        status: 'CONFIRMED',
+        status: 'PENDING',
       },
     ])
     .select('*')
     .single()
   if (bookingError) return json({ error: bookingError.message }, 500)
 
-  const unitRows = unitsInput.map((u, i) => {
-    const unitBase = unitDurations[i]
-    return {
+  const unitRows = [
+    {
       booking_id: booking.id,
-      sequence: i + 1,
-      pickup_at: (orderType === 'NOW' ? now : new Date(u.pickup_at || first.pickup_at)).toISOString(),
+      sequence: 1,
+      pickup_at: pickupAt.toISOString(),
       pickup_address: u.pickup_address,
       dropoff_address: u.dropoff_address,
       vehicle_info: u.vehicle_info || '',
-      status: 'CONFIRMED',
-      confirmed_at: nowIso,
-      hold_until: null,
-      uses_extra_capacity: availability.usesExtraCapacity,
+      status: 'HOLDING',
+      confirmed_at: null,
+      hold_until: holdUntilIso,
+      uses_extra_capacity: usesExtraCapacity,
       base_duration_min: unitBase,
       buffer_min: calculateLineBuffer(unitBase),
-    }
-  })
+    },
+  ]
 
   const { data: units, error: unitsError } = await supabase
     .from('line_booking_units')
@@ -373,16 +491,14 @@ async function handleSubmit(supabase, body) {
     .select('*')
   if (unitsError) return json({ error: unitsError.message }, 500)
 
-  for (const unit of units) {
-    await projectUnit(supabase, booking, unit, 'CONFIRMED')
-  }
-
   const pickupLabel = new Date(units[0].pickup_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+  const holdUntilLabel = holdUntil.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
   await notify(
     lineUserId,
-    buildConfirmedCustomerMessage({
+    buildTentativeCustomerMessage({
       pickupAtLabel: pickupLabel,
-      sequence: units.length > 1 ? null : units[0].sequence,
+      holdUntilLabel,
+      discountLabel: discount?.applied ? discount.label : null,
     })
   )
 
@@ -390,7 +506,7 @@ async function handleSubmit(supabase, body) {
     ok: true,
     booking,
     units,
-    uses_extra_capacity: availability.usesExtraCapacity,
+    uses_extra_capacity: usesExtraCapacity,
     discount,
   })
 }
@@ -444,7 +560,7 @@ async function handleApprove(supabase, body, staffUser = null) {
   const pickupLabel = new Date(unit.pickup_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
   await notify(
     booking.line_user_id,
-    buildConfirmedCustomerMessage({ pickupAtLabel: pickupLabel, sequence: unit.sequence })
+    buildConfirmedCustomerMessage({ pickupAtLabel: pickupLabel })
   )
 
   return json({ ok: true, unit_id: unitId })
@@ -466,17 +582,9 @@ async function handleCancel(supabase, body) {
     return json({ error: 'Cannot cancel' }, 409)
   }
 
-  await supabase
-    .from('line_booking_units')
-    .update({ status: 'CANCELLED', cancelled_at: new Date().toISOString() })
-    .eq('id', unitId)
-
-  if (unit.order_id) {
-    await supabase.from('orders').update({ status: 'CANCELLED' }).eq('id', unit.order_id)
-  }
-  if (unit.reservation_id) {
-    await supabase.from('reservations').delete().eq('id', unit.reservation_id)
-  }
+  await markUnitCancelled(supabase, unitId)
+  await releaseUnitCapacity(supabase, unit)
+  await syncBookingStatus(supabase, unit.booking_id)
 
   return json({ ok: true })
 }
@@ -485,7 +593,9 @@ async function handleAdminUpdate(supabase, body, staffUser = null) {
   const unitId = body.unit_id
   if (!unitId) return json({ error: 'unit_id required' }, 400)
   if (!staffUser) {
-    if (!isValidPinFormat(body.pin)) return json({ error: 'unit_id and pin required' }, 400)
+    if (!isValidPinFormat(body.pin)) {
+      return json({ error: 'ログインし直すか、PIN を入力してください' }, 401)
+    }
     const pinResult = await consumePinAttempt(supabase, body.pin)
     if (!pinResult.ok) return json({ error: pinResult.error, reason: pinResult.reason }, pinResult.status)
   }
@@ -499,12 +609,14 @@ async function handleAdminUpdate(supabase, body, staffUser = null) {
   const booking = unit.line_bookings
 
   if (body.action === 'admin_delete') {
-    await supabase
-      .from('line_booking_units')
-      .update({ status: 'CANCELLED', cancelled_at: new Date().toISOString() })
-      .eq('id', unitId)
-    if (unit.order_id) await supabase.from('orders').update({ status: 'CANCELLED' }).eq('id', unit.order_id)
-    if (unit.reservation_id) await supabase.from('reservations').delete().eq('id', unit.reservation_id)
+    if (['CANCELLED', 'EXPIRED'].includes(unit.status)) {
+      await releaseUnitCapacity(supabase, unit)
+      await syncBookingStatus(supabase, unit.booking_id)
+      return json({ ok: true })
+    }
+    await markUnitCancelled(supabase, unitId)
+    await releaseUnitCapacity(supabase, unit)
+    await syncBookingStatus(supabase, unit.booking_id)
     await notify(
       booking.line_user_id,
       `【予約取消】\n運営により予約が取り消されました。\nお迎え予定: ${new Date(unit.pickup_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`

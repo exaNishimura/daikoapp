@@ -213,6 +213,7 @@ function buildVehicleSection({ carNum, salesRow, shifts, employees, receivables,
  * @param {Array} params.receivables
  * @param {Record<string,string>} [params.companyLookup]
  * @param {string} [params.closedAtLabel] 締め時刻表示
+ * @param {boolean} [params.isResend] 再送時はタイトルに明記
  */
 export function buildDailyCloseMessage({
   workDate,
@@ -224,9 +225,13 @@ export function buildDailyCloseMessage({
   receivables = [],
   companyLookup = {},
   closedAtLabel = '',
+  isResend = false,
 }) {
   const dateLabel = formatWorkDateLabel(workDate, dow)
-  const lines = [`【${dateLabel} 日次締め報告】`, '']
+  const title = isResend
+    ? `【${dateLabel} 日次締め報告・再送】`
+    : `【${dateLabel} 日次締め報告】`
+  const lines = [title, '']
 
   const operatingCars = getOperatingCars(shifts)
   if (operatingCars.length === 0) {

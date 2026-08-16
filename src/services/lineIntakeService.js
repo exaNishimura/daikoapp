@@ -50,7 +50,7 @@ export async function listLineHoldingUnits() {
     const { data, error } = await supabase
       .from('line_booking_units')
       .select('*, line_bookings(*)')
-      .in('status', ['HOLDING', 'CONFIRMED', 'EXPIRED', 'CANCELLED'])
+      .in('status', ['HOLDING', 'CONFIRMED'])
       .order('created_at', { ascending: false })
       .limit(100)
     if (error) throw error
