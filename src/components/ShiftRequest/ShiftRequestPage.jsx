@@ -234,8 +234,10 @@ export function ShiftRequestPage() {
   }
 
   return (
-    <ShiftPinGate>
-      {({ employee }) => <ShiftRequestForm employee={employee} onLogout={handleLogout} />}
-    </ShiftPinGate>
+    <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflowY: 'auto' }}>
+      <ShiftPinGate>
+        {({ employee }) => <ShiftRequestForm employee={employee} onLogout={handleLogout} />}
+      </ShiftPinGate>
+    </Box>
   )
 }

@@ -46,9 +46,7 @@ function RequestDetailRow({ row }) {
           />
         </TableCell>
         <TableCell align="right">{row.has_request ? row.available_days : '—'}</TableCell>
-        <TableCell>
-          {row.updated_at ? dayjs(row.updated_at).format('M/D HH:mm') : '—'}
-        </TableCell>
+        <TableCell>{row.updated_at ? dayjs(row.updated_at).format('M/D HH:mm') : '—'}</TableCell>
       </TableRow>
       <TableRow>
         <TableCell colSpan={6} sx={{ py: 0, borderBottom: open ? undefined : 0 }}>
@@ -114,58 +112,60 @@ export function ShiftRequestsAdminPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Typography variant="h5" component="h1" sx={{ mb: 2 }}>
-        シフト希望一覧（管理者）
-      </Typography>
+    <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflowY: 'auto' }}>
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Typography variant="h5" component="h1" sx={{ mb: 2 }}>
+          シフト希望一覧（管理者）
+        </Typography>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-          <IconButton onClick={() => shiftMonth(-1)} aria-label="前の月">
-            <ChevronLeftIcon />
-          </IconButton>
-          <Typography variant="h6">{dayjs(`${month}-01`).format('YYYY年M月')}</Typography>
-          <IconButton onClick={() => shiftMonth(1)} aria-label="次の月">
-            <ChevronRightIcon />
-          </IconButton>
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <IconButton onClick={() => shiftMonth(-1)} aria-label="前の月">
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography variant="h6">{dayjs(`${month}-01`).format('YYYY年M月')}</Typography>
+            <IconButton onClick={() => shiftMonth(1)} aria-label="次の月">
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+        </Paper>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {loading ? (
+          <Typography>読み込み中...</Typography>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell />
+                  <TableCell>名前</TableCell>
+                  <TableCell>免許</TableCell>
+                  <TableCell>PIN</TableCell>
+                  <TableCell align="right">出勤可日数</TableCell>
+                  <TableCell>更新日時</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rows.map((row) => (
+                  <RequestDetailRow key={row.employee_id} row={row} />
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        <Box sx={{ mt: 2 }}>
+          <Button onClick={load} disabled={loading}>
+            再読み込み
+          </Button>
         </Box>
-      </Paper>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {loading ? (
-        <Typography>読み込み中...</Typography>
-      ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell />
-                <TableCell>名前</TableCell>
-                <TableCell>免許</TableCell>
-                <TableCell>PIN</TableCell>
-                <TableCell align="right">出勤可日数</TableCell>
-                <TableCell>更新日時</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((row) => (
-                <RequestDetailRow key={row.employee_id} row={row} />
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Box sx={{ mt: 2 }}>
-        <Button onClick={load} disabled={loading}>
-          再読み込み
-        </Button>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   )
 }

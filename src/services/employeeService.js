@@ -104,7 +104,11 @@ export async function createEmployee(employeeData) {
   }
 
   try {
-    const { data, error } = await supabase.from('employees').insert(employeeData).select(EMPLOYEE_PUBLIC_COLUMNS).single()
+    const { data, error } = await supabase
+      .from('employees')
+      .insert(employeeData)
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
+      .single()
 
     if (error) throw error
     return { data, error: null }
@@ -188,7 +192,12 @@ export async function deleteEmployee(id) {
   }
 
   try {
-    const { data, error } = await supabase.from('employees').delete().eq('id', id).select(EMPLOYEE_PUBLIC_COLUMNS).single()
+    const { data, error } = await supabase
+      .from('employees')
+      .delete()
+      .eq('id', id)
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
+      .single()
 
     if (error) throw error
     return { data, error: null }

@@ -228,9 +228,7 @@ export function buildDailyCloseMessage({
   isResend = false,
 }) {
   const dateLabel = formatWorkDateLabel(workDate, dow)
-  const title = isResend
-    ? `【${dateLabel} 日次締め報告・再送】`
-    : `【${dateLabel} 日次締め報告】`
+  const title = isResend ? `【${dateLabel} 日次締め報告・再送】` : `【${dateLabel} 日次締め報告】`
   const lines = [title, '']
 
   const operatingCars = getOperatingCars(shifts)

@@ -6,10 +6,7 @@ import {
   useUpdateEmployee,
   useDeleteEmployee,
 } from '@/hooks/useEmployees'
-import {
-  setEmployeeShiftPin,
-  clearEmployeeShiftPin,
-} from '@/services/employeeShiftService'
+import { setEmployeeShiftPin, clearEmployeeShiftPin } from '@/services/employeeShiftService'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Select from '@mui/material/Select'

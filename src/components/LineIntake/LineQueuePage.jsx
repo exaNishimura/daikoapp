@@ -148,9 +148,7 @@ export function LineQueuePage() {
               <Typography variant="body2">車両: {selected.vehicle_info || '—'}</Typography>
               <Typography variant="body2">電話: {selected.line_bookings?.contact_phone}</Typography>
               <Typography variant="body2">LINE: {selected.line_bookings?.line_user_id}</Typography>
-              <Typography variant="body2">
-                状態: {unitStatusLabel(selected.status)}
-              </Typography>
+              <Typography variant="body2">状態: {unitStatusLabel(selected.status)}</Typography>
               <Typography variant="body2">
                 割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}
               </Typography>

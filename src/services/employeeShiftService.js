@@ -72,17 +72,11 @@ export async function clearEmployeeShiftPin(employeeId) {
 }
 
 export async function getShiftAvailabilityRequest(month) {
-  return callEmployeeShiftApi(
-    { action: 'get_request', month },
-    { employeeSession: true }
-  )
+  return callEmployeeShiftApi({ action: 'get_request', month }, { employeeSession: true })
 }
 
 export async function saveShiftAvailabilityRequest(month, payload) {
-  return callEmployeeShiftApi(
-    { action: 'save_request', month, payload },
-    { employeeSession: true }
-  )
+  return callEmployeeShiftApi({ action: 'save_request', month, payload }, { employeeSession: true })
 }
 
 export async function listShiftAvailabilityRequests(month) {

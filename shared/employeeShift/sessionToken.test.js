@@ -30,7 +30,11 @@ describe('employee session token', () => {
       secret,
       now: 1_000_000,
     })
-    const payload = await verifyEmployeeSession(token, secret, 1_000_000 + EMPLOYEE_SESSION_TTL_MS + 1)
+    const payload = await verifyEmployeeSession(
+      token,
+      secret,
+      1_000_000 + EMPLOYEE_SESSION_TTL_MS + 1
+    )
     expect(payload).toBeNull()
   })
 
