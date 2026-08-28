@@ -39,12 +39,12 @@ function fmtDate(s) {
   return m ? `${m[1]}/${m[2]}/${m[3]}` : s
 }
 
-/** 発行時と同じ命名: `YYYYMM_会社名様_請求書` */
+/** 発行時と同じ命名: `YYYYMM_会社名様_請求書_#id`（同月複数枚を区別） */
 function invoiceDisplayName(row, year, month) {
   const ymPrefix = `${year}${String(month).padStart(2, '0')}`
   const baseName =
     row.companies?.invoice_display_name || row.companies?.name || `company-${row.company_id}`
-  return `${ymPrefix}_${baseName}様_請求書`
+  return `${ymPrefix}_${baseName}様_請求書_#${row.id}`
 }
 
 export function InvoiceIssuedTab({ year, month }) {
@@ -80,7 +80,7 @@ export function InvoiceIssuedTab({ year, month }) {
   const handleRevoke = async (row) => {
     if (
       !window.confirm(
-        `「${row.companies?.name}」の ${fmtMonth(row.billing_month)} 請求書を取消します。よろしいですか?`
+        `「${row.companies?.name}」の ${fmtMonth(row.billing_month)} 請求書（#${row.id}）を取消します。よろしいですか?`
       )
     ) {
       return

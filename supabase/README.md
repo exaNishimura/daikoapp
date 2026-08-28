@@ -92,10 +92,10 @@ supabase/migrations/<UTC timestamp YYYYMMDDHHMMSS>_<snake_case_description>.sql
 
 請求書発行・取消・入金記録の RPC 3 種:
 
-- `issue_invoice(company_id, billing_month, issue_date, total_amount, line_count, profile_snapshot, file_path)`
+- `issue_invoice(company_id, billing_month, issue_date, total_amount, line_count, profile_snapshot, file_path, receivable_ids?)`
   - 当月・当社の未請求売掛集計が引数と一致するかを検算 (`line_count` / `total_amount`)
   - `invoices` insert + `accounts_receivable.invoice_id` を 1 トランザクションで一括更新
-  - 同月二重発行は `invoices.UNIQUE(company_id, billing_month)` で防止
+  - 同月・同社の複数回発行（都度請求）を許可。`p_receivable_ids` 指定時はその明細のみ紐付け
 - `revoke_invoice(invoice_id)`
   - 未入金 invoices を削除し、紐付いていた `accounts_receivable.invoice_id` を NULL に戻す
   - 入金済の場合はエラー

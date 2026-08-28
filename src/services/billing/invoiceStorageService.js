@@ -13,7 +13,8 @@ import { supabase } from '@/lib/supabase'
  * - mime: application/pdf
  * - authenticated のみ アップロード/読み取り可
  *
- * パス命名: `YYYY/MM/{company_id}[-{idx}of{total}].pdf`
+ * パス命名: `YYYY/MM/{company_id}-{suffix}[-{idx}of{total}].pdf`
+ * suffix は都度請求で同月複数枚がぶつからないよう呼び出し側が付与する。
  */
 
 const BUCKET = 'invoices'
@@ -33,12 +34,14 @@ const NOT_INITIALIZED = () => ({
  * (`getInvoiceFileUrl` の `download` オプション)。
  *
  * @param {{ year: number, month: number, companyId: number,
+ *           suffix?: string | number,
  *           sequence?: { index: number, total: number } }} args
  */
-export function buildInvoicePath({ year, month, companyId, sequence }) {
+export function buildInvoicePath({ year, month, companyId, suffix, sequence }) {
   const m = String(month).padStart(2, '0')
+  const unique = suffix != null && String(suffix) !== '' ? String(suffix) : String(Date.now())
   const seq = sequence ? `-${sequence.index}of${sequence.total}` : ''
-  return `${year}/${m}/${companyId}${seq}.pdf`
+  return `${year}/${m}/${companyId}-${unique}${seq}.pdf`
 }
 
 /**

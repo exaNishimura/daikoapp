@@ -61,7 +61,7 @@
 7. 「N 社を発行」ボタンをクリック。
 8. 結果ダイアログで個別ダウンロード / 一括 zip ダウンロード可能。
 
-> **同月の二重発行は不可**: 同じ取引先で既に発行済みの月は、そのまま再発行できません。先に「取消」してください。
+> **都度請求 OK**: 未請求の売掛だけが発行対象です。同月・同取引先でも、追加分を後から何度でも発行できます。すでに発行済みの請求書を出し直すときは「発行済一覧」から取消または「修正して再発行」してください。
 
 ### 入金記録
 
@@ -157,7 +157,7 @@
 ### 一意性キー
 
 - `accounts_receivable`: `(billing_month, company_id, work_date, departure, destination, amount)` で重複検出
-- `invoices`: `(company_id, billing_month)` で同月二重発行を防止
+- `invoices`: 同月・同社で複数発行可（都度請求）。紐付けは `accounts_receivable.invoice_id`
 - `daily_sales`: `work_date`
 - `daily_staff_sales`: `(work_date, staff_name)`
 - `monthly_fixed_expenses`: `(billing_month, label)`

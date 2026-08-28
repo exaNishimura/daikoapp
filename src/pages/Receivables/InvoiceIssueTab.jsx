@@ -144,6 +144,9 @@ export function InvoiceIssueTab({ year, month }) {
           {previewError}
         </Alert>
       )}
+      <Alert severity="info" sx={{ mb: 2 }}>
+        未請求の売掛だけが対象です。同月・同取引先でも、追加分を後から都度発行できます。
+      </Alert>
       {hasOverflow && (
         <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}>
           明細が {INVOICE_MAX_LINES} 件を超える企業があります。

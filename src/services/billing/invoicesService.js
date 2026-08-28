@@ -35,6 +35,7 @@ export async function getInvoices(filter = {}) {
       .select('*, companies(id, name, invoice_display_name)')
       .order('billing_month', { ascending: false })
       .order('issue_date', { ascending: false })
+      .order('id', { ascending: false })
 
     if (filter.year && filter.month) {
       q = q.eq('billing_month', toBillingMonth(filter.year, filter.month))
@@ -78,13 +79,15 @@ export async function getInvoice(id) {
  * @param {number}   params.lineCount
  * @param {Object}   params.profileSnapshot
  * @param {string|null} [params.filePath]
+ * @param {number[]|null} [params.receivableIds]
+ *   指定時はその売掛だけ紐付ける（再発行・部分発行用）。省略時は未請求全件。
  */
 export async function issueInvoice(params) {
   if (!supabase) return NOT_INITIALIZED()
   try {
     const issueDateStr =
       params.issueDate instanceof Date ? formatIsoDate(params.issueDate) : params.issueDate
-    const { data, error } = await supabase.rpc('issue_invoice', {
+    const payload = {
       p_company_id: params.companyId,
       p_billing_month: toBillingMonth(params.year, params.month),
       p_issue_date: issueDateStr,
@@ -92,7 +95,11 @@ export async function issueInvoice(params) {
       p_line_count: params.lineCount,
       p_profile_snapshot: params.profileSnapshot,
       p_file_path: params.filePath ?? null,
-    })
+    }
+    if (Array.isArray(params.receivableIds) && params.receivableIds.length > 0) {
+      payload.p_receivable_ids = params.receivableIds
+    }
+    const { data, error } = await supabase.rpc('issue_invoice', payload)
     if (error) throw error
     return { data, error: null }
   } catch (error) {

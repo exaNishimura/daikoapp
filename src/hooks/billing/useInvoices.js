@@ -56,6 +56,8 @@ function expandByStrategy(lines, strategy) {
  * 1 社分の請求書を発行する (内部関数)。
  * 戦略 ('normal'|'merge'|'split') により 1 〜 N 枚の請求書を生成する。
  *
+ * @param {number[]|null} [receivableIds]
+ *   指定時はその売掛だけ対象（再発行用）。省略時は当月未請求全件。
  * @returns {Promise<Array<{ companyId, invoiceId, filePath, sequence?: { index, total } }>>}
  */
 async function issueOneCompany({
@@ -65,10 +67,20 @@ async function issueOneCompany({
   issueDate,
   profile,
   strategy = STRATEGIES.NORMAL,
+  receivableIds = null,
 }) {
-  const receivables = await unwrap(
+  let receivables = await unwrap(
     getReceivables({ year, month, companyId: company.company_id, invoiced: false })
   )
+  if (Array.isArray(receivableIds) && receivableIds.length > 0) {
+    const idSet = new Set(receivableIds)
+    receivables = receivables.filter((r) => idSet.has(r.id))
+    if (receivables.length !== receivableIds.length) {
+      throw new Error(
+        `指定売掛の一部が未請求ではありません (expected=${receivableIds.length}, actual=${receivables.length})`
+      )
+    }
+  }
   if (!receivables.length) {
     throw new Error(`未請求の売掛がありません (company_id=${company.company_id})`)
   }
@@ -79,6 +91,8 @@ async function issueOneCompany({
 
   const chunks = expandByStrategy(sortedLines, strategy)
   const results = []
+  // 同一発行セッション内の分割枚は同じ suffix でグルーピング。都度請求では別セッションで別 path。
+  const pathSuffix = `${Date.now()}`
 
   for (const chunk of chunks) {
     const totalAmount = chunk.lines.reduce((s, x) => s + (Number(x.amount) || 0), 0)
@@ -104,25 +118,24 @@ async function issueOneCompany({
       year,
       month,
       companyId: company.company_id,
+      suffix: pathSuffix,
       sequence: chunk.sequence,
     })
 
-    // ファイル名: `${YYYY}${MM}_{会社名}様_請求書` (拡張子は DL 側で付与)
+    // ファイル名: `${YYYY}${MM}_{会社名}様_請求書_#id` (拡張子は DL 側で付与)
     const ymPrefix = `${year}${String(month).padStart(2, '0')}`
     const baseName =
       company.invoice_display_name || company.company_name || `company-${company.company_id}`
-    const displayName =
+    let displayName =
       `${ymPrefix}_${baseName}様_請求書` +
       (chunk.sequence ? `_${chunk.sequence.index}of${chunk.sequence.total}` : '')
 
     await unwrap(uploadInvoiceFile(filePath, pdfBuf))
 
     // split 戦略のときは、各枚で発行 RPC を呼ぶと line_count/total が
-    // accounts_receivable と合わないため、現状の DB スキーマでは
-    // 1 (company_id, billing_month) につき 1 invoices 行のみ作成できる。
-    // → split で複数枚必要なときは 1 枚目だけ RPC で永続化し、
-    //   それ以外の枚は Storage アップロードのみ (file_path リスト返却)。
-    //   分割発行は「明細上の都合で複数枚に分けたが、会計上は同一」という運用前提。
+    // accounts_receivable と合わないため、1 枚目だけ RPC で永続化し、
+    // それ以外の枚は Storage アップロードのみ (file_path リスト返却)。
+    // 分割発行は「明細上の都合で複数枚に分けたが、会計上は同一」という運用前提。
     let invoiceId = null
     const isFirstChunk = !chunk.sequence || chunk.sequence.index === 1
     if (isFirstChunk) {
@@ -136,9 +149,11 @@ async function issueOneCompany({
           lineCount: sortedLines.length,
           profileSnapshot: profile ?? {},
           filePath,
+          receivableIds: sortedLines.map((r) => r.id),
         })
       )
       invoiceId = invoice.id
+      displayName = `${displayName}_#${invoiceId}`
     }
 
     results.push({
@@ -404,7 +419,7 @@ export function useRevokeInvoice() {
  *   1. ダイアログ上で編集した売掛を DB に反映 (create/update/delete)
  *   2. 既存 invoice を取消 (revoke)
  *   3. 旧 Storage ファイルを削除 (失敗しても続行)
- *   4. 最新の未請求売掛から PDF を再生成して発行
+ *   4. 編集対象の売掛 ID だけを再発行（同月の他の未請求＝都度分は巻き込まない）
  *
  * 入金済みは revoke_invoice 側で拒否される。
  *
@@ -450,6 +465,7 @@ export function useReissueInvoice() {
         await unwrap(deleteReceivable(id))
       }
 
+      const intendedIds = []
       for (const line of lines) {
         const workDate = line.work_date
         const payload = {
@@ -464,8 +480,10 @@ export function useReissueInvoice() {
         }
         if (line.id != null) {
           await unwrap(updateReceivable(line.id, payload))
+          intendedIds.push(line.id)
         } else {
-          await unwrap(createReceivable(payload))
+          const created = await unwrap(createReceivable(payload))
+          intendedIds.push(created.id)
         }
       }
 
@@ -480,7 +498,7 @@ export function useReissueInvoice() {
         }
       }
 
-      // 4. 再発行
+      // 4. 再発行（編集対象 ID のみ。同月の他未請求は都度請求として残す）
       const profile = await unwrap(getCompanyProfile())
       const company = {
         company_id: companyId,
@@ -494,6 +512,7 @@ export function useReissueInvoice() {
         issueDate: issueDate ?? resolveIssueDate(year, month),
         profile,
         strategy,
+        receivableIds: intendedIds,
       })
 
       return { successes: issued, failures: [] }

@@ -104,7 +104,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
   const [deletedIds, setDeletedIds] = useState([])
   const [strategy, setStrategy] = useState(STRATEGIES.NORMAL)
   const [error, setError] = useState(null)
-  const [extraUnbilledCount, setExtraUnbilledCount] = useState(0)
+  const [otherUnbilledCount, setOtherUnbilledCount] = useState(0)
   const [initializedFor, setInitializedFor] = useState(null)
   const [initBusy, setInitBusy] = useState(false)
 
@@ -120,7 +120,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
     invoice?.companies?.invoice_display_name || invoice?.companies?.name || `企業 #${companyId}`
 
   // 明細ロード完了時にドラフト初期化
-  // 発行済み明細 + 同月同社の未請求 (発行後に追加された行) をマージ
+  // この請求書に紐付く明細のみ（同月の他未請求＝都度分は巻き込まない）
   useEffect(() => {
     if (!open || !invoice?.id || !year || !month) return
     if (initializedFor === invoice.id) return
@@ -139,24 +139,14 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         })
         if (unbilledErr) throw unbilledErr
 
-        const byId = new Map()
-        for (const row of linked) byId.set(row.id, row)
-        let extra = 0
-        for (const row of unbilled ?? []) {
-          if (!byId.has(row.id)) {
-            byId.set(row.id, row)
-            extra += 1
-          }
-        }
-
-        const merged = [...byId.values()].sort((a, b) =>
+        const sorted = [...linked].sort((a, b) =>
           String(a.work_date).localeCompare(String(b.work_date))
         )
         if (cancelled) return
-        setLines(merged.map(rowToDraft))
+        setLines(sorted.map(rowToDraft))
         setDeletedIds([])
-        setStrategy(recommendedStrategy(merged.length))
-        setExtraUnbilledCount(extra)
+        setStrategy(recommendedStrategy(sorted.length))
+        setOtherUnbilledCount((unbilled ?? []).length)
         setError(null)
         setInitializedFor(invoice.id)
       } catch (err) {
@@ -177,7 +167,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
   useEffect(() => {
     if (!open) {
       setInitializedFor(null)
-      setExtraUnbilledCount(0)
+      setOtherUnbilledCount(0)
     }
   }, [open])
 
@@ -357,10 +347,10 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                 明細を直して「再発行」すると、現行の請求書を取消して新しい PDF
                 を発行します。入金済みは修正できません。
               </Alert>
-              {extraUnbilledCount > 0 && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  発行後に追加された未請求売掛が {extraUnbilledCount}{' '}
-                  件あるため、明細に含めています。不要なら削除してから再発行してください。
+              {otherUnbilledCount > 0 && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  同月・同取引先に未請求売掛が {otherUnbilledCount}{' '}
+                  件あります。それらはこの再発行には含めず、「新規発行」から都度請求できます。
                 </Alert>
               )}
 
