@@ -101,6 +101,8 @@ supabase/migrations/<UTC timestamp YYYYMMDDHHMMSS>_<snake_case_description>.sql
   - 入金済の場合はエラー
 - `mark_invoice_paid(invoice_id, paid_at)`
   - `invoices.paid_at` をセット (再入金は禁止)
+- `unmark_invoice_paid(invoice_id)`
+  - `invoices.paid_at` を NULL に戻す (未入金に復帰)
 
 すべて `SECURITY INVOKER` (RLS は呼び出しユーザーに従う)、`authenticated` のみ
 EXECUTE 権限、`anon` / `PUBLIC` は REVOKE。

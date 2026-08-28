@@ -4,7 +4,8 @@ import { formatIsoDate } from '@/lib/excel/formatters'
 /**
  * invoices (請求書ヘッダ) サービス。
  *
- * 発行・取消・入金は RPC (`issue_invoice` / `revoke_invoice` / `mark_invoice_paid`)
+ * 発行・取消・入金は RPC (`issue_invoice` / `revoke_invoice` / `mark_invoice_paid` /
+ * `unmark_invoice_paid`) を経由する。
  * を経由する。アプリ側で個別 INSERT/UPDATE すると accounts_receivable.invoice_id
  * との整合が取れなくなるため。
  */
@@ -142,10 +143,30 @@ export async function revokeInvoice(invoiceId) {
   }
 }
 
-export async function markInvoicePaid(invoiceId, paidAt) {
+export async function unmarkInvoicePaid(invoiceId) {
   if (!supabase) return NOT_INITIALIZED()
   try {
-    const paidAtStr = paidAt instanceof Date ? paidAt.toISOString() : (paidAt ?? null)
+    const { data, error } = await supabase.rpc('unmark_invoice_paid', {
+      p_invoice_id: invoiceId,
+    })
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error unmarking invoice paid:', error)
+    return { data: null, error }
+  }
+}
+
+/**
+ * 入金状態を更新する。paidAt が null のときは未入金に戻す。
+ */
+export async function markInvoicePaid(invoiceId, paidAt) {
+  if (!supabase) return NOT_INITIALIZED()
+  if (paidAt == null) {
+    return unmarkInvoicePaid(invoiceId)
+  }
+  try {
+    const paidAtStr = paidAt instanceof Date ? paidAt.toISOString() : paidAt
     const { data, error } = await supabase.rpc('mark_invoice_paid', {
       p_invoice_id: invoiceId,
       ...(paidAtStr ? { p_paid_at: paidAtStr } : {}),

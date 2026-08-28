@@ -530,6 +530,7 @@ export function useMarkInvoicePaid() {
     mutationFn: ({ id, paidAt }) => unwrap(markInvoicePaid(id, paidAt)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
+      qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
     },
   })
 }
