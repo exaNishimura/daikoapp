@@ -1,19 +1,18 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { ThemeProvider } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import { LocalizationProvider } from '@mui/x-date-pickers'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import 'dayjs/locale/ja'
+import { Theme } from '@astryxdesign/core/theme'
+import { LinkProvider } from '@astryxdesign/core/Link'
+import { InternationalizationProvider } from '@astryxdesign/core/i18n'
+import jaJP from '@astryxdesign/core/locales/ja-JP.json'
 import App from './App.jsx'
 import { ToastProvider } from './contexts/ToastContext'
 import { queryClient } from './lib/queryClient'
-import { appLightTheme } from './theme/appTheme'
+import { stoneTheme } from './theme/astryx/stoneTheme'
+import { AstryxRouterLink } from './lib/astryxLink'
 import './index.css'
 
-// Google Places APIスクリプトを動的に読み込む
 const loadGooglePlacesAPI = () => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   if (!apiKey) {
@@ -23,7 +22,6 @@ const loadGooglePlacesAPI = () => {
     return
   }
 
-  // 既に読み込まれているかチェック
   if (window.google && window.google.maps && window.google.maps.places) {
     if (import.meta.env.DEV) {
       console.log('✅ Google Places API is already loaded')
@@ -31,7 +29,6 @@ const loadGooglePlacesAPI = () => {
     return
   }
 
-  // スクリプトが既に追加されているかチェック
   const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
   if (existingScript) {
     if (import.meta.env.DEV) {
@@ -61,23 +58,23 @@ const loadGooglePlacesAPI = () => {
   document.head.appendChild(script)
 }
 
-// アプリ起動時にGoogle Places APIを読み込む
 loadGooglePlacesAPI()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={appLightTheme}>
-        <CssBaseline />
-        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ja">
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </LocalizationProvider>
-      </ThemeProvider>
+      <Theme theme={stoneTheme} mode="light">
+        <InternationalizationProvider locale="ja-JP" messages={{ 'ja-JP': jaJP }}>
+          <LinkProvider component={AstryxRouterLink}>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </LinkProvider>
+        </InternationalizationProvider>
+      </Theme>
       {import.meta.env.DEV && (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       )}
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 )

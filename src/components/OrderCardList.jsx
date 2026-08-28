@@ -1,12 +1,10 @@
 import { useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { OrderCard } from './OrderCard'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Paper from '@mui/material/Paper'
-import IconButton from '@mui/material/IconButton'
-import Chip from '@mui/material/Chip'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import { HStack, StackItem, VStack } from '@astryxdesign/core/Layout'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
 
 export function OrderCardList({
   orders,
@@ -27,135 +25,71 @@ export function OrderCardList({
     }
   }
 
-  // 未確定の依頼をフィルタ（未割当 + 仮配置）
   const unassignedOrders = orders.filter(
     (order) => order.status === 'UNASSIGNED' || order.status === 'TENTATIVE'
   )
 
-  // 0件の場合は何も表示しない
   if (unassignedOrders.length === 0) {
     return null
   }
 
+  const listHeight = expanded ? (fillHeight ? '100%' : expandedMaxHeight) : 'auto'
+
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
+    <VStack
+      className="order-card-list"
+      height={listHeight}
+      minHeight={fillHeight ? 0 : undefined}
+      style={{
         overflow: 'hidden',
-        ...(fillHeight ? { flex: 1, minHeight: 0, height: '100%' } : { flexShrink: 0 }),
-        ...(expanded
-          ? fillHeight
-            ? { flex: 1, minHeight: 0, height: '100%' }
-            : { height: expandedMaxHeight, maxHeight: expandedMaxHeight }
-          : { height: 'auto' }),
+        flex: fillHeight ? 1 : undefined,
+        flexShrink: fillHeight ? undefined : 0,
+        maxHeight: expanded && !fillHeight ? expandedMaxHeight : undefined,
       }}
     >
-      {/* ヘッダー */}
-      <Paper
-        elevation={0}
-        square
-        sx={{
-          px: 1,
-          py: 0.5,
-          minHeight: 36,
-          borderBottom: expanded ? 1 : 0,
-          borderTop: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-          cursor: 'pointer',
-          flexShrink: 0,
-          borderRadius: 0,
-          '&:hover': {
-            bgcolor: 'action.hover',
-          },
-        }}
+      <HStack
+        className="order-list-title"
+        padding={1}
+        paddingBlock={0.5}
+        gap={1}
+        vAlign="center"
+        hAlign="between"
         onClick={handleToggle}
+        style={{ cursor: 'pointer', flexShrink: 0 }}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            minHeight: 24,
+        <HStack gap={1} vAlign="center">
+          <Text size="xsm" weight="semibold">
+            未確定依頼
+          </Text>
+          <Token size="sm" color="blue" label={String(unassignedOrders.length)} />
+        </HStack>
+        <IconButton
+          size="sm"
+          variant="ghost"
+          label={expanded ? '未確定依頼一覧を閉じる' : '未確定依頼一覧を開く'}
+          icon={expanded ? <ChevronUp /> : <ChevronDown />}
+          aria-expanded={expanded}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleToggle()
           }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0 }}>
-            <Typography
-              variant="caption"
-              component="span"
-              sx={{ fontWeight: 600, fontSize: '0.75rem', lineHeight: 1.2 }}
-            >
-              未確定依頼
-            </Typography>
-            <Chip
-              label={unassignedOrders.length}
-              size="small"
-              color="primary"
-              sx={{
-                height: 18,
-                fontSize: '0.65rem',
-                fontWeight: 600,
-                '& .MuiChip-label': { px: 0.75, py: 0 },
-              }}
-            />
-          </Box>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleToggle()
-            }}
-            sx={{ ml: 0.5, p: 0.25 }}
-            aria-label={expanded ? '未確定依頼一覧を閉じる' : '未確定依頼一覧を開く'}
-            aria-expanded={expanded}
-          >
-            {expanded ? (
-              <ExpandLessIcon sx={{ fontSize: 20 }} />
-            ) : (
-              <ExpandMoreIcon sx={{ fontSize: 20 }} />
-            )}
-          </IconButton>
-        </Box>
-      </Paper>
+        />
+      </HStack>
 
-      {/* 依頼リスト */}
-      {expanded && (
-        <Box
-          sx={{
-            flex: 1,
-            overflow: 'auto',
-            p: { xs: 0.75, sm: 1 },
-            minHeight: 0,
-          }}
-        >
-          {unassignedOrders.length === 0 ? (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                未割当の依頼はありません
-              </Typography>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              {unassignedOrders.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  isSelected={selectedOrderId === order.id}
-                  onClick={() => onOrderSelect(order)}
-                />
-              ))}
-            </Box>
-          )}
-        </Box>
-      )}
-    </Box>
+      {expanded ? (
+        <StackItem size="fill" isScrollable>
+          <VStack className="order-cards" gap={0.5} padding={1}>
+            {unassignedOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                isSelected={selectedOrderId === order.id}
+                onClick={() => onOrderSelect(order)}
+              />
+            ))}
+          </VStack>
+        </StackItem>
+      ) : null}
+    </VStack>
   )
 }

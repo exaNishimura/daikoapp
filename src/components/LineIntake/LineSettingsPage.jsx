@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Heading } from '@astryxdesign/core/Heading'
+import { VStack } from '@astryxdesign/core/Layout'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { PageFrame } from '@/components/PageFrame'
 import { useAdminLineUnitAction, useLineIntakeSettings } from '@/hooks/useLineIntake'
-import './LineSettingsPage.css'
 
 export function LineSettingsPage() {
   const { data, isLoading, error } = useLineIntakeSettings()
@@ -54,58 +55,62 @@ export function LineSettingsPage() {
   }
 
   return (
-    <Box className="line-settings-page" sx={{ p: 2, maxWidth: 480 }}>
-      <Typography variant="h5" mb={2}>
-        LINE 受注設定
-      </Typography>
-      {isLoading && <Typography>読み込み中…</Typography>}
-      {error && <Alert severity="error">{error.message}</Alert>}
-      <Stack spacing={2}>
-        <TextField
-          label="平日稼働台数"
-          type="number"
-          value={form.weekday_fleet_count}
-          onChange={(e) => setField('weekday_fleet_count', e.target.value)}
-        />
-        <TextField
-          label="金土稼働台数"
-          type="number"
-          value={form.weekend_fleet_count}
-          onChange={(e) => setField('weekend_fleet_count', e.target.value)}
-        />
-        <TextField
-          label="最大台数（将来）"
-          type="number"
-          value={form.max_fleet_count}
-          onChange={(e) => setField('max_fleet_count', e.target.value)}
-        />
-        <TextField
-          label="仮想余裕枠上限 (+1〜+2)"
-          type="number"
-          value={form.extra_capacity_max}
-          onChange={(e) => setField('extra_capacity_max', e.target.value)}
-        />
-        <TextField
-          label="LINE割引額（円）"
-          type="number"
-          value={form.discount_amount}
-          onChange={(e) => setField('discount_amount', e.target.value)}
-        />
-        <TextField
-          label="配車画面 PIN 変更（6桁・空なら変更なし）"
-          value={pin}
-          onChange={(e) => setPin(e.target.value)}
-          inputProps={{ maxLength: 6, inputMode: 'numeric' }}
-        />
-        <Typography variant="caption" color="text.secondary">
-          配車画面を開くときに1回入力します。予約ごとの承認には使いません。ハッシュ化して保存します。
-        </Typography>
-        {message && <Alert severity="success">{message}</Alert>}
-        {err && <Alert severity="error">{err}</Alert>}
-        <Button variant="contained" onClick={onSave} disabled={save.isPending}>
-          保存
-        </Button>
-      </Stack>
-    </Box>
+    <PageFrame>
+      <VStack gap={4}>
+        <Heading level={1}>LINE 受注設定</Heading>
+        {isLoading ? <Spinner label="読み込み中…" /> : null}
+        {error ? <Banner status="error" title={error.message} collapsible={false} /> : null}
+        <VStack gap={4}>
+          <TextInput
+            label="平日稼働台数"
+            value={String(form.weekday_fleet_count)}
+            onChange={(value) => setField('weekday_fleet_count', value)}
+            width="100%"
+          />
+          <TextInput
+            label="金土稼働台数"
+            value={String(form.weekend_fleet_count)}
+            onChange={(value) => setField('weekend_fleet_count', value)}
+            width="100%"
+          />
+          <TextInput
+            label="最大台数（将来）"
+            value={String(form.max_fleet_count)}
+            onChange={(value) => setField('max_fleet_count', value)}
+            width="100%"
+          />
+          <TextInput
+            label="仮想余裕枠上限 (+1〜+2)"
+            value={String(form.extra_capacity_max)}
+            onChange={(value) => setField('extra_capacity_max', value)}
+            width="100%"
+          />
+          <TextInput
+            label="LINE割引額（円）"
+            value={String(form.discount_amount)}
+            onChange={(value) => setField('discount_amount', value)}
+            width="100%"
+          />
+          <TextInput
+            label="配車画面 PIN 変更（6桁・空なら変更なし）"
+            value={pin}
+            onChange={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+            width="100%"
+          />
+          <Text color="secondary">
+            配車画面を開くときに1回入力します。予約ごとの承認には使いません。ハッシュ化して保存します。
+          </Text>
+          {message ? <Banner status="success" title={message} collapsible={false} /> : null}
+          {err ? <Banner status="error" title={err} collapsible={false} /> : null}
+          <Button
+            label="保存"
+            variant="primary"
+            onClick={onSave}
+            isDisabled={save.isPending}
+            isLoading={save.isPending}
+          />
+        </VStack>
+      </VStack>
+    </PageFrame>
   )
 }

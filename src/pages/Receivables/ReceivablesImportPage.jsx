@@ -1,32 +1,27 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Paper from '@mui/material/Paper'
-import Alert from '@mui/material/Alert'
-import AlertTitle from '@mui/material/AlertTitle'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import RadioGroup from '@mui/material/RadioGroup'
-import Radio from '@mui/material/Radio'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Stack from '@mui/material/Stack'
-import CircularProgress from '@mui/material/CircularProgress'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import SaveAltIcon from '@mui/icons-material/SaveAlt'
-import ReplayIcon from '@mui/icons-material/Replay'
-
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Link } from '@astryxdesign/core/Link'
+import { List, ListItem } from '@astryxdesign/core/List'
+import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
+import { Text } from '@astryxdesign/core/Text'
+import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import { parseSalesWorkbook } from '@/lib/excel/parseSalesWorkbook'
 import { findDuplicates } from '@/lib/billing/duplicateReceivables'
 import { buildImportPlan } from '@/lib/billing/buildImportPlan'
 import { useCompanies } from '@/hooks/billing/useCompanies'
 import { useReceivables } from '@/hooks/billing/useReceivables'
 import { useBulkImportReceivables } from '@/hooks/billing/useBulkImportReceivables'
-
+import { resolveCompanyMap } from '@/lib/billing/matchCompany'
 import { ImportDropZone } from './ImportDropZone'
 import { ImportPreviewTabs } from './ImportPreviewTabs'
 import { UnknownCompanyResolver } from './UnknownCompanyResolver'
-import { resolveCompanyMap } from '@/lib/billing/matchCompany'
 
 const MODE = { SKIP: 'skip', OVERWRITE: 'overwrite', MERGE: 'merge' }
 
@@ -177,151 +172,182 @@ export function ReceivablesImportPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <IconButton onClick={() => navigate(-1)} aria-label="戻る">
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4">Excel インポート</Typography>
-      </Box>
-
-      <Alert severity="warning" sx={{ mb: 2 }}>
-        <AlertTitle>初期データ移行・運用復旧用</AlertTitle>
-        このページは <strong>過去データの移行・運用復旧</strong> 用です。 日々の運用は{' '}
-        <a href="/admin/receivables">売掛画面</a> から直接入力してください。
-      </Alert>
-
-      {!parsed && !parseError && (
-        <ImportDropZone onFile={handleFile} disabled={importMutation.isPending} />
-      )}
-
-      {parseError && (
-        <Alert severity="error" action={<Button onClick={handleReset}>もう一度</Button>}>
-          {parseError}
-        </Alert>
-      )}
-
-      {parsed && (
-        <Stack spacing={2}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Typography variant="body1">
-                <strong>{file.name}</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {parsed.period.year} 年 {parsed.period.month} 月
-              </Typography>
-              <Box sx={{ flex: 1 }} />
-              <Button startIcon={<ReplayIcon />} onClick={handleReset}>
-                やり直し
-              </Button>
-            </Box>
-          </Paper>
-
-          {parsed.errors.length > 0 && (
-            <Alert severity="warning">
-              <AlertTitle>パースエラー {parsed.errors.length} 件</AlertTitle>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {parsed.errors.slice(0, 5).map((e, i) => (
-                  <li key={i}>
-                    [{e.sheet} L{e.row} / {e.field}] {e.message}
-                  </li>
-                ))}
-                {parsed.errors.length > 5 && <li>…他 {parsed.errors.length - 5} 件</li>}
-              </ul>
-              エラー行はインポートされません。
-            </Alert>
-          )}
-
-          <UnknownCompanyResolver
-            companyNames={Array.from(parsed.seenCompanies ?? [])}
-            companies={companies}
-            decisions={decisions}
-            onChange={(name, d) =>
-              setDecisions((prev) => {
-                const next = { ...prev }
-                if (d === undefined) delete next[name]
-                else next[name] = d
-                return next
-              })
-            }
+    <PageFrame>
+      <VStack gap={4}>
+        <HStack gap={2} vAlign="center">
+          <IconButton
+            label="戻る"
+            icon={<ArrowLeft />}
+            variant="ghost"
+            onClick={() => navigate(-1)}
           />
+          <Heading level={1}>Excel インポート</Heading>
+        </HStack>
 
-          {hasExistingData && (
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                同月既存データの扱い
-              </Typography>
-              <Alert severity={hasInvoicedExisting ? 'error' : 'info'} sx={{ mb: 1 }}>
-                {parsed.period.year} 年 {parsed.period.month} 月の売掛が{' '}
-                <strong>{existingReceivables.length}</strong> 件既に登録されています
-                {hasInvoicedExisting && '（うち請求書発行済みあり）'}
-              </Alert>
-              <RadioGroup value={mode} onChange={(e) => setMode(e.target.value)}>
-                <FormControlLabel
-                  value={MODE.MERGE}
-                  control={<Radio />}
-                  label="マージ（重複を除いて追加挿入。既存は残す）"
+        <Banner
+          status="warning"
+          title="初期データ移行・運用復旧用"
+          description={
+            <>
+              このページは過去データの移行・運用復旧用です。日々の運用は
+              <Link href="/admin/receivables">売掛画面</Link>
+              から直接入力してください。
+            </>
+          }
+          collapsible={false}
+        />
+
+        {!parsed && !parseError ? (
+          <ImportDropZone onFile={handleFile} disabled={importMutation.isPending} />
+        ) : null}
+
+        {parseError ? (
+          <Banner
+            status="error"
+            title={parseError}
+            endContent={<Button label="もう一度" variant="secondary" onClick={handleReset} />}
+            collapsible={false}
+          />
+        ) : null}
+
+        {parsed ? (
+          <VStack gap={3}>
+            <Card padding={3}>
+              <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
+                <HStack gap={2} wrap="wrap" vAlign="center">
+                  <Text weight="semibold">{file.name}</Text>
+                  <Text color="secondary">
+                    {parsed.period.year} 年 {parsed.period.month} 月
+                  </Text>
+                </HStack>
+                <Button
+                  variant="secondary"
+                  icon={<RefreshCw />}
+                  label="やり直し"
+                  onClick={handleReset}
                 />
-                <FormControlLabel
-                  value={MODE.OVERWRITE}
-                  control={<Radio disabled={hasInvoicedExisting} />}
-                  label={
-                    hasInvoicedExisting
-                      ? '上書き（請求書発行済みがあるため不可）'
-                      : '上書き（同月の既存データを削除してから挿入）'
-                  }
-                />
-                <FormControlLabel
-                  value={MODE.SKIP}
-                  control={<Radio />}
-                  label="スキップ（既存があるため取り込まない）"
-                />
-              </RadioGroup>
-            </Paper>
-          )}
+              </HStack>
+            </Card>
 
-          <ImportPreviewTabs parsed={parsed} receivablesAnnotated={receivablesAnnotated} />
+            {parsed.errors.length > 0 ? (
+              <Banner
+                status="warning"
+                title={`パースエラー ${parsed.errors.length} 件`}
+                description="エラー行はインポートされません。"
+                collapsible={false}
+              >
+                <List>
+                  {parsed.errors.slice(0, 5).map((e, i) => (
+                    <ListItem
+                      key={i}
+                      label={`[${e.sheet} L${e.row} / ${e.field}] ${e.message}`}
+                    />
+                  ))}
+                  {parsed.errors.length > 5 ? (
+                    <ListItem label={`…他 ${parsed.errors.length - 5} 件`} />
+                  ) : null}
+                </List>
+              </Banner>
+            ) : null}
 
-          {runError && (
-            <Alert severity="error" onClose={() => setRunError(null)}>
-              {runError}
-            </Alert>
-          )}
-          {result && (
-            <Alert severity="success">
-              <AlertTitle>インポート完了</AlertTitle>
-              挿入: daily_sales {result.rpc.inserted?.daily_sales ?? 0} / staff_sales{' '}
-              {result.rpc.inserted?.staff_sales ?? 0} / receivables{' '}
-              {result.rpc.inserted?.receivables ?? 0} / fixed_expenses{' '}
-              {result.rpc.inserted?.fixed_expenses ?? 0}
-              {result.rpc.overwrite && (
-                <> · 上書き削除: receivables {result.rpc.deleted?.receivables ?? 0} 件</>
-              )}
-              {result.plan.duplicate_count > 0 && (
-                <> · 重複スキップ: {result.plan.duplicate_count} 件</>
-              )}
-              {result.plan.skipped_receivables > 0 && (
-                <> · マッピング未解決スキップ: {result.plan.skipped_receivables} 件</>
-              )}
-            </Alert>
-          )}
-
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={
-                importMutation.isPending ? <CircularProgress size={16} /> : <SaveAltIcon />
+            <UnknownCompanyResolver
+              companyNames={Array.from(parsed.seenCompanies ?? [])}
+              companies={companies}
+              decisions={decisions}
+              onChange={(name, d) =>
+                setDecisions((prev) => {
+                  const next = { ...prev }
+                  if (d === undefined) delete next[name]
+                  else next[name] = d
+                  return next
+                })
               }
-              disabled={importMutation.isPending || mode === MODE.SKIP || unmatchedNames.length > 0}
-              onClick={handleRun}
-            >
-              {importMutation.isPending ? '取り込み中…' : 'この内容で保存'}
-            </Button>
-          </Box>
-        </Stack>
-      )}
-    </Box>
+            />
+
+            {hasExistingData ? (
+              <Card padding={3}>
+                <VStack gap={2}>
+                  <Heading level={3}>同月既存データの扱い</Heading>
+                  <Banner
+                    status={hasInvoicedExisting ? 'error' : 'info'}
+                    title={`${parsed.period.year} 年 ${parsed.period.month} 月の売掛が ${existingReceivables.length} 件既に登録されています${hasInvoicedExisting ? '（うち請求書発行済みあり）' : ''}`}
+                    collapsible={false}
+                  />
+                  <RadioList
+                    label="同月既存データの扱い"
+                    value={mode}
+                    onChange={setMode}
+                  >
+                    <RadioListItem
+                      value={MODE.MERGE}
+                      label="マージ（重複を除いて追加挿入。既存は残す）"
+                    />
+                    <RadioListItem
+                      value={MODE.OVERWRITE}
+                      label={
+                        hasInvoicedExisting
+                          ? '上書き（請求書発行済みがあるため不可）'
+                          : '上書き（同月の既存データを削除してから挿入）'
+                      }
+                      isDisabled={hasInvoicedExisting}
+                    />
+                    <RadioListItem
+                      value={MODE.SKIP}
+                      label="スキップ（既存があるため取り込まない）"
+                    />
+                  </RadioList>
+                </VStack>
+              </Card>
+            ) : null}
+
+            <ImportPreviewTabs parsed={parsed} receivablesAnnotated={receivablesAnnotated} />
+
+            {runError ? (
+              <Banner
+                status="error"
+                title={runError}
+                isDismissable
+                onDismiss={() => setRunError(null)}
+                collapsible={false}
+              />
+            ) : null}
+            {result ? (
+              <Banner
+                status="success"
+                title="インポート完了"
+                description={[
+                  `挿入: daily_sales ${result.rpc.inserted?.daily_sales ?? 0} / staff_sales ${result.rpc.inserted?.staff_sales ?? 0} / receivables ${result.rpc.inserted?.receivables ?? 0} / fixed_expenses ${result.rpc.inserted?.fixed_expenses ?? 0}`,
+                  result.rpc.overwrite
+                    ? `上書き削除: receivables ${result.rpc.deleted?.receivables ?? 0} 件`
+                    : null,
+                  result.plan.duplicate_count > 0
+                    ? `重複スキップ: ${result.plan.duplicate_count} 件`
+                    : null,
+                  result.plan.skipped_receivables > 0
+                    ? `マッピング未解決スキップ: ${result.plan.skipped_receivables} 件`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                collapsible={false}
+              />
+            ) : null}
+
+            <HStack hAlign="end">
+              <Button
+                variant="primary"
+                icon={<Download />}
+                label={importMutation.isPending ? '取り込み中…' : 'この内容で保存'}
+                isDisabled={
+                  importMutation.isPending || mode === MODE.SKIP || unmatchedNames.length > 0
+                }
+                isLoading={importMutation.isPending}
+                onClick={handleRun}
+              />
+            </HStack>
+          </VStack>
+        ) : null}
+      </VStack>
+    </PageFrame>
   )
 }

@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import Paper from '@mui/material/Paper'
-import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
-import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { TabList, Tab } from '@astryxdesign/core/TabList'
+import { ArrowLeft } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
 import { fromMonthString, toMonthString, monthRange } from '@/components/Receivables/monthUtils'
 import { useDailySales, useUpsertDailySale } from '@/hooks/billing/useDailySales'
@@ -28,10 +27,12 @@ function currentYearMonth() {
   return toMonthString(new Date()) ?? '2026-01'
 }
 
+const TABS = { daily: 'daily', fixed: 'fixed' }
+
 export function DailySalesPage() {
   const navigate = useNavigate()
   const [monthValue, setMonthValue] = useState(currentYearMonth)
-  const [tab, setTab] = useState(0)
+  const [tab, setTab] = useState(TABS.daily)
   const [error, setError] = useState(null)
 
   const { year, month } = fromMonthString(monthValue) ?? { year: 2026, month: 1 }
@@ -106,77 +107,84 @@ export function DailySalesPage() {
   }
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        width: '100%',
-        minWidth: 0,
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      }}
-    >
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <IconButton onClick={() => navigate(-1)} aria-label="戻る">
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4" component="h1">
-          売上管理
-        </Typography>
-        <Box sx={{ flex: 1 }} />
-        <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
-      </Box>
+    <PageFrame>
+      <VStack gap={4}>
+        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
+          <HStack gap={2} vAlign="center">
+            <IconButton
+              label="戻る"
+              icon={<ArrowLeft />}
+              variant="ghost"
+              onClick={() => navigate(-1)}
+            />
+            <Heading level={1}>売上管理</Heading>
+          </HStack>
+          <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
+        </HStack>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {dailyQuery.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          売上データの取得に失敗: {dailyQuery.error.message}
-        </Alert>
-      )}
-      {fixedExpensesQuery.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          月額固定経費の取得に失敗: {fixedExpensesQuery.error.message}
-        </Alert>
-      )}
-      {fixedExpensesCarriedOver && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          前月の月額固定経費を当月へ引き継ぎました。金額は必要に応じて修正してください。
-        </Alert>
-      )}
+        {error ? (
+          <Banner
+            status="error"
+            title={error}
+            isDismissable
+            onDismiss={() => setError(null)}
+            collapsible={false}
+          />
+        ) : null}
+        {dailyQuery.error ? (
+          <Banner
+            status="error"
+            title={`売上データの取得に失敗: ${dailyQuery.error.message}`}
+            collapsible={false}
+          />
+        ) : null}
+        {fixedExpensesQuery.error ? (
+          <Banner
+            status="error"
+            title={`月額固定経費の取得に失敗: ${fixedExpensesQuery.error.message}`}
+            collapsible={false}
+          />
+        ) : null}
+        {fixedExpensesCarriedOver ? (
+          <Banner
+            status="info"
+            title="前月の月額固定経費を当月へ引き継ぎました。金額は必要に応じて修正してください。"
+            collapsible={false}
+          />
+        ) : null}
 
-      <Stack spacing={2}>
         <MonthlySummary summary={summary} />
 
-        <Paper sx={{ minWidth: 0 }}>
-          <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ px: 2 }}>
-            <Tab label="日次売上" />
-            <Tab label="月額固定経費" />
-          </Tabs>
-          <Box sx={{ p: 2, minWidth: 0 }}>
-            {tab === 0 && (
-              <DailySalesTable
-                year={year}
-                month={month}
-                rows={dailyRows}
-                receivableByDate={receivableByDate}
-                onUpsert={handleDailyUpsert}
-              />
-            )}
-            {tab === 1 && billingMonth && (
-              <MonthlyFixedExpensesPanel
-                billingMonth={billingMonth}
-                rows={fixedExpenses}
-                onUpsert={handleFixedUpsert}
-                onDelete={handleFixedDelete}
-              />
-            )}
-          </Box>
-        </Paper>
-      </Stack>
-    </Box>
+        <Card padding={2}>
+          <VStack gap={3}>
+            <TabList value={tab} onChange={setTab} role="tablist" hasDivider>
+              <Tab value={TABS.daily} label="日次売上" panelId="sales-panel-daily" />
+              <Tab value={TABS.fixed} label="月額固定経費" panelId="sales-panel-fixed" />
+            </TabList>
+            {tab === TABS.daily ? (
+              <VStack id="sales-panel-daily" role="tabpanel" gap={0}>
+                <DailySalesTable
+                  year={year}
+                  month={month}
+                  rows={dailyRows}
+                  receivableByDate={receivableByDate}
+                  onUpsert={handleDailyUpsert}
+                />
+              </VStack>
+            ) : null}
+            {tab === TABS.fixed && billingMonth ? (
+              <VStack id="sales-panel-fixed" role="tabpanel" gap={0}>
+                <MonthlyFixedExpensesPanel
+                  billingMonth={billingMonth}
+                  rows={fixedExpenses}
+                  onUpsert={handleFixedUpsert}
+                  onDelete={handleFixedDelete}
+                />
+              </VStack>
+            ) : null}
+          </VStack>
+        </Card>
+      </VStack>
+    </PageFrame>
   )
 }

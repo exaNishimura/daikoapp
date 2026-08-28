@@ -1,18 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Paper from '@mui/material/Paper'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
-import Divider from '@mui/material/Divider'
-import MenuItem from '@mui/material/MenuItem'
-import TextField from '@mui/material/TextField'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import DownloadIcon from '@mui/icons-material/Download'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Divider } from '@astryxdesign/core/Divider'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+import { ArrowLeft, Download, Upload } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
 import { fromMonthString, toMonthString } from '@/components/Receivables/monthUtils'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
@@ -44,6 +43,18 @@ function downloadTextFile(filename, content, mimeType = 'text/csv;charset=utf-8'
   a.remove()
   URL.revokeObjectURL(url)
 }
+
+const INVOICED_OPTIONS = [
+  { value: 'all', label: '全て' },
+  { value: 'unbilled', label: '未請求のみ' },
+  { value: 'billed', label: '請求済のみ' },
+]
+
+const PAID_OPTIONS = [
+  { value: 'all', label: '全て' },
+  { value: 'paid', label: '入金済のみ' },
+  { value: 'unpaid', label: '未入金のみ' },
+]
 
 export function ReceivablesListPage() {
   const navigate = useNavigate()
@@ -146,49 +157,39 @@ export function ReceivablesListPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 2,
-          flexWrap: 'wrap',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate(-1)} aria-label="戻る">
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h4" component="h1">
-            売掛一覧
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="text"
-            size="small"
-            startIcon={<UploadFileIcon />}
-            onClick={() => navigate('/admin/receivables/import')}
-          >
-            Excel インポート
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={handleExportCsv}
-            disabled={receivablesQuery.isLoading || rows.length === 0}
-          >
-            CSV エクスポート
-          </Button>
-        </Stack>
-      </Box>
+    <PageFrame>
+      <VStack gap={4}>
+        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
+          <HStack gap={2} vAlign="center">
+            <IconButton
+              label="戻る"
+              icon={<ArrowLeft />}
+              variant="ghost"
+              onClick={() => navigate(-1)}
+            />
+            <Heading level={1}>売掛一覧</Heading>
+          </HStack>
+          <HStack gap={1} wrap="wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Upload />}
+              label="Excel インポート"
+              onClick={() => navigate('/admin/receivables/import')}
+            />
+            <Button
+              variant="secondary"
+              icon={<Download />}
+              label="CSV エクスポート"
+              onClick={handleExportCsv}
+              isDisabled={receivablesQuery.isLoading || rows.length === 0}
+            />
+          </HStack>
+        </HStack>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="flex-start">
-          <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
-          <Box sx={{ minWidth: 220 }}>
+        <Card padding={3}>
+          <HStack gap={2} wrap="wrap" vAlign="start">
+            <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
             <CompanySelect
               companies={allCompanies}
               value={companyId}
@@ -196,115 +197,109 @@ export function ReceivablesListPage() {
               includeInactive
               label="取引先 (全て)"
             />
-          </Box>
-          <TextField
-            select
-            size="small"
-            label="請求状態"
-            value={invoicedFilter}
-            onChange={(e) => setInvoicedFilter(e.target.value)}
-            sx={{ minWidth: 140 }}
-          >
-            <MenuItem value="all">全て</MenuItem>
-            <MenuItem value="unbilled">未請求のみ</MenuItem>
-            <MenuItem value="billed">請求済のみ</MenuItem>
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="入金状態"
-            value={paidFilter}
-            onChange={(e) => setPaidFilter(e.target.value)}
-            sx={{ minWidth: 140 }}
-          >
-            <MenuItem value="all">全て</MenuItem>
-            <MenuItem value="paid">入金済のみ</MenuItem>
-            <MenuItem value="unpaid">未入金のみ</MenuItem>
-          </TextField>
-        </Stack>
-      </Paper>
+            <Selector
+              label="請求状態"
+              options={INVOICED_OPTIONS}
+              value={invoicedFilter}
+              onChange={setInvoicedFilter}
+              size="sm"
+            />
+            <Selector
+              label="入金状態"
+              options={PAID_OPTIONS}
+              value={paidFilter}
+              onChange={setPaidFilter}
+              size="sm"
+            />
+          </HStack>
+        </Card>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Stack direction="row" spacing={3} divider={<Divider orientation="vertical" flexItem />}>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              件数
-            </Typography>
-            <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              {summary.count}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              合計金額
-            </Typography>
-            <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              ¥{summary.totalAmount.toLocaleString('ja-JP')}
-            </Typography>
-          </Box>
-          {summary.byCompany.length > 0 && (
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="caption" color="text.secondary">
-                企業別合計 (上位)
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
-                {summary.byCompany.slice(0, 6).map((c) => (
-                  <Box
-                    key={c.companyId}
-                    sx={{
-                      px: 1,
-                      py: 0.25,
-                      borderRadius: 1,
-                      bgcolor: 'action.selected',
-                      fontSize: 13,
-                    }}
-                  >
-                    {c.companyName} ×{c.count} / ¥{c.total.toLocaleString('ja-JP')}
-                  </Box>
-                ))}
-                {summary.byCompany.length > 6 && (
-                  <Typography variant="caption" color="text.secondary">
-                    ...他 {summary.byCompany.length - 6} 社
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-          )}
-        </Stack>
-      </Paper>
+        <Card padding={3}>
+          <HStack gap={3} wrap="wrap" vAlign="start">
+            <VStack gap={0}>
+              <Text size="sm" color="secondary">
+                件数
+              </Text>
+              <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {summary.count}
+              </Text>
+            </VStack>
+            <Divider orientation="vertical" />
+            <VStack gap={0}>
+              <Text size="sm" color="secondary">
+                合計金額
+              </Text>
+              <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                ¥{summary.totalAmount.toLocaleString('ja-JP')}
+              </Text>
+            </VStack>
+            {summary.byCompany.length > 0 ? (
+              <VStack gap={1}>
+                <Text size="sm" color="secondary">
+                  企業別合計 (上位)
+                </Text>
+                <HStack gap={1} wrap="wrap">
+                  {summary.byCompany.slice(0, 6).map((c) => (
+                    <Token
+                      key={c.companyId}
+                      size="sm"
+                      label={`${c.companyName} ×${c.count} / ¥${c.total.toLocaleString('ja-JP')}`}
+                    />
+                  ))}
+                  {summary.byCompany.length > 6 ? (
+                    <Text size="sm" color="secondary">
+                      ...他 {summary.byCompany.length - 6} 社
+                    </Text>
+                  ) : null}
+                </HStack>
+              </VStack>
+            ) : null}
+          </HStack>
+        </Card>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
-      {receivablesQuery.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          売掛データの取得に失敗: {receivablesQuery.error.message}
-        </Alert>
-      )}
+        {error ? (
+          <Banner
+            status="error"
+            title={error}
+            isDismissable
+            onDismiss={() => setError(null)}
+            collapsible={false}
+          />
+        ) : null}
+        {success ? (
+          <Banner
+            status="success"
+            title={success}
+            isDismissable
+            onDismiss={() => setSuccess(null)}
+            collapsible={false}
+          />
+        ) : null}
+        {receivablesQuery.error ? (
+          <Banner
+            status="error"
+            title={`売掛データの取得に失敗: ${receivablesQuery.error.message}`}
+            collapsible={false}
+          />
+        ) : null}
 
-      <ReceivablesAddRow
-        companies={allCompanies}
-        year={year}
-        month={month}
-        onCreate={handleCreate}
-        isSaving={createMutation.isPending}
-      />
+        <ReceivablesAddRow
+          companies={allCompanies}
+          year={year}
+          month={month}
+          onCreate={handleCreate}
+          isSaving={createMutation.isPending}
+        />
 
-      <ReceivablesTable
-        rows={rows}
-        companies={allCompanies}
-        options={{ year, month }}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
-        isSaving={isMutating}
-      />
-    </Box>
+        <ReceivablesTable
+          rows={rows}
+          companies={allCompanies}
+          options={{ year, month }}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+          isSaving={isMutating}
+        />
+      </VStack>
+    </PageFrame>
   )
 }

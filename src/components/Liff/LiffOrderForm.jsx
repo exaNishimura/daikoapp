@@ -1,21 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
-import FormControl from '@mui/material/FormControl'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
-import Select from '@mui/material/Select'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import { useEffect, useState } from 'react'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { DateInput } from '@astryxdesign/core/DateInput'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Heading } from '@astryxdesign/core/Heading'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import {
   callLineIntakeApi,
   fetchLiffNightOccupancy,
@@ -39,49 +33,10 @@ import {
   isLiffNowAvailable,
   nextLiffPickupAt,
 } from '@/utils/liffPickupTime'
+import { snapshotDiscount } from '../../../shared/lineIntake/discount.js'
 import './LiffOrderForm.css'
 
 const LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID || ''
-
-function loadPlacesAutocomplete(inputEl, onPlace) {
-  if (!window.google?.maps?.places || !inputEl) return null
-  const ac = new window.google.maps.places.Autocomplete(inputEl, {
-    componentRestrictions: { country: 'jp' },
-    fields: ['formatted_address', 'name'],
-  })
-  ac.addListener('place_changed', () => {
-    const place = ac.getPlace()
-    const text = place.formatted_address || place.name || ''
-    onPlace(text)
-  })
-  return ac
-}
-
-function ensureMapsScript() {
-  return new Promise((resolve, reject) => {
-    if (window.google?.maps?.places) {
-      resolve()
-      return
-    }
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    if (!key) {
-      reject(new Error('VITE_GOOGLE_MAPS_API_KEY missing'))
-      return
-    }
-    const existing = document.querySelector('script[data-line-places]')
-    if (existing) {
-      existing.addEventListener('load', () => resolve())
-      return
-    }
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&language=ja`
-    script.async = true
-    script.dataset.linePlaces = '1'
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Maps script failed'))
-    document.head.appendChild(script)
-  })
-}
 
 async function initLiffUserId() {
   const params = new URLSearchParams(window.location.search)
@@ -139,6 +94,11 @@ function formatCheckHint(hint) {
   return `不可: ${hint.reason}`
 }
 
+function resultBannerStatus(type) {
+  if (type === 'tentative') return 'success'
+  return 'warning'
+}
+
 export function LiffOrderForm() {
   const [userId, setUserId] = useState(null)
   const nowAvailable = isLiffNowAvailable()
@@ -157,8 +117,6 @@ export function LiffOrderForm() {
     phoneLocks: [],
     settings: {},
   })
-  const pickupRef = useRef(null)
-  const dropoffRef = useRef(null)
   const nightDate = unit.pickup_date || ''
 
   const nightSlots = buildLiffNightSlots({
@@ -236,25 +194,6 @@ export function LiffOrderForm() {
     if (!userId) return
     listMyLineUnits(userId).then(({ data }) => setMyUnits(data || []))
   }, [userId, result])
-
-  useEffect(() => {
-    ensureMapsScript()
-      .then(() => {
-        if (pickupRef.current) {
-          loadPlacesAutocomplete(pickupRef.current, (text) => {
-            setUnit((prev) => ({ ...prev, pickup_address: text }))
-          })
-        }
-        if (dropoffRef.current) {
-          loadPlacesAutocomplete(dropoffRef.current, (text) => {
-            setUnit((prev) => ({ ...prev, dropoff_address: text }))
-          })
-        }
-      })
-      .catch(() => {
-        /* Places なしでも手入力可 */
-      })
-  }, [])
 
   const updateUnit = (patch) => {
     setUnit((prev) => ({ ...prev, ...patch }))
@@ -388,222 +327,231 @@ export function LiffOrderForm() {
     setMyUnits(data || [])
   }
 
+  const handleConfirmOpenChange = (isOpen) => {
+    if (!isOpen && !submitting) setConfirmOpen(false)
+  }
+
+  const discountSnap =
+    hint?.discount ?? snapshotDiscount(occupancy.settings?.discount_config)
+  const discountLine = discountSnap.applied
+    ? `LINE割引あり（${discountSnap.label}）`
+    : 'LINE割引なし'
+
   return (
-    <Box className="liff-order-form">
-      <Typography variant="h5" className="liff-order-form__brand" gutterBottom>
-        代行運転 受付
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={2}>
-        24時間受付 / LINE割引あり
-        {hint?.discount?.applied ? `（${hint.discount.label}）` : '（500円引き）'}
-      </Typography>
+    <VStack gap={4} className="liff-order-form">
+      <VStack gap={1}>
+        <Heading level={1} className="liff-order-form__brand">
+          代行運転 受付
+        </Heading>
+        <Text color="secondary">24時間受付 / {discountLine}</Text>
+      </VStack>
 
-      <Alert severity="info" sx={{ mb: 2 }}>
-        1回の予約は1台までです。2台以上ご利用の場合は、それぞれの車の持ち主がLINEから予約してください。
-      </Alert>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {result && (
-        <Alert severity={result.type === 'tentative' ? 'success' : 'warning'} sx={{ mb: 2 }}>
-          {result.message}
-          {result.discount?.applied ? ` / ${result.discount.label}` : ''}
-        </Alert>
-      )}
-
-      <Typography variant="caption" display="block" mb={1}>
-        userId: {userId || '取得中…'}
-      </Typography>
-
-      {nowAvailable ? (
-        <RadioGroup
-          row
-          value={orderType}
-          onChange={(e) => setOrderType(e.target.value)}
-          sx={{ mb: 2 }}
-        >
-          <FormControlLabel value="NOW" control={<Radio />} label="今すぐ" />
-          <FormControlLabel value="SCHEDULED" control={<Radio />} label="日時指定" />
-        </RadioGroup>
-      ) : null}
-
-      <TextField
-        label="連絡先電話番号"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        fullWidth
-        required
-        sx={{ mb: 2 }}
+      <Banner
+        status="info"
+        title="1回の予約は1台までです。2台以上ご利用の場合は、それぞれの車の持ち主がLINEから予約してください。"
+        collapsible={false}
       />
 
-      <Stack spacing={1.5} className="liff-order-form__unit" mb={2}>
+      {error ? <Banner status="error" title={error} collapsible={false} /> : null}
+      {result ? (
+        <Banner
+          status={resultBannerStatus(result.type)}
+          title={`${result.message}${result.discount?.applied ? ` / ${result.discount.label}` : ''}`}
+          collapsible={false}
+        />
+      ) : null}
+
+      <Text color="secondary">userId: {userId || '取得中…'}</Text>
+
+      {nowAvailable ? (
+        <RadioList
+          label="受付方法"
+          isLabelHidden
+          value={orderType}
+          onChange={setOrderType}
+          orientation="horizontal"
+        >
+          <RadioListItem value="NOW" label="今すぐ" />
+          <RadioListItem value="SCHEDULED" label="日時指定" />
+        </RadioList>
+      ) : null}
+
+      <TextInput
+        label="連絡先電話番号"
+        value={phone}
+        onChange={setPhone}
+        isRequired
+        width="100%"
+      />
+
+      <VStack gap={3} className="liff-order-form__unit">
         {orderType === 'SCHEDULED' ? (
-          <Stack spacing={1}>
-            <TextField
+          <VStack gap={2}>
+            <DateInput
               label="希望日（その夜）"
-              type="date"
-              value={unit.pickup_date}
-              onChange={(e) => updateUnit({ pickup_date: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              inputProps={{ min: getMinLiffPickupDate() }}
-              fullWidth
-              required
+              value={unit.pickup_date || undefined}
+              onChange={(value) => updateUnit({ pickup_date: value || '' })}
+              min={getMinLiffPickupDate()}
+              isRequired
+              weekStartsOn="mon"
+              width="100%"
             />
-            <Stack direction="row" spacing={1.5} useFlexGap>
-              <FormControl sx={{ flex: 1 }} required>
-                <InputLabel id="liff-hour">時</InputLabel>
-                <Select
-                  labelId="liff-hour"
-                  label="時"
-                  value={
-                    unit.pickup_hour === '' || unit.pickup_hour == null ? '' : unit.pickup_hour
+            <HStack gap={3}>
+              <Selector
+                label="時"
+                isRequired
+                width="100%"
+                value={
+                  unit.pickup_hour === '' || unit.pickup_hour == null
+                    ? undefined
+                    : String(unit.pickup_hour)
+                }
+                onChange={(next) => updateUnitHour(next === '' ? '' : Number(next))}
+                options={LIFF_PICKUP_HOURS.map((hour) => ({
+                  value: String(hour),
+                  label: formatLiffHourOptionLabel(hour, nightSlots),
+                  disabled: !hourHasAvailable(nightSlots, hour),
+                }))}
+              />
+              <Selector
+                label="分"
+                isRequired
+                width="100%"
+                value={
+                  unit.pickup_minute === '' || unit.pickup_minute == null
+                    ? undefined
+                    : String(unit.pickup_minute)
+                }
+                onChange={(next) =>
+                  updateUnit({
+                    pickup_minute: next === '' ? '' : Number(next),
+                  })
+                }
+                options={LIFF_PICKUP_MINUTES.map((minute) => {
+                  const slot = nightSlots.find(
+                    (s) => s.hour === unit.pickup_hour && s.minute === minute
+                  ) || { minute, past: false, booked: false, available: true }
+                  return {
+                    value: String(minute),
+                    label: formatLiffMinuteOptionLabel(slot),
+                    disabled: !slot.available,
                   }
-                  onChange={(e) =>
-                    updateUnitHour(e.target.value === '' ? '' : Number(e.target.value))
-                  }
-                >
-                  {LIFF_PICKUP_HOURS.map((hour) => (
-                    <MenuItem
-                      key={hour}
-                      value={hour}
-                      disabled={!hourHasAvailable(nightSlots, hour)}
-                    >
-                      {formatLiffHourOptionLabel(hour, nightSlots)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl sx={{ flex: 1 }} required>
-                <InputLabel id="liff-minute">分</InputLabel>
-                <Select
-                  labelId="liff-minute"
-                  label="分"
-                  value={
-                    unit.pickup_minute === '' || unit.pickup_minute == null
-                      ? ''
-                      : unit.pickup_minute
-                  }
-                  onChange={(e) =>
-                    updateUnit({
-                      pickup_minute: e.target.value === '' ? '' : Number(e.target.value),
-                    })
-                  }
-                >
-                  {LIFF_PICKUP_MINUTES.map((minute) => {
-                    const slot = nightSlots.find(
-                      (s) => s.hour === unit.pickup_hour && s.minute === minute
-                    ) || { minute, past: false, booked: false, available: true }
-                    return (
-                      <MenuItem key={minute} value={minute} disabled={!slot.available}>
-                        {formatLiffMinuteOptionLabel(slot)}
-                      </MenuItem>
-                    )
-                  })}
-                </Select>
-              </FormControl>
-            </Stack>
-            <Typography className="liff-order-form__pickup-note" component="p">
+                })}
+              />
+            </HStack>
+            <Text className="liff-order-form__pickup-note">
               ※ 0時〜5時は翌朝です。日付は「お酒を飲む夜」を選んでください
-            </Typography>
+            </Text>
             {unitPickupAt(unit) ? (
-              <Typography className="liff-order-form__pickup-preview" component="p">
+              <Text className="liff-order-form__pickup-preview">
                 {formatLiffPickupPreview(unitPickupAt(unit))}
-              </Typography>
+              </Text>
             ) : null}
-          </Stack>
+          </VStack>
         ) : null}
-        <TextField
+        <PlacesAutocompleteField
           label="お迎え先"
           value={unit.pickup_address}
-          onChange={(e) => updateUnit({ pickup_address: e.target.value })}
-          inputRef={pickupRef}
-          fullWidth
+          onChange={(text) => updateUnit({ pickup_address: text })}
           required
         />
-        <TextField
+        <PlacesAutocompleteField
           label="お帰り先"
           value={unit.dropoff_address}
-          onChange={(e) => updateUnit({ dropoff_address: e.target.value })}
-          inputRef={dropoffRef}
-          fullWidth
+          onChange={(text) => updateUnit({ dropoff_address: text })}
           required
         />
-        <TextField
+        <TextInput
           label="車両情報"
           value={unit.vehicle_info}
-          onChange={(e) => updateUnit({ vehicle_info: e.target.value })}
-          fullWidth
-          required
+          onChange={(value) => updateUnit({ vehicle_info: value })}
+          isRequired
+          width="100%"
           placeholder="車種・色・ナンバー等"
         />
-      </Stack>
+      </VStack>
 
-      <Stack direction="row" spacing={1} mb={2} flexWrap="wrap">
-        <Button onClick={checkHint}>最短目安・可否を確認</Button>
-      </Stack>
+      <Button label="最短目安・可否を確認" variant="secondary" onClick={checkHint} />
 
-      {hint && (
-        <Alert severity={hint.ok ? 'info' : 'warning'} sx={{ mb: 2 }}>
-          {formatCheckHint(hint)}
-        </Alert>
-      )}
+      {hint ? (
+        <Banner
+          status={hint.ok ? 'info' : 'warning'}
+          title={formatCheckHint(hint)}
+          collapsible={false}
+        />
+      ) : null}
 
       <Button
-        variant="contained"
-        fullWidth
+        label="申し込む"
+        variant="primary"
+        width="100%"
         onClick={requestConfirm}
-        disabled={submitting || !userId}
-      >
-        申し込む
-      </Button>
+        isDisabled={submitting || !userId}
+        isLoading={submitting}
+      />
 
-      <Dialog
-        open={confirmOpen}
-        onClose={submitting ? undefined : () => setConfirmOpen(false)}
-        aria-labelledby="liff-confirm-title"
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle id="liff-confirm-title">予約内容の確認</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ pt: 0.5 }}>{confirmMessage}</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)} disabled={submitting}>
-            戻る
-          </Button>
-          <Button variant="contained" onClick={submit} disabled={submitting}>
-            申し込む
-          </Button>
-        </DialogActions>
+      <Dialog isOpen={confirmOpen} onOpenChange={handleConfirmOpenChange} purpose="info">
+        <Layout
+          height="auto"
+          padding={4}
+          header={
+            <DialogHeader title="予約内容の確認" onOpenChange={handleConfirmOpenChange} />
+          }
+          content={
+            <LayoutContent>
+              <Text>{confirmMessage}</Text>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} hAlign="end" wrap="wrap">
+                <Button
+                  label="戻る"
+                  variant="secondary"
+                  onClick={() => setConfirmOpen(false)}
+                  isDisabled={submitting}
+                />
+                <Button
+                  label="申し込む"
+                  variant="primary"
+                  onClick={submit}
+                  isDisabled={submitting}
+                  isLoading={submitting}
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
 
-      <Typography variant="subtitle1" mt={3} mb={1}>
-        自分の予約（キャンセル可 / 時間変更は再申込）
-      </Typography>
-      <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-        ※ 時間の直接変更はできません。キャンセル後に再度お申し込みください。
-      </Typography>
-      <Stack spacing={1}>
+      <VStack gap={1}>
+        <Heading level={3}>自分の予約（キャンセル可 / 時間変更は再申込）</Heading>
+        <Text color="secondary">
+          ※ 時間の直接変更はできません。キャンセル後に再度お申し込みください。
+        </Text>
+      </VStack>
+      <VStack gap={2}>
         {myUnits.map((u) => (
-          <Box key={u.id} className="liff-order-form__my-unit">
-            <Typography variant="body2">
+          <HStack
+            key={u.id}
+            className="liff-order-form__my-unit"
+            hAlign="between"
+            vAlign="center"
+            gap={2}
+          >
+            <Text>
               {new Date(u.pickup_at).toLocaleString('ja-JP')} [{u.status}]
-            </Typography>
-            <Button size="small" color="error" onClick={() => cancelUnit(u.id)}>
-              キャンセル
-            </Button>
-          </Box>
+            </Text>
+            <Button
+              label="キャンセル"
+              size="sm"
+              variant="destructive"
+              onClick={() => cancelUnit(u.id)}
+            />
+          </HStack>
         ))}
-        {myUnits.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            予約はありません
-          </Typography>
-        )}
-      </Stack>
-    </Box>
+        {myUnits.length === 0 ? <Text color="secondary">予約はありません</Text> : null}
+      </VStack>
+    </VStack>
   )
 }

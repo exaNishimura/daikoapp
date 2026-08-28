@@ -1,23 +1,23 @@
 import { useEffect } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
 import { getMinBusinessDateTime } from '@/utils/businessDayUtils'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import { useOrderForm } from '@/hooks/useOrderForm'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import IconButton from '@mui/material/IconButton'
-import AddIcon from '@mui/icons-material/Add'
-import DeleteIcon from '@mui/icons-material/Delete'
-import Stack from '@mui/material/Stack'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { DateTimeInput } from '@astryxdesign/core/DateTimeInput'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, Layout, LayoutContent, LayoutFooter, StackItem, VStack } from '@astryxdesign/core/Layout'
+import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
+import { Text } from '@astryxdesign/core/Text'
+import { TextArea } from '@astryxdesign/core/TextArea'
+import { TextInput } from '@astryxdesign/core/TextInput'
+
+function namedChange(handleChange, name) {
+  return (value) => handleChange({ target: { name, value: value ?? '' } })
+}
 
 export function OrderFormModal({ onClose, onOrderCreated, open }) {
   const {
@@ -27,7 +27,6 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     updateField,
     setErrors,
     handleChange,
-    handleScheduledBlur,
     addWaypoint,
     updateWaypoint,
     removeWaypoint,
@@ -35,12 +34,15 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     reset,
   } = useOrderForm({ onSuccess: onOrderCreated })
 
-  // モーダルが開かれたタイミングでフォームをリセット
   useEffect(() => {
     if (open) {
       reset()
     }
   }, [open, reset])
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
 
   const handlePickupAddressChange = (address) => {
     updateField('pickup_address', address)
@@ -53,212 +55,199 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      disableEnforceFocus={true}
-      disableAutoFocus={false}
-      PaperProps={{
-        style: {
-          overflow: 'visible',
-          position: 'relative',
-        },
-      }}
-      sx={{
-        '& .MuiDialog-container': {
-          overflow: 'visible',
-        },
-      }}
-    >
-      <DialogTitle>新規依頼（電話）</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          新しい依頼情報を入力してください
-        </Typography>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+      <VStack as="form" onSubmit={handleSubmit} gap={0}>
+        <Layout
+          height="auto"
+          padding={4}
+          header={<DialogHeader title="新規依頼（電話）" onOpenChange={handleOpenChange} />}
+          content={
+            <LayoutContent>
+              <VStack gap={3}>
+                <Text color="secondary">新しい依頼情報を入力してください</Text>
 
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
-        >
-          <Box>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              予約種別 <span style={{ color: '#ff4444' }}>*</span>
-            </Typography>
-            <RadioGroup row name="order_type" value={formData.order_type} onChange={handleChange}>
-              <FormControlLabel value="NOW" control={<Radio />} label="今すぐ" />
-              <FormControlLabel value="SCHEDULED" control={<Radio />} label="日時指定" />
-            </RadioGroup>
-          </Box>
-
-          {formData.order_type === 'SCHEDULED' && (
-            <TextField
-              label="予約日時（15分刻み）"
-              type="datetime-local"
-              name="scheduled_at"
-              value={formData.scheduled_at}
-              onChange={handleChange}
-              onBlur={handleScheduledBlur}
-              error={!!errors.scheduled_at}
-              helperText={
-                errors.scheduled_at || '15分刻みで選択してください（営業時間: 18:00〜翌06:00）'
-              }
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              inputProps={{
-                step: 900,
-                min: getMinBusinessDateTime(),
-              }}
-              required
-            />
-          )}
-
-          <TextField
-            label="お迎え場所"
-            name="pickup_location"
-            value={formData.pickup_location}
-            onChange={handleChange}
-            error={!!errors.pickup_location}
-            helperText={errors.pickup_location}
-            placeholder="例: モンガータ"
-            fullWidth
-          />
-
-          <PlacesAutocompleteField
-            label="出発地"
-            name="pickup_address"
-            value={formData.pickup_address}
-            onChange={handlePickupAddressChange}
-            error={errors.pickup_address}
-            placeholder="例: 三重県鈴鹿市..."
-            required
-          />
-
-          <PlacesAutocompleteField
-            label="目的地"
-            name="dropoff_address"
-            value={formData.dropoff_address}
-            onChange={handleDropoffAddressChange}
-            error={errors.dropoff_address}
-            placeholder="例: 三重県鈴鹿市..."
-            required
-          />
-
-          <Box>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 1,
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                経由地
-              </Typography>
-              <Button size="small" startIcon={<AddIcon />} onClick={addWaypoint}>
-                追加
-              </Button>
-            </Box>
-            <Stack spacing={1.5}>
-              {formData.waypoints.map((waypoint, index) => (
-                <Box
-                  key={index}
-                  sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, flex: 1 }}
+                <RadioList
+                  label="予約種別"
+                  value={formData.order_type}
+                  onChange={namedChange(handleChange, 'order_type')}
+                  orientation="horizontal"
+                  isRequired
+                  htmlName="order_type"
+                  width="100%"
                 >
-                  <Box sx={{ flex: 1 }}>
-                    <PlacesAutocompleteField
-                      label={`経由地 ${index + 1}`}
-                      value={waypoint}
-                      onChange={(address) => updateWaypoint(index, address)}
-                      placeholder="例: 三重県鈴鹿市..."
+                  <RadioListItem label="今すぐ" value="NOW" />
+                  <RadioListItem label="日時指定" value="SCHEDULED" />
+                </RadioList>
+
+                {formData.order_type === 'SCHEDULED' ? (
+                  <DateTimeInput
+                    label="予約日時（15分刻み）"
+                    value={formData.scheduled_at || undefined}
+                    onChange={namedChange(handleChange, 'scheduled_at')}
+                    description="15分刻みで選択してください（営業時間: 18:00〜翌06:00）"
+                    status={
+                      errors.scheduled_at
+                        ? { type: 'error', message: errors.scheduled_at }
+                        : undefined
+                    }
+                    min={getMinBusinessDateTime()}
+                    hourFormat="24h"
+                    timeIncrement={15}
+                    timeOptionInterval={15}
+                    isRequired
+                    width="100%"
+                  />
+                ) : null}
+
+                <TextInput
+                  label="お迎え場所"
+                  htmlName="pickup_location"
+                  value={formData.pickup_location}
+                  onChange={namedChange(handleChange, 'pickup_location')}
+                  status={
+                    errors.pickup_location
+                      ? { type: 'error', message: errors.pickup_location }
+                      : undefined
+                  }
+                  placeholder="例: モンガータ"
+                  width="100%"
+                />
+
+                <PlacesAutocompleteField
+                  label="出発地"
+                  name="pickup_address"
+                  value={formData.pickup_address}
+                  onChange={handlePickupAddressChange}
+                  error={errors.pickup_address}
+                  placeholder="例: 三重県鈴鹿市..."
+                  required
+                />
+
+                <PlacesAutocompleteField
+                  label="目的地"
+                  name="dropoff_address"
+                  value={formData.dropoff_address}
+                  onChange={handleDropoffAddressChange}
+                  error={errors.dropoff_address}
+                  placeholder="例: 三重県鈴鹿市..."
+                  required
+                />
+
+                <VStack gap={1.5}>
+                  <HStack hAlign="between" vAlign="center">
+                    <Text weight="medium">経由地</Text>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      label="追加"
+                      icon={<Plus />}
+                      onClick={addWaypoint}
                     />
-                  </Box>
-                  <IconButton onClick={() => removeWaypoint(index)} sx={{ mt: 0.5 }} color="error">
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              ))}
-              {formData.waypoints.length === 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                  経由地はありません
-                </Typography>
-              )}
-            </Stack>
-          </Box>
+                  </HStack>
+                  {formData.waypoints.map((waypoint, index) => (
+                    <HStack key={index} gap={1} vAlign="start">
+                      <StackItem size="fill">
+                        <PlacesAutocompleteField
+                          label={`経由地 ${index + 1}`}
+                          value={waypoint}
+                          onChange={(address) => updateWaypoint(index, address)}
+                          placeholder="例: 三重県鈴鹿市..."
+                        />
+                      </StackItem>
+                      <IconButton
+                        label={`経由地 ${index + 1} を削除`}
+                        icon={<Trash2 />}
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeWaypoint(index)}
+                      />
+                    </HStack>
+                  ))}
+                  {formData.waypoints.length === 0 ? (
+                    <Text color="secondary">経由地はありません</Text>
+                  ) : null}
+                </VStack>
 
-          <TextField
-            label="連絡先電話番号"
-            type="tel"
-            name="contact_phone"
-            value={formData.contact_phone}
-            onChange={handleChange}
-            placeholder="例: 090-1234-5678"
-            fullWidth
-          />
-
-          <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              車情報
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                <TextField
-                  label="車種"
-                  type="text"
-                  name="car_model"
-                  value={formData.car_model}
-                  onChange={handleChange}
-                  placeholder="例: プリウス"
+                <TextInput
+                  label="連絡先電話番号"
+                  htmlName="contact_phone"
+                  value={formData.contact_phone}
+                  onChange={namedChange(handleChange, 'contact_phone')}
+                  placeholder="例: 090-1234-5678"
+                  width="100%"
                 />
-                <TextField
-                  label="色"
-                  type="text"
-                  name="car_color"
-                  value={formData.car_color}
-                  onChange={handleChange}
-                  placeholder="例: 白"
-                />
-              </Box>
-              <TextField
-                label="ナンバー"
-                type="text"
-                name="car_plate"
-                value={formData.car_plate}
-                onChange={handleChange}
-                placeholder="例: 三重500あ1234"
-                fullWidth
-              />
-            </Box>
-            <TextField
-              label="駐車位置メモ"
-              name="parking_note"
-              value={formData.parking_note}
-              onChange={handleChange}
-              multiline
-              rows={3}
-              placeholder="駐車位置やその他のメモ..."
-              fullWidth
-            />
-          </Box>
 
-          {errors.submit && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {errors.submit}
-            </Alert>
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          キャンセル
-        </Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={loading}>
-          {loading ? '保存中...' : '保存'}
-        </Button>
-      </DialogActions>
+                <VStack gap={2}>
+                  <Heading level={3}>車情報</Heading>
+                  <HStack gap={2} wrap="wrap">
+                    <StackItem size="fill">
+                      <TextInput
+                        label="車種"
+                        htmlName="car_model"
+                        value={formData.car_model}
+                        onChange={namedChange(handleChange, 'car_model')}
+                        placeholder="例: プリウス"
+                        width="100%"
+                      />
+                    </StackItem>
+                    <StackItem size="fill">
+                      <TextInput
+                        label="色"
+                        htmlName="car_color"
+                        value={formData.car_color}
+                        onChange={namedChange(handleChange, 'car_color')}
+                        placeholder="例: 白"
+                        width="100%"
+                      />
+                    </StackItem>
+                  </HStack>
+                  <TextInput
+                    label="ナンバー"
+                    htmlName="car_plate"
+                    value={formData.car_plate}
+                    onChange={namedChange(handleChange, 'car_plate')}
+                    placeholder="例: 三重500あ1234"
+                    width="100%"
+                  />
+                  <TextArea
+                    label="駐車位置メモ"
+                    htmlName="parking_note"
+                    value={formData.parking_note}
+                    onChange={namedChange(handleChange, 'parking_note')}
+                    rows={3}
+                    placeholder="駐車位置やその他のメモ..."
+                    width="100%"
+                  />
+                </VStack>
+
+                {errors.submit ? (
+                  <Banner status="error" title={errors.submit} collapsible={false} />
+                ) : null}
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} hAlign="end">
+                <Button
+                  type="button"
+                  label="キャンセル"
+                  variant="secondary"
+                  onClick={onClose}
+                  isDisabled={loading}
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  label={loading ? '保存中...' : '保存'}
+                  isDisabled={loading}
+                  isLoading={loading}
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
+      </VStack>
     </Dialog>
   )
 }

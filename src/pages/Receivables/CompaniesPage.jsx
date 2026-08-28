@@ -16,25 +16,25 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import Alert from '@mui/material/Alert'
-import Chip from '@mui/material/Chip'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import AddIcon from '@mui/icons-material/Add'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import RestoreIcon from '@mui/icons-material/Restore'
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Center } from '@astryxdesign/core/Center'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+import { ArrowLeft, GripVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import {
   useCompanies,
   useCreateCompany,
@@ -53,84 +53,83 @@ function SortableRow({ company, onEdit, onToggleActive, disabled }) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : company.is_active ? 1 : 0.55,
-    backgroundColor: isDragging ? 'rgba(100, 108, 255, 0.08)' : undefined,
+    backgroundColor: isDragging ? 'var(--color-background-blue)' : undefined,
   }
 
   return (
-    <TableRow ref={setNodeRef} style={style} hover>
-      <TableCell width={36}>
-        <Box
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <HStack
           {...attributes}
           {...listeners}
-          sx={{
-            cursor: 'grab',
-            display: 'flex',
-            alignItems: 'center',
-            color: 'text.secondary',
-            '&:active': { cursor: 'grabbing' },
-          }}
+          vAlign="center"
+          style={{ cursor: 'grab' }}
           aria-label="並び替え"
         >
-          <DragIndicatorIcon fontSize="small" />
-        </Box>
+          <GripVertical size={16} color="var(--color-text-secondary)" />
+        </HStack>
       </TableCell>
       <TableCell>
-        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-          {company.name}
-        </Typography>
-        {company.invoice_display_name && company.invoice_display_name !== company.name && (
-          <Typography variant="caption" color="text.secondary">
-            請求書表記: {company.invoice_display_name}
-          </Typography>
-        )}
+        <VStack gap={0}>
+          <Text weight="medium">{company.name}</Text>
+          {company.invoice_display_name && company.invoice_display_name !== company.name ? (
+            <Text size="sm" color="secondary">
+              請求書表記: {company.invoice_display_name}
+            </Text>
+          ) : null}
+        </VStack>
       </TableCell>
       <TableCell>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+        <HStack gap={1} wrap="wrap">
           {(company.aliases ?? []).map((a) => (
-            <Chip key={a} label={a} size="small" variant="outlined" />
+            <Token key={a} size="sm" label={a} />
           ))}
-        </Box>
+        </HStack>
       </TableCell>
-      <TableCell align="right">{company.display_order ?? 0}</TableCell>
+      <TableCell style={{ textAlign: 'right' }}>{company.display_order ?? 0}</TableCell>
       <TableCell>
         {company.is_active ? (
-          <Chip label="有効" color="success" size="small" />
+          <Token size="sm" color="green" label="有効" />
         ) : (
-          <Chip label="無効" size="small" />
+          <Token size="sm" color="gray" label="無効" />
         )}
       </TableCell>
-      <TableCell sx={{ maxWidth: 240, color: 'text.secondary' }}>{company.memo || '—'}</TableCell>
-      <TableCell align="center" width={120}>
-        <IconButton
-          size="small"
-          onClick={() => onEdit(company)}
-          disabled={disabled}
-          color="primary"
-          aria-label="編集"
-        >
-          <EditIcon fontSize="small" />
-        </IconButton>
-        {company.is_active ? (
+      <TableCell>
+        <Text color="secondary">{company.memo || '—'}</Text>
+      </TableCell>
+      <TableCell>
+        <HStack gap={0} hAlign="center">
           <IconButton
-            size="small"
-            onClick={() => onToggleActive(company, false)}
-            disabled={disabled}
-            color="error"
-            aria-label="無効化"
-          >
-            <DeleteOutlineIcon fontSize="small" />
-          </IconButton>
-        ) : (
-          <IconButton
-            size="small"
-            onClick={() => onToggleActive(company, true)}
-            disabled={disabled}
-            color="success"
-            aria-label="有効化"
-          >
-            <RestoreIcon fontSize="small" />
-          </IconButton>
-        )}
+            size="sm"
+            variant="ghost"
+            label="編集"
+            tooltip="編集"
+            icon={<Pencil />}
+            onClick={() => onEdit(company)}
+            isDisabled={disabled}
+          />
+          {company.is_active ? (
+            <IconButton
+              size="sm"
+              variant="destructive"
+              label="無効化"
+              tooltip="無効化"
+              icon={<Trash2 />}
+              onClick={() => onToggleActive(company, false)}
+              isDisabled={disabled}
+            />
+          ) : (
+            <IconButton
+              size="sm"
+              variant="ghost"
+              label="有効化"
+              tooltip="有効化"
+              icon={<RotateCcw />}
+              onClick={() => onToggleActive(company, true)}
+              isDisabled={disabled}
+            />
+          )}
+        </HStack>
       </TableCell>
     </TableRow>
   )
@@ -231,86 +230,87 @@ export function CompaniesPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Box
-        sx={{
-          mb: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 2,
-          flexWrap: 'wrap',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate(-1)} aria-label="戻る">
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h4" component="h1">
-            取引先マスタ
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenNew}
-          disabled={loading}
-        >
-          新規追加
-        </Button>
-      </Box>
+    <PageFrame>
+      <VStack gap={4}>
+        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
+          <HStack gap={2} vAlign="center">
+            <IconButton
+              label="戻る"
+              icon={<ArrowLeft />}
+              variant="ghost"
+              onClick={() => navigate(-1)}
+            />
+            <Heading level={1}>取引先マスタ</Heading>
+          </HStack>
+          <Button
+            variant="primary"
+            icon={<Plus />}
+            label="新規追加"
+            onClick={handleOpenNew}
+            isDisabled={loading}
+          />
+        </HStack>
 
-      {companiesQuery.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          取引先データの取得に失敗: {companiesQuery.error.message}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
+        {companiesQuery.error ? (
+          <Banner
+            status="error"
+            title={`取引先データの取得に失敗: ${companiesQuery.error.message}`}
+            collapsible={false}
+          />
+        ) : null}
+        {error ? (
+          <Banner
+            status="error"
+            title={error}
+            isDismissable
+            onDismiss={() => setError(null)}
+            collapsible={false}
+          />
+        ) : null}
+        {success ? (
+          <Banner
+            status="success"
+            title={success}
+            isDismissable
+            onDismiss={() => setSuccess(null)}
+            collapsible={false}
+          />
+        ) : null}
 
-      {isFetching && !companies.length && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography>読み込み中...</Typography>
-        </Box>
-      )}
+        {isFetching && !companies.length ? (
+          <Center padding={4}>
+            <Spinner />
+          </Center>
+        ) : null}
 
-      {!isFetching && companies.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography color="text.secondary">取引先が登録されていません</Typography>
-        </Box>
-      )}
+        {!isFetching && companies.length === 0 ? (
+          <Center padding={4}>
+            <Text color="secondary">取引先が登録されていません</Text>
+          </Center>
+        ) : null}
 
-      {companies.length > 0 && (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell />
-                <TableCell>名前</TableCell>
-                <TableCell>別名</TableCell>
-                <TableCell align="right">並び順</TableCell>
-                <TableCell>状態</TableCell>
-                <TableCell>メモ</TableCell>
-                <TableCell align="center">操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+        {companies.length > 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={companies.map((c) => c.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <SortableContext
-                items={companies.map((c) => c.id)}
-                strategy={verticalListSortingStrategy}
-              >
+              <Table density="compact" hasHover>
+                <TableHeader>
+                  <TableRow isHeaderRow>
+                    <TableHeaderCell />
+                    <TableHeaderCell>名前</TableHeaderCell>
+                    <TableHeaderCell>別名</TableHeaderCell>
+                    <TableHeaderCell>並び順</TableHeaderCell>
+                    <TableHeaderCell>状態</TableHeaderCell>
+                    <TableHeaderCell>メモ</TableHeaderCell>
+                    <TableHeaderCell>操作</TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {companies.map((c) => (
                     <SortableRow
@@ -322,20 +322,20 @@ export function CompaniesPage() {
                     />
                   ))}
                 </TableBody>
-              </SortableContext>
-            </DndContext>
-          </Table>
-        </TableContainer>
-      )}
+              </Table>
+            </SortableContext>
+          </DndContext>
+        ) : null}
 
-      <CompanyEditDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        company={editing}
-        existingCompanies={companies}
-        onSave={handleSave}
-        loading={isMutating}
-      />
-    </Box>
+        <CompanyEditDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          company={editing}
+          existingCompanies={companies}
+          onSave={handleSave}
+          loading={isMutating}
+        />
+      </VStack>
+    </PageFrame>
   )
 }

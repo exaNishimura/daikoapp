@@ -1,13 +1,9 @@
-import { Link as RouterLink } from 'react-router-dom'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
-import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Link } from '@astryxdesign/core/Link'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
 
 function holdRemainingLabel(holdUntil) {
   if (!holdUntil) return ''
@@ -33,62 +29,56 @@ function holdRemainingLabel(holdUntil) {
  */
 export function LineHoldingAlertDialog({ open, units, onClose }) {
   const count = units?.length ?? 0
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      aria-labelledby="line-holding-alert-title"
-      fullWidth
-      maxWidth="sm"
-    >
-      <DialogTitle id="line-holding-alert-title">LINE仮受付 {count}件</DialogTitle>
-      <DialogContent>
-        <Stack spacing={1.25} sx={{ mt: 0.5 }}>
-          {(units ?? []).map((unit) => {
-            const remain = holdRemainingLabel(unit.hold_until)
-            return (
-              <Box
-                key={unit.id}
-                sx={{
-                  p: 1.25,
-                  border: '1px solid #e3e7ec',
-                  borderRadius: 1,
-                  background: '#fff',
-                }}
-              >
-                <Stack direction="row" spacing={1} flexWrap="wrap" mb={0.5}>
-                  {remain ? <Chip size="small" variant="outlined" label={remain} /> : null}
-                  {unit.uses_extra_capacity ? (
-                    <Chip size="small" color="error" label="要手配" />
-                  ) : null}
-                </Stack>
-                <Typography sx={{ fontWeight: 700, color: '#b45309' }}>
-                  {unit.pickup_at
-                    ? new Date(unit.pickup_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-                    : '—'}
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.25 }}>
-                  {unit.pickup_address || '—'} → {unit.dropoff_address || '—'}
-                </Typography>
-                {unit.line_bookings?.contact_phone ? (
-                  <Typography variant="body2" sx={{ mt: 0.25 }}>
-                    <a href={`tel:${unit.line_bookings.contact_phone}`}>
-                      {unit.line_bookings.contact_phone}
-                    </a>
-                  </Typography>
-                ) : null}
-              </Box>
-            )
-          })}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>閉じる</Button>
-        <Button component={RouterLink} to="/line-queue" variant="contained" onClick={onClose}>
-          LINE仮受付へ
-        </Button>
-      </DialogActions>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+      <Layout
+        height="auto"
+        padding={4}
+        header={<DialogHeader title={`LINE仮受付 ${count}件`} onOpenChange={handleOpenChange} />}
+        content={
+          <LayoutContent>
+            <VStack gap={4}>
+              {(units ?? []).map((unit) => {
+                const remain = holdRemainingLabel(unit.hold_until)
+                const phone = unit.line_bookings?.contact_phone
+                return (
+                  <VStack key={unit.id} gap={1}>
+                    <HStack gap={1} wrap="wrap">
+                      {remain ? <Token size="sm" label={remain} /> : null}
+                      {unit.uses_extra_capacity ? (
+                        <Token size="sm" color="red" label="要手配" />
+                      ) : null}
+                    </HStack>
+                    <Text weight="semibold">
+                      {unit.pickup_at
+                        ? new Date(unit.pickup_at).toLocaleString('ja-JP', {
+                            timeZone: 'Asia/Tokyo',
+                          })
+                        : '—'}
+                    </Text>
+                    <Text>
+                      {unit.pickup_address || '—'} → {unit.dropoff_address || '—'}
+                    </Text>
+                    {phone ? <Link href={`tel:${phone}`}>{phone}</Link> : null}
+                  </VStack>
+                )
+              })}
+            </VStack>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              <Button label="閉じる" variant="secondary" onClick={onClose} />
+              <Button label="LINE仮受付へ" href="/line-queue" variant="primary" onClick={onClose} />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

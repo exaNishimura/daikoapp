@@ -1,35 +1,9 @@
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import Button from '@mui/material/Button'
-import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
-import Typography from '@mui/material/Typography'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-
-const selectSx = {
-  color: '#333',
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#bdbdbd' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666' },
-  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#1976d2' },
-}
-const menuPaperSx = {
-  PaperProps: {
-    sx: {
-      maxHeight: 400,
-      bgcolor: '#ffffff',
-      '& .MuiMenuItem-root': {
-        color: '#333',
-        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-      },
-    },
-  },
-}
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Text } from '@astryxdesign/core/Text'
 
 /**
  * 一括コピー用ダイアログ。
@@ -48,96 +22,69 @@ export function BulkCopyShiftDialog({
 }) {
   const noShiftAvailable = days.every(({ date }) => getShiftsForDate(date).length === 0)
 
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
+
+  const options = days
+    .filter(({ date }) => getShiftsForDate(date).length > 0)
+    .map(({ date, day, dow }) => {
+      const dateShifts = getShiftsForDate(date)
+      return {
+        value: date,
+        label: `${day}日 (${dow}) · ${dateShifts.length}件`,
+        description: dateShifts
+          .map((shift) => `${shift.staff} / ${shift.start} - ${shift.end}`)
+          .join(' / '),
+      }
+    })
+
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      PaperProps={{ sx: { bgcolor: '#ffffff' } }}
-    >
-      <DialogTitle sx={{ color: '#333' }}>一括コピー</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" sx={{ mb: 2, color: '#333' }}>
-          チェックした{selectedCopyDestCount}
-          日に、コピー元のシフトで上書きします（各コピー先の当日のシフト・ステータスはいったんすべて削除されてから複製されます。コピー元の日は対象外です）。
-        </Typography>
-        {noShiftAvailable ? (
-          <Typography variant="body2" sx={{ color: '#c62828' }}>
-            この月にコピー元にできるシフトがありません。
-          </Typography>
-        ) : (
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel sx={{ color: '#666' }}>コピー元の日付</InputLabel>
-            <Select
-              value={bulkCopySourceDate}
-              onChange={(e) => setBulkCopySourceDate(e.target.value)}
-              label="コピー元の日付"
-              displayEmpty
-              renderValue={(selected) => {
-                if (!selected) return ''
-                const d = days.find((x) => x.date === selected)
-                return d ? `${d.day}日 (${d.dow})` : selected
-              }}
-              sx={selectSx}
-              MenuProps={menuPaperSx}
-            >
-              <MenuItem value="" sx={{ display: 'none' }} aria-hidden />
-              {days
-                .filter(({ date }) => getShiftsForDate(date).length > 0)
-                .map(({ date, day, dow }) => {
-                  const dateShifts = getShiftsForDate(date)
-                  return (
-                    <MenuItem key={date} value={date}>
-                      <Box sx={{ width: '100%' }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: dateShifts.length > 0 ? 0.5 : 0,
-                          }}
-                        >
-                          <Typography variant="body1" sx={{ fontWeight: 'medium', color: '#333' }}>
-                            {day}日 ({dow})
-                          </Typography>
-                          <Chip
-                            label={`${dateShifts.length}件`}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        </Box>
-                        <Box sx={{ mt: 0.5 }}>
-                          {dateShifts.map((shift, index) => (
-                            <Typography
-                              key={shift.id || index}
-                              variant="caption"
-                              sx={{ display: 'block', fontSize: '0.75rem', color: '#666' }}
-                            >
-                              {shift.staff} / {shift.start} - {shift.end}
-                            </Typography>
-                          ))}
-                        </Box>
-                      </Box>
-                    </MenuItem>
-                  )
-                })}
-            </Select>
-          </FormControl>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>キャンセル</Button>
-        <Button
-          variant="contained"
-          onClick={onExecute}
-          disabled={loading || !bulkCopySourceDate || noShiftAvailable}
-          startIcon={<ContentCopyIcon />}
-        >
-          複製する
-        </Button>
-      </DialogActions>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+      <Layout
+        height="auto"
+        padding={4}
+        header={<DialogHeader title="一括コピー" onOpenChange={handleOpenChange} />}
+        content={
+          <LayoutContent>
+            <VStack gap={3}>
+              <Text>
+                チェックした{selectedCopyDestCount}
+                日に、コピー元のシフトで上書きします（各コピー先の当日のシフト・ステータスはいったんすべて削除されてから複製されます。コピー元の日は対象外です）。
+              </Text>
+              {noShiftAvailable ? (
+                <Banner
+                  status="error"
+                  title="この月にコピー元にできるシフトがありません。"
+                  collapsible={false}
+                />
+              ) : (
+                <Selector
+                  label="コピー元の日付"
+                  options={options}
+                  value={bulkCopySourceDate}
+                  onChange={setBulkCopySourceDate}
+                  placeholder="コピー元の日付"
+                  width="100%"
+                />
+              )}
+            </VStack>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              <Button label="キャンセル" variant="secondary" onClick={onClose} />
+              <Button
+                label="複製する"
+                variant="primary"
+                onClick={onExecute}
+                isDisabled={loading || !bulkCopySourceDate || noShiftAvailable}
+              />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

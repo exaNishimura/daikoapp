@@ -1,0 +1,29 @@
+dialog:has(.reservation-form-dialog) {
+  overflow-x: hidden;
+  max-width: calc(100vw - var(--spacing-8));
+}
+
+/* Dialog 内 padding と Layout の負 margin の組み合わせで右だけ隙間が出るため、全幅に伸ばす */
+.reservation-form-dialog {
+  width: calc(100% + 32px);
+  max-width: none;
+  margin-inline: -16px;
+  box-sizing: border-box;
+}
+
+.reservation-form-dialog__fields {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reservation-form-dialog input[type='time'],
+.reservation-form-dialog textarea {
+  max-width: 100%;
+}
+
+.reservation-form-dialog__footer {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}

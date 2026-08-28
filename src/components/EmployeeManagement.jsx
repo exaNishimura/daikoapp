@@ -1,5 +1,28 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Center } from '@astryxdesign/core/Center'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Heading } from '@astryxdesign/core/Heading'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import { Switch } from '@astryxdesign/core/Switch'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { Token } from '@astryxdesign/core/Token'
+import { PageFrame } from '@/components/PageFrame'
 import {
   useEmployees,
   useCreateEmployee,
@@ -7,36 +30,6 @@ import {
   useDeleteEmployee,
 } from '@/hooks/useEmployees'
 import { setEmployeeShiftPin, clearEmployeeShiftPin } from '@/services/employeeShiftService'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import IconButton from '@mui/material/IconButton'
-import DeleteIcon from '@mui/icons-material/Delete'
-import EditIcon from '@mui/icons-material/Edit'
-import AddIcon from '@mui/icons-material/Add'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import SaveIcon from '@mui/icons-material/Save'
-import CancelIcon from '@mui/icons-material/Cancel'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Chip from '@mui/material/Chip'
-import Switch from '@mui/material/Switch'
-import FormControlLabel from '@mui/material/FormControlLabel'
 
 const LICENSE_TYPES = ['一種', '二種']
 const DEFAULT_COLORS = [
@@ -51,6 +44,15 @@ const DEFAULT_COLORS = [
   { name: '茶', value: '#A52A2A' },
   { name: 'グレー', value: '#808080' },
 ]
+
+const COLOR_SWATCH_STYLE = {
+  display: 'inline-block',
+  width: 'var(--spacing-4)',
+  height: 'var(--spacing-4)',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--color-border)',
+  flexShrink: 0,
+}
 
 export function EmployeeManagement() {
   const navigate = useNavigate()
@@ -247,335 +249,335 @@ export function EmployeeManagement() {
     }
   }
 
+  const handleFormOpenChange = (isOpen) => {
+    if (!isOpen) handleCloseDialog()
+  }
+
+  const handlePinOpenChange = (isOpen) => {
+    if (!isOpen) handleClosePinDialog()
+  }
+
   return (
-    <Box sx={{ p: 3, maxWidth: '1200px', mx: 'auto' }}>
-      {/* ヘッダー */}
-      <Box
-        sx={{
-          mb: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/shift')} sx={{ mr: 1 }}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h4" component="h1">
-            従業員マスタ
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          disabled={loading}
-        >
-          新規追加
-        </Button>
-      </Box>
+    <PageFrame>
+      <VStack gap={4}>
+        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+          <HStack gap={2} vAlign="center">
+            <IconButton
+              label="シフトへ戻る"
+              tooltip="シフトへ戻る"
+              variant="ghost"
+              icon={<ArrowLeft size={18} />}
+              onClick={() => navigate('/shift')}
+            />
+            <Heading level={1}>従業員マスタ</Heading>
+          </HStack>
+          <Button
+            variant="primary"
+            label="新規追加"
+            icon={<Plus size={16} />}
+            onClick={() => handleOpenDialog()}
+            isDisabled={loading}
+          />
+        </HStack>
 
-      {/* エラー・成功メッセージ */}
-      {fetchError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          従業員データの取得に失敗: {fetchError.message}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
+        {fetchError ? (
+          <Banner
+            status="error"
+            title={`従業員データの取得に失敗: ${fetchError.message}`}
+            collapsible={false}
+          />
+        ) : null}
+        {error ? (
+          <Banner
+            status="error"
+            title={error}
+            isDismissable
+            onDismiss={() => setError(null)}
+            collapsible={false}
+          />
+        ) : null}
+        {success ? (
+          <Banner
+            status="success"
+            title={success}
+            isDismissable
+            onDismiss={() => setSuccess(null)}
+            collapsible={false}
+          />
+        ) : null}
 
-      {/* 従業員一覧 */}
-      {loading && !employees.length && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography>読み込み中...</Typography>
-        </Box>
-      )}
+        {loading && !employees.length ? (
+          <Center padding={8}>
+            <Spinner label="読み込み中..." />
+          </Center>
+        ) : null}
 
-      {!loading && employees.length > 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
+        {!loading && employees.length > 0 ? (
+          <Table hasHover density="compact">
+            <TableHeader>
               <TableRow>
-                <TableCell>名前</TableCell>
-                <TableCell>免許種別</TableCell>
-                <TableCell>色</TableCell>
-                <TableCell align="right">時給</TableCell>
-                <TableCell>状態</TableCell>
-                <TableCell>シフトPIN</TableCell>
-                <TableCell align="right">並び順</TableCell>
-                <TableCell align="center">操作</TableCell>
+                <TableHeaderCell>名前</TableHeaderCell>
+                <TableHeaderCell>免許種別</TableHeaderCell>
+                <TableHeaderCell>色</TableHeaderCell>
+                <TableHeaderCell>時給</TableHeaderCell>
+                <TableHeaderCell>状態</TableHeaderCell>
+                <TableHeaderCell>シフトPIN</TableHeaderCell>
+                <TableHeaderCell>並び順</TableHeaderCell>
+                <TableHeaderCell>操作</TableHeaderCell>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {employees.map((employee) => (
                 <TableRow key={employee.id}>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                      {employee.name}
-                    </Typography>
+                    <Text weight="medium">{employee.name}</Text>
                   </TableCell>
                   <TableCell>
-                    <Chip
+                    <Token
                       label={employee.license_type}
-                      size="small"
-                      color={employee.license_type === '一種' ? 'primary' : 'secondary'}
+                      size="sm"
+                      color={employee.license_type === '一種' ? 'blue' : 'purple'}
                     />
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box
-                        sx={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 1,
-                          backgroundColor: employee.color,
-                          border: '1px solid rgba(0, 0, 0, 0.2)',
-                        }}
+                    <HStack gap={1} vAlign="center">
+                      <span
+                        aria-hidden
+                        style={{ ...COLOR_SWATCH_STYLE, backgroundColor: employee.color }}
                       />
-                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                        {employee.color}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2">
-                      ¥{Number(employee.hourly_wage || 0).toLocaleString()}
-                    </Typography>
+                      <Text>{employee.color}</Text>
+                    </HStack>
                   </TableCell>
                   <TableCell>
-                    <Chip
+                    <Text>¥{Number(employee.hourly_wage || 0).toLocaleString()}</Text>
+                  </TableCell>
+                  <TableCell>
+                    <Token
                       label={employee.is_active ? '有効' : '無効'}
-                      size="small"
-                      color={employee.is_active ? 'success' : 'default'}
+                      size="sm"
+                      color={employee.is_active ? 'green' : 'gray'}
                     />
                   </TableCell>
                   <TableCell>
-                    <Chip
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       label={employee.shift_pin_configured ? '設定済' : '未設定'}
-                      size="small"
-                      color={employee.shift_pin_configured ? 'success' : 'default'}
                       onClick={() => handleOpenPinDialog(employee)}
-                      sx={{ cursor: 'pointer' }}
                     />
                   </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2">{employee.sort_order || 0}</Typography>
+                  <TableCell>
+                    <Text>{employee.sort_order || 0}</Text>
                   </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenDialog(employee)}
-                      disabled={loading}
-                      color="primary"
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(employee.id, employee.name)}
-                      disabled={loading}
-                      color="error"
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+                  <TableCell>
+                    <HStack gap={1}>
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        label="編集"
+                        tooltip="編集"
+                        icon={<Pencil size={14} />}
+                        onClick={() => handleOpenDialog(employee)}
+                        isDisabled={loading}
+                      />
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        label="削除"
+                        tooltip="削除"
+                        icon={<Trash2 size={14} />}
+                        onClick={() => handleDelete(employee.id, employee.name)}
+                        isDisabled={loading}
+                      />
+                    </HStack>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
-      )}
+        ) : null}
 
-      {!loading && employees.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="body1" color="text.secondary">
-            従業員が登録されていません
-          </Typography>
-        </Box>
-      )}
+        {!loading && employees.length === 0 ? (
+          <Center padding={8}>
+            <Text color="secondary">従業員が登録されていません</Text>
+          </Center>
+        ) : null}
+      </VStack>
 
-      {/* 編集ダイアログ */}
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingId ? '従業員編集' : '新規従業員追加'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="名前"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              fullWidth
-              required
-              disabled={loading}
+      <Dialog isOpen={dialogOpen} onOpenChange={handleFormOpenChange} purpose="form">
+        <Layout
+          height="auto"
+          padding={4}
+          header={
+            <DialogHeader
+              title={editingId ? '従業員編集' : '新規従業員追加'}
+              onOpenChange={handleFormOpenChange}
             />
-            {editingId && (
-              <TextField
-                label="売上データに残っている旧スタッフ名（任意）"
-                value={legacyStaffName}
-                onChange={(e) => setLegacyStaffName(e.target.value)}
-                fullWidth
-                disabled={loading}
-                placeholder="例: 北島"
-                helperText="売上インポート等で古い表記のまま残っている場合に入力（シフトは従業員IDで連携）"
-              />
-            )}
-            <FormControl fullWidth required>
-              <InputLabel>免許種別</InputLabel>
-              <Select
-                value={formData.license_type}
-                onChange={(e) => setFormData({ ...formData, license_type: e.target.value })}
-                label="免許種別"
-                disabled={loading}
-              >
-                {LICENSE_TYPES.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth required>
-              <InputLabel>色</InputLabel>
-              <Select
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                label="色"
-                disabled={loading}
-              >
-                {DEFAULT_COLORS.map((color) => (
-                  <MenuItem key={color.value} value={color.value}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 0.5,
-                          backgroundColor: color.value,
-                          border: '1px solid rgba(0, 0, 0, 0.2)',
-                        }}
-                      />
-                      {color.name} ({color.value})
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="時給"
-              type="number"
-              value={formData.hourly_wage}
-              onChange={(e) => setFormData({ ...formData, hourly_wage: e.target.value })}
-              fullWidth
-              inputProps={{ min: 0, step: 100 }}
-              disabled={loading}
-              helperText="円単位で入力してください"
-            />
-            <TextField
-              label="並び順"
-              type="number"
-              value={formData.sort_order}
-              onChange={(e) =>
-                setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })
-              }
-              fullWidth
-              inputProps={{ min: 0 }}
-              disabled={loading}
-              helperText="数値が小さいほど上に表示されます"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  disabled={loading}
+          }
+          content={
+            <LayoutContent>
+              <VStack gap={4}>
+                <TextInput
+                  label="名前"
+                  value={formData.name}
+                  onChange={(value) => setFormData({ ...formData, name: value })}
+                  isRequired
+                  isDisabled={loading}
+                  width="100%"
                 />
-              }
-              label="有効"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} disabled={loading} startIcon={<CancelIcon />}>
-            キャンセル
-          </Button>
-          <Button
-            onClick={handleSave}
-            variant="contained"
-            disabled={loading}
-            startIcon={<SaveIcon />}
-          >
-            保存
-          </Button>
-        </DialogActions>
+                {editingId ? (
+                  <TextInput
+                    label="売上データに残っている旧スタッフ名（任意）"
+                    value={legacyStaffName}
+                    onChange={setLegacyStaffName}
+                    isDisabled={loading}
+                    placeholder="例: 北島"
+                    description="売上インポート等で古い表記のまま残っている場合に入力（シフトは従業員IDで連携）"
+                    width="100%"
+                  />
+                ) : null}
+                <Selector
+                  label="免許種別"
+                  isRequired
+                  value={formData.license_type}
+                  onChange={(value) => setFormData({ ...formData, license_type: value })}
+                  isDisabled={loading}
+                  width="100%"
+                  options={LICENSE_TYPES.map((type) => ({ value: type, label: type }))}
+                />
+                <Selector
+                  label="色"
+                  isRequired
+                  value={formData.color}
+                  onChange={(value) => setFormData({ ...formData, color: value })}
+                  isDisabled={loading}
+                  width="100%"
+                  options={DEFAULT_COLORS.map((color) => ({
+                    value: color.value,
+                    label: `${color.name} (${color.value})`,
+                  }))}
+                />
+                <TextInput
+                  label="時給"
+                  value={String(formData.hourly_wage)}
+                  onChange={(value) => setFormData({ ...formData, hourly_wage: value })}
+                  description="円単位で入力してください"
+                  isDisabled={loading}
+                  width="100%"
+                />
+                <TextInput
+                  label="並び順"
+                  value={String(formData.sort_order)}
+                  onChange={(value) =>
+                    setFormData({ ...formData, sort_order: parseInt(value, 10) || 0 })
+                  }
+                  description="数値が小さいほど上に表示されます"
+                  isDisabled={loading}
+                  width="100%"
+                />
+                <Switch
+                  label="有効"
+                  value={formData.is_active}
+                  onChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  isDisabled={loading}
+                />
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} hAlign="end" wrap="wrap">
+                <Button
+                  label="キャンセル"
+                  variant="secondary"
+                  onClick={handleCloseDialog}
+                  isDisabled={loading}
+                />
+                <Button
+                  label="保存"
+                  variant="primary"
+                  onClick={handleSave}
+                  isDisabled={loading}
+                  isLoading={isMutating}
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
 
-      <Dialog open={pinDialogOpen} onClose={handleClosePinDialog} maxWidth="xs" fullWidth>
-        <DialogTitle>シフト希望PIN — {pinTarget?.name}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            配車画面のPINとは別です。従業員に本人のみ通知してください。
-          </Typography>
-          {issuedPin ? (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              発行したPIN: <strong>{issuedPin}</strong>
-              <br />
-              この画面を閉じると再表示できません。
-            </Alert>
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{ mb: 2 }}
-                onClick={() => handleIssuePin(false)}
-                disabled={pinSubmitting}
-              >
-                ランダムPINを発行
-              </Button>
-              <TextField
-                label="手動指定（6桁）"
-                value={customPin}
-                onChange={(e) => setCustomPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                fullWidth
-                inputProps={{ inputMode: 'numeric', maxLength: 6 }}
-                sx={{ mb: 1 }}
-              />
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => handleIssuePin(true)}
-                disabled={pinSubmitting || customPin.length !== 6}
-              >
-                指定PINを設定
-              </Button>
-            </>
-          )}
-          {pinTarget?.shift_pin_configured ? (
-            <Button
-              color="error"
-              fullWidth
-              sx={{ mt: 2 }}
-              onClick={handleClearPin}
-              disabled={pinSubmitting}
-            >
-              PINを解除
-            </Button>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClosePinDialog}>閉じる</Button>
-        </DialogActions>
+      <Dialog isOpen={pinDialogOpen} onOpenChange={handlePinOpenChange} purpose="form">
+        <Layout
+          height="auto"
+          padding={4}
+          header={
+            <DialogHeader
+              title={`シフト希望PIN — ${pinTarget?.name ?? ''}`}
+              onOpenChange={handlePinOpenChange}
+            />
+          }
+          content={
+            <LayoutContent>
+              <VStack gap={4}>
+                <Text color="secondary">
+                  配車画面のPINとは別です。従業員に本人のみ通知してください。
+                </Text>
+                {issuedPin ? (
+                  <Banner
+                    status="warning"
+                    title={`発行したPIN: ${issuedPin}`}
+                    description="この画面を閉じると再表示できません。"
+                    collapsible={false}
+                  />
+                ) : null}
+                {!issuedPin ? (
+                  <Button
+                    variant="primary"
+                    width="100%"
+                    label="ランダムPINを発行"
+                    onClick={() => handleIssuePin(false)}
+                    isDisabled={pinSubmitting}
+                    isLoading={pinSubmitting}
+                  />
+                ) : null}
+                {!issuedPin ? (
+                  <TextInput
+                    label="手動指定（6桁）"
+                    value={customPin}
+                    onChange={(value) => setCustomPin(value.replace(/\D/g, '').slice(0, 6))}
+                    width="100%"
+                  />
+                ) : null}
+                {!issuedPin ? (
+                  <Button
+                    variant="secondary"
+                    width="100%"
+                    label="指定PINを設定"
+                    onClick={() => handleIssuePin(true)}
+                    isDisabled={pinSubmitting || customPin.length !== 6}
+                  />
+                ) : null}
+                {pinTarget?.shift_pin_configured ? (
+                  <Button
+                    variant="destructive"
+                    width="100%"
+                    label="PINを解除"
+                    onClick={handleClearPin}
+                    isDisabled={pinSubmitting}
+                  />
+                ) : null}
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack hAlign="end">
+                <Button label="閉じる" variant="secondary" onClick={handleClosePinDialog} />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
-    </Box>
+    </PageFrame>
   )
 }

@@ -1,44 +1,43 @@
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Chip from '@mui/material/Chip'
-import Stack from '@mui/material/Stack'
+import { Heading } from '@astryxdesign/core/Heading'
+import { Token } from '@astryxdesign/core/Token'
+import { Text } from '@astryxdesign/core/Text'
+import { VStack } from '@astryxdesign/core/Layout'
 
-const sectionTitleSx = {
-  fontWeight: 600,
-  mb: 2,
-  pb: 1.5,
-  borderBottom: 1,
-  borderColor: 'divider',
+const MUI_TO_TOKEN_COLOR = {
+  default: 'gray',
+  warning: 'yellow',
+  success: 'green',
+  info: 'cyan',
+  error: 'red',
+  primary: 'blue',
 }
 
-const labelSx = { display: 'block', mb: 0.5 }
-
 export function OrderInfoSection({ order, statusLabel, statusColor }) {
+  const tokenColor = MUI_TO_TOKEN_COLOR[statusColor] || 'gray'
+
   return (
-    <Box>
-      <Typography variant="subtitle1" sx={sectionTitleSx}>
-        基本情報
-      </Typography>
-      <Stack spacing={2.5}>
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+    <VStack gap={2}>
+      <Heading level={3}>基本情報</Heading>
+      <VStack gap={2}>
+        <VStack gap={0.5}>
+          <Text size="xsm" color="secondary">
             ステータス
-          </Typography>
-          <Chip label={statusLabel} color={statusColor} size="small" />
-        </Box>
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+          </Text>
+          <Token size="sm" label={statusLabel} color={tokenColor} />
+        </VStack>
+        <VStack gap={0.5}>
+          <Text size="xsm" color="secondary">
             予約種別
-          </Typography>
-          <Typography variant="body2">
+          </Text>
+          <Text>
             {order.order_type === 'NOW'
               ? '今すぐ'
               : order.scheduled_at
                 ? new Date(order.scheduled_at).toLocaleString('ja-JP')
                 : '日時指定'}
-          </Typography>
-        </Box>
-      </Stack>
-    </Box>
+          </Text>
+        </VStack>
+      </VStack>
+    </VStack>
   )
 }

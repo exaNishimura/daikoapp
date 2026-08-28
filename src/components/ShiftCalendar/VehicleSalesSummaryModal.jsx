@@ -1,17 +1,11 @@
 import { useMemo } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
-import CircularProgress from '@mui/material/CircularProgress'
-import Divider from '@mui/material/Divider'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableRow from '@mui/material/TableRow'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Center } from '@astryxdesign/core/Center'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import { Table, TableBody, TableCell, TableRow } from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
 import { useDailySaleByDate } from '@/hooks/billing/useDailySales'
 import { useReceivablesByWorkDate } from '@/hooks/billing/useReceivables'
 import { useCompanies } from '@/hooks/billing/useCompanies'
@@ -44,18 +38,14 @@ function formatDistance(value) {
   return `${Number(value).toLocaleString('ja-JP')} km`
 }
 
-function SummaryRow({ label, value, valueSx }) {
+function SummaryRow({ label, value, emphasize = false }) {
   return (
     <TableRow>
-      <TableCell
-        component="th"
-        scope="row"
-        sx={{ width: 120, color: 'text.secondary', border: 0, py: 1 }}
-      >
-        {label}
+      <TableCell>
+        <Text color="secondary">{label}</Text>
       </TableCell>
-      <TableCell sx={{ border: 0, py: 1, fontVariantNumeric: 'tabular-nums', ...valueSx }}>
-        {value}
+      <TableCell>
+        <Text weight={emphasize ? 'semibold' : undefined}>{value}</Text>
       </TableCell>
     </TableRow>
   )
@@ -78,6 +68,10 @@ export function VehicleSalesSummaryModal({
     () => buildCompanyLookup(companiesQuery.data ?? []),
     [companiesQuery.data]
   )
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
 
   const loading = saleQuery.isLoading || receivablesQuery.isLoading || companiesQuery.isLoading
   const salesRow = saleQuery.data ?? null
@@ -104,107 +98,93 @@ export function VehicleSalesSummaryModal({
   const dateLabel = formatWorkDateLabel(workDate, dow)
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>集計結果</DialogTitle>
-      <DialogContent>
-        {loading ? (
-          <Stack alignItems="center" py={3}>
-            <CircularProgress size={28} />
-          </Stack>
-        ) : (
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            <Table size="small" sx={{ '& td, & th': { px: 0 } }}>
-              <TableBody>
-                <SummaryRow label="日付" value={dateLabel} />
-                <SummaryRow label="号車" value={carNum ? `${carNum}号車` : '—'} />
-                <SummaryRow label="走行距離" value={formatDistance(distance)} />
-                <SummaryRow label="燃料代" value={formatYen(fuel)} />
-                <SummaryRow label="売上" value={formatYen(sales)} />
-              </TableBody>
-            </Table>
-
-            <Divider />
-
-            <Typography variant="subtitle2" color="text.secondary">
-              稼働スタッフ
-            </Typography>
-            {staffLabels.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                なし
-              </Typography>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+      <Layout
+        height="auto"
+        padding={4}
+        header={<DialogHeader title="集計結果" onOpenChange={handleOpenChange} />}
+        content={
+          <LayoutContent>
+            {loading ? (
+              <Center padding={4}>
+                <Spinner />
+              </Center>
             ) : (
-              <Stack spacing={0.5}>
-                {staffLabels.map((label) => (
-                  <Typography key={label} variant="body2">
-                    {label}
-                  </Typography>
-                ))}
-              </Stack>
-            )}
-
-            <Divider />
-
-            <Typography variant="subtitle2" color="text.secondary">
-              未収（売掛）
-            </Typography>
-            {receivables.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                なし
-              </Typography>
-            ) : (
-              <Table size="small">
-                <TableBody>
-                  {receivables.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell sx={{ pl: 0, py: 0.75 }}>
-                        {getReceivableDisplayName(row, companyLookup)}
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ pr: 0, py: 0.75, fontVariantNumeric: 'tabular-nums' }}
-                      >
-                        {formatYen(row.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-
-            {hasExpense && (
-              <>
-                <Divider />
-                <Typography variant="subtitle2" color="text.secondary">
-                  経費
-                </Typography>
-                <Table size="small" sx={{ '& td, & th': { px: 0 } }}>
+              <VStack gap={4}>
+                <Table density="compact">
                   <TableBody>
-                    {expenseNote && <SummaryRow label="内容" value={expenseNote} />}
-                    {expenseAmount > 0 && (
-                      <SummaryRow label="金額" value={formatYen(expenseAmount)} />
-                    )}
+                    <SummaryRow label="日付" value={dateLabel} />
+                    <SummaryRow label="号車" value={carNum ? `${carNum}号車` : '—'} />
+                    <SummaryRow label="走行距離" value={formatDistance(distance)} />
+                    <SummaryRow label="燃料代" value={formatYen(fuel)} />
+                    <SummaryRow label="売上" value={formatYen(sales)} />
                   </TableBody>
                 </Table>
-              </>
+
+                <VStack gap={1}>
+                  <Text color="secondary" weight="semibold">
+                    稼働スタッフ
+                  </Text>
+                  {staffLabels.length === 0 ? (
+                    <Text color="secondary">なし</Text>
+                  ) : (
+                    staffLabels.map((label) => <Text key={label}>{label}</Text>)
+                  )}
+                </VStack>
+
+                <VStack gap={1}>
+                  <Text color="secondary" weight="semibold">
+                    未収（売掛）
+                  </Text>
+                  {receivables.length === 0 ? (
+                    <Text color="secondary">なし</Text>
+                  ) : (
+                    <Table density="compact">
+                      <TableBody>
+                        {receivables.map((row) => (
+                          <TableRow key={row.id}>
+                            <TableCell>{getReceivableDisplayName(row, companyLookup)}</TableCell>
+                            <TableCell>{formatYen(row.amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </VStack>
+
+                {hasExpense ? (
+                  <VStack gap={1}>
+                    <Text color="secondary" weight="semibold">
+                      経費
+                    </Text>
+                    <Table density="compact">
+                      <TableBody>
+                        {expenseNote ? <SummaryRow label="内容" value={expenseNote} /> : null}
+                        {expenseAmount > 0 ? (
+                          <SummaryRow label="金額" value={formatYen(expenseAmount)} />
+                        ) : null}
+                      </TableBody>
+                    </Table>
+                  </VStack>
+                ) : null}
+
+                <Table density="compact">
+                  <TableBody>
+                    <SummaryRow label="現金" value={formatYen(vehicleCash)} emphasize />
+                  </TableBody>
+                </Table>
+              </VStack>
             )}
-
-            <Divider />
-
-            <Table size="small" sx={{ '& td, & th': { px: 0 } }}>
-              <TableBody>
-                <SummaryRow
-                  label="現金"
-                  value={formatYen(vehicleCash)}
-                  valueSx={{ fontWeight: 600 }}
-                />
-              </TableBody>
-            </Table>
-          </Stack>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>閉じる</Button>
-      </DialogActions>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack hAlign="end">
+              <Button label="閉じる" variant="secondary" onClick={onClose} />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

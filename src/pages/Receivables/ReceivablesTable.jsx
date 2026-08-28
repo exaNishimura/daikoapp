@@ -1,19 +1,18 @@
 import { useMemo, useState } from 'react'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
-import IconButton from '@mui/material/IconButton'
-import TextField from '@mui/material/TextField'
-import Tooltip from '@mui/material/Tooltip'
-import EditIcon from '@mui/icons-material/Edit'
-import SaveIcon from '@mui/icons-material/Save'
-import CancelIcon from '@mui/icons-material/Cancel'
-import DeleteIcon from '@mui/icons-material/Delete'
-import LockIcon from '@mui/icons-material/Lock'
+import { DateInput } from '@astryxdesign/core/DateInput'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack } from '@astryxdesign/core/Layout'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { Lock, Pencil, Save, Trash2, X } from 'lucide-react'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
@@ -53,6 +52,10 @@ function buildUpdatePayload(form) {
   }
 }
 
+function monthBound(options, day) {
+  return `${options.year}-${String(options.month).padStart(2, '0')}-${day}`
+}
+
 function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
   const [form, setForm] = useState(() => rowToForm(row))
   const { errors, isValid } = useMemo(
@@ -70,23 +73,21 @@ function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
   }
 
   return (
-    <TableRow hover>
+    <TableRow>
       <TableCell />
       <TableCell>
-        <TextField
-          type="date"
-          size="small"
-          value={form.work_date}
-          onChange={(e) => setForm({ ...form, work_date: e.target.value })}
-          error={!!errors.work_date}
-          helperText={errors.work_date}
-          inputProps={{
-            min: `${options.year}-${String(options.month).padStart(2, '0')}-01`,
-            max: `${options.year}-${String(options.month).padStart(2, '0')}-31`,
-          }}
+        <DateInput
+          label="日付"
+          isLabelHidden
+          value={form.work_date || undefined}
+          onChange={(work_date) => setForm({ ...form, work_date: work_date ?? '' })}
+          min={monthBound(options, '01')}
+          max={monthBound(options, '31')}
+          size="sm"
+          status={errors.work_date ? { type: 'error', message: errors.work_date } : undefined}
         />
       </TableCell>
-      <TableCell sx={{ minWidth: 200 }}>
+      <TableCell>
         <CompanySelect
           companies={companies}
           value={form.company_id}
@@ -94,58 +95,70 @@ function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
           includeInactive
         />
       </TableCell>
-      <TableCell sx={{ minWidth: 100 }}>
+      <TableCell>
         <VehicleNumSelect
           value={form.vehicle_num}
           onChange={(vehicle_num) => setForm({ ...form, vehicle_num })}
         />
       </TableCell>
       <TableCell>
-        <TextField
-          size="small"
+        <TextInput
+          label="出発地"
+          isLabelHidden
+          size="sm"
           value={form.departure}
-          onChange={(e) => setForm({ ...form, departure: e.target.value })}
+          onChange={(departure) => setForm({ ...form, departure })}
           placeholder="出発地"
+          width="100%"
         />
       </TableCell>
       <TableCell>
-        <TextField
-          size="small"
+        <TextInput
+          label="到着地"
+          isLabelHidden
+          size="sm"
           value={form.destination}
-          onChange={(e) => setForm({ ...form, destination: e.target.value })}
+          onChange={(destination) => setForm({ ...form, destination })}
           placeholder="到着地"
+          width="100%"
         />
       </TableCell>
-      <TableCell align="right" sx={{ minWidth: 140 }}>
+      <TableCell>
         <AmountInput value={form.amount} onChange={(v) => setForm({ ...form, amount: v })} />
       </TableCell>
       <TableCell>
-        <TextField
-          size="small"
+        <TextInput
+          label="備考"
+          isLabelHidden
+          size="sm"
           value={form.note}
-          onChange={(e) => setForm({ ...form, note: e.target.value })}
+          onChange={(note) => setForm({ ...form, note })}
           placeholder="備考"
+          width="100%"
         />
       </TableCell>
       <TableCell />
-      <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
-        <Tooltip title="保存">
-          <span>
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={handleSave}
-              disabled={!isValid || isSaving}
-            >
-              <SaveIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title="キャンセル">
-          <IconButton size="small" onClick={onCancel} disabled={isSaving}>
-            <CancelIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+      <TableCell>
+        <HStack gap={0} hAlign="center">
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="保存"
+            tooltip="保存"
+            icon={<Save />}
+            onClick={handleSave}
+            isDisabled={!isValid || isSaving}
+          />
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="キャンセル"
+            tooltip="キャンセル"
+            icon={<X />}
+            onClick={onCancel}
+            isDisabled={isSaving}
+          />
+        </HStack>
       </TableCell>
     </TableRow>
   )
@@ -160,51 +173,52 @@ function DisplayRow({ row, onEdit, onDelete, disabled }) {
     (row.company_id == null ? '（請求先未選択）' : '(取引先未設定)')
 
   return (
-    <TableRow hover sx={{ opacity: row.companies?.is_active === false ? 0.6 : 1 }}>
-      <TableCell width={28}>
-        {locked && (
-          <Tooltip title="請求書発行済み (取消すると編集可)">
-            <LockIcon fontSize="small" color="action" />
-          </Tooltip>
-        )}
+    <TableRow style={{ opacity: row.companies?.is_active === false ? 0.6 : 1 }}>
+      <TableCell>
+        {locked ? (
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="請求書発行済み (取消すると編集可)"
+            tooltip="請求書発行済み (取消すると編集可)"
+            icon={<Lock />}
+            isDisabled
+          />
+        ) : null}
       </TableCell>
       <TableCell>{row.work_date}</TableCell>
       <TableCell>{companyName}</TableCell>
       <TableCell>{formatVehicleNumLabel(row.vehicle_num)}</TableCell>
       <TableCell>{row.departure || '—'}</TableCell>
       <TableCell>{row.destination || '—'}</TableCell>
-      <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+      <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
         ¥{Number(row.amount ?? 0).toLocaleString('ja-JP')}
       </TableCell>
-      <TableCell sx={{ maxWidth: 220 }}>{row.note || '—'}</TableCell>
+      <TableCell>{row.note || '—'}</TableCell>
       <TableCell>
         <StatusBadge status={status} />
       </TableCell>
-      <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
-        <Tooltip title={locked ? '請求書発行済み (編集不可)' : '編集'}>
-          <span>
-            <IconButton
-              size="small"
-              color="primary"
-              onClick={() => onEdit(row)}
-              disabled={disabled || locked}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title={locked ? '請求書発行済み (削除不可)' : '削除'}>
-          <span>
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => onDelete(row)}
-              disabled={disabled || locked}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
+      <TableCell>
+        <HStack gap={0} hAlign="center">
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="編集"
+            tooltip={locked ? '請求書発行済み (編集不可)' : '編集'}
+            icon={<Pencil />}
+            onClick={() => onEdit(row)}
+            isDisabled={disabled || locked}
+          />
+          <IconButton
+            size="sm"
+            variant="destructive"
+            label="削除"
+            tooltip={locked ? '請求書発行済み (削除不可)' : '削除'}
+            icon={<Trash2 />}
+            onClick={() => onDelete(row)}
+            isDisabled={disabled || locked}
+          />
+        </HStack>
       </TableCell>
     </TableRow>
   )
@@ -243,53 +257,51 @@ export function ReceivablesTable({ rows, companies, options, onUpdate, onDelete,
   }
 
   return (
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
+    <Table density="compact" hasHover>
+      <TableHeader>
+        <TableRow isHeaderRow>
+          <TableHeaderCell />
+          <TableHeaderCell>日付</TableHeaderCell>
+          <TableHeaderCell>取引先</TableHeaderCell>
+          <TableHeaderCell>号車</TableHeaderCell>
+          <TableHeaderCell>出発</TableHeaderCell>
+          <TableHeaderCell>到着</TableHeaderCell>
+          <TableHeaderCell>金額</TableHeaderCell>
+          <TableHeaderCell>備考</TableHeaderCell>
+          <TableHeaderCell>状態</TableHeaderCell>
+          <TableHeaderCell>操作</TableHeaderCell>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.length === 0 ? (
           <TableRow>
-            <TableCell />
-            <TableCell>日付</TableCell>
-            <TableCell>取引先</TableCell>
-            <TableCell>号車</TableCell>
-            <TableCell>出発</TableCell>
-            <TableCell>到着</TableCell>
-            <TableCell align="right">金額</TableCell>
-            <TableCell>備考</TableCell>
-            <TableCell>状態</TableCell>
-            <TableCell align="center">操作</TableCell>
+            <TableCell colSpan={10}>
+              <Text color="secondary">該当する売掛がありません</Text>
+            </TableCell>
           </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                該当する売掛がありません
-              </TableCell>
-            </TableRow>
-          )}
-          {rows.map((row) =>
-            row.id === editingId ? (
-              <EditableRow
-                key={row.id}
-                row={row}
-                companies={companies}
-                options={options}
-                onSave={handleSaveEdit}
-                onCancel={handleCancel}
-                isSaving={isSaving}
-              />
-            ) : (
-              <DisplayRow
-                key={row.id}
-                row={row}
-                onEdit={handleStartEdit}
-                onDelete={onDelete}
-                disabled={isSaving || editingId != null}
-              />
-            )
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+        ) : null}
+        {rows.map((row) =>
+          row.id === editingId ? (
+            <EditableRow
+              key={row.id}
+              row={row}
+              companies={companies}
+              options={options}
+              onSave={handleSaveEdit}
+              onCancel={handleCancel}
+              isSaving={isSaving}
+            />
+          ) : (
+            <DisplayRow
+              key={row.id}
+              row={row}
+              onEdit={handleStartEdit}
+              onDelete={onDelete}
+              disabled={isSaving || editingId != null}
+            />
+          )
+        )}
+      </TableBody>
+    </Table>
   )
 }

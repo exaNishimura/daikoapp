@@ -1,5 +1,26 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import {
+  BookOpen,
+  Building2,
+  CalendarDays,
+  CalendarPlus,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  ListChecks,
+  MessageSquare,
+  Pencil,
+  Settings2,
+  Truck,
+  Users,
+  Wallet,
+} from 'lucide-react'
+import { AppShell } from '@astryxdesign/core/AppShell'
+import { Button } from '@astryxdesign/core/Button'
+import { HStack } from '@astryxdesign/core/Layout'
+import { Text } from '@astryxdesign/core/Text'
+import { TopNav, TopNavHeading, TopNavMenu } from '@astryxdesign/core/TopNav'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { DispatchBoard } from '@/components/DispatchBoard'
 import { ShiftCalendar } from '@/components/ShiftCalendar'
@@ -21,105 +42,39 @@ import { ReceivablesListPage } from '@/pages/Receivables/ReceivablesListPage'
 import { DailySalesPage } from '@/pages/Receivables/DailySalesPage'
 import { InvoicesPage } from '@/pages/Receivables/InvoicesPage'
 import { ReceivablesImportPage } from '@/pages/Receivables/ReceivablesImportPage'
-import Button from '@mui/material/Button'
-import Drawer from '@mui/material/Drawer'
-import IconButton from '@mui/material/IconButton'
-import List from '@mui/material/List'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemText from '@mui/material/ListItemText'
-import ListSubheader from '@mui/material/ListSubheader'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
-import Typography from '@mui/material/Typography'
-import Box from '@mui/material/Box'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import MenuIcon from '@mui/icons-material/Menu'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import { useCompanyProfile } from '@/hooks/billing/useCompanyProfile'
 import { DashboardPage } from '@/pages/DashboardPage'
-import { NAV_CATEGORIES, isNavItemActive, filterVisibleCategories } from '@/lib/navConfig'
-import './App.css'
+import { isNavItemActive, filterVisibleCategories } from '@/lib/navConfig'
 
 const SYSTEM_NAME = '運転代行管理システム'
 
-function NavCategoryDropdown({ category, pathname }) {
-  const [anchorEl, setAnchorEl] = useState(null)
-  const open = Boolean(anchorEl)
-  const active = category.items.some((item) => isNavItemActive(pathname, item))
-
-  return (
-    <>
-      <Button
-        id={`nav-cat-${category.id}`}
-        aria-controls={open ? `nav-menu-${category.id}` : undefined}
-        aria-haspopup="true"
-        aria-expanded={open ? 'true' : undefined}
-        onClick={(e) => setAnchorEl(e.currentTarget)}
-        endIcon={<KeyboardArrowDownIcon sx={{ fontSize: 18 }} />}
-        sx={{
-          color: active ? '#5b61e6' : '#1f2733',
-          fontWeight: active ? 700 : 500,
-          textTransform: 'none',
-          px: 1.25,
-          minWidth: 0,
-          '&:hover': {
-            backgroundColor: 'rgba(91, 97, 230, 0.06)',
-          },
-        }}
-      >
-        {category.label}
-      </Button>
-      <Menu
-        id={`nav-menu-${category.id}`}
-        anchorEl={anchorEl}
-        open={open}
-        onClose={() => setAnchorEl(null)}
-        MenuListProps={{ 'aria-labelledby': `nav-cat-${category.id}` }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        slotProps={{
-          paper: {
-            sx: {
-              mt: 0.5,
-              minWidth: 180,
-              border: '1px solid #e3e7ec',
-              boxShadow: '0 8px 24px rgba(31, 39, 51, 0.1)',
-            },
-          },
-        }}
-      >
-        {category.items.map((item) => {
-          const selected = isNavItemActive(pathname, item)
-          return (
-            <MenuItem
-              key={item.to}
-              component={Link}
-              to={item.to}
-              selected={selected}
-              onClick={() => setAnchorEl(null)}
-              sx={{
-                fontWeight: selected ? 600 : 400,
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(91, 97, 230, 0.1)',
-                },
-              }}
-            >
-              {item.label}
-            </MenuItem>
-          )
-        })}
-      </Menu>
-    </>
-  )
+const NAV_ITEM_ICONS = {
+  '/dispatch': Truck,
+  '/reservations': BookOpen,
+  '/line-queue': MessageSquare,
+  '/shift': CalendarDays,
+  '/shift/request': CalendarPlus,
+  '/shift/requests': ListChecks,
+  '/shift/edit': Pencil,
+  '/admin/sales': LayoutDashboard,
+  '/admin/receivables': Wallet,
+  '/admin/invoices': FileText,
+  '/employees': Users,
+  '/admin/companies': Building2,
+  '/admin/company-profile': ClipboardList,
+  '/admin/line-settings': Settings2,
 }
 
-function NavBar() {
+function navItemIcon(to) {
+  const Icon = NAV_ITEM_ICONS[to]
+  if (!Icon) return null
+  return <Icon size={20} aria-hidden />
+}
+
+function AppTopNav() {
   const { isAuthenticated, logout, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const isMobile = useMediaQuery('(max-width: 768px)')
-  const [menuOpen, setMenuOpen] = useState(false)
-
   const categories = filterVisibleCategories(isAuthenticated)
   const profileQuery = useCompanyProfile({
     enabled: isAuthenticated,
@@ -132,350 +87,169 @@ function NavBar() {
     document.title = brandTitle
   }, [brandTitle])
 
-  useEffect(() => {
-    const handlePopState = () => setMenuOpen(false)
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
-
   const handleLogout = async () => {
-    setMenuOpen(false)
     await logout()
     navigate('/')
   }
 
-  const handleLogin = () => {
-    setMenuOpen(false)
-    navigate('/login')
-  }
-
-  const brandBlock = (
-    <Box
-      component={Link}
-      to="/"
-      sx={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        alignItems: isMobile ? 'flex-start' : 'baseline',
-        gap: isMobile ? 0 : 1.25,
-        textDecoration: 'none',
-        color: 'inherit',
-        minWidth: 0,
-        mr: isMobile ? 1 : 2,
-        flex: isMobile ? 1 : 'none',
-      }}
-    >
-      <Typography
-        component="span"
-        sx={{
-          fontWeight: 700,
-          fontSize: isMobile ? 14 : 15,
-          color: '#1f2733',
-          whiteSpace: 'nowrap',
-          lineHeight: 1.3,
-        }}
-      >
-        {SYSTEM_NAME}
-      </Typography>
-      {companyName ? (
-        <Typography
-          component="span"
-          sx={{
-            fontWeight: 600,
-            fontSize: isMobile ? 12 : 14,
-            color: '#5b61e6',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: isMobile ? '46vw' : 280,
-            lineHeight: 1.3,
-          }}
-          title={companyName}
-        >
-          {companyName}
-        </Typography>
-      ) : null}
-    </Box>
-  )
-
-  const authActions = isAuthenticated ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-      {user?.email && !isMobile && (
-        <span style={{ color: '#6b7280', fontSize: 13 }}>{user.email}</span>
-      )}
-      <Button
-        onClick={handleLogout}
-        variant="outlined"
-        size="small"
-        sx={{
-          color: '#1f2733',
-          borderColor: '#c5cad3',
-          '&:hover': {
-            borderColor: '#5b61e6',
-            backgroundColor: 'rgba(91, 97, 230, 0.06)',
-          },
-        }}
-      >
-        ログアウト
-      </Button>
-    </div>
-  ) : (
-    <Button
-      onClick={handleLogin}
-      variant="contained"
-      size="small"
-      sx={{ backgroundColor: '#5b61e6', '&:hover': { backgroundColor: '#4a50d6' }, flexShrink: 0 }}
-    >
-      ログイン
-    </Button>
-  )
-
   return (
-    <nav
-      style={{
-        padding: '10px 16px',
-        background: '#ffffff',
-        borderBottom: '1px solid #e3e7ec',
-        flexShrink: 0,
-        zIndex: 1000,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      {isMobile ? (
-        <>
-          <IconButton
-            aria-label="メニューを開く"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(true)}
-            sx={{ color: '#1f2733' }}
-          >
-            <MenuIcon />
-          </IconButton>
-          {brandBlock}
-          <Drawer
-            anchor="left"
-            open={menuOpen}
-            onClose={() => setMenuOpen(false)}
-            PaperProps={{
-              sx: {
-                width: 280,
-                backgroundColor: '#ffffff',
-                color: '#1f2733',
-                display: 'flex',
-                flexDirection: 'column',
-              },
-            }}
-          >
-            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #e3e7ec' }}>
-              <Typography sx={{ fontWeight: 700, fontSize: 14, color: '#1f2733' }}>
-                {SYSTEM_NAME}
-              </Typography>
-              {companyName ? (
-                <Typography sx={{ fontWeight: 600, fontSize: 13, color: '#5b61e6', mt: 0.25 }}>
-                  {companyName}
-                </Typography>
-              ) : null}
-            </Box>
-            <List sx={{ pt: 0, pb: 1 }}>
-              {categories.map((cat) => (
-                <li key={cat.id}>
-                  <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
-                    <ListSubheader
-                      sx={{
-                        bgcolor: '#f4f6f8',
-                        color: '#6b7280',
-                        fontWeight: 700,
-                        fontSize: 12,
-                        letterSpacing: '0.04em',
-                        lineHeight: '36px',
-                      }}
-                    >
-                      {cat.label}
-                    </ListSubheader>
-                    {cat.items.map((link) => (
-                      <ListItemButton
-                        key={link.to}
-                        component={Link}
-                        to={link.to}
-                        selected={isNavItemActive(location.pathname, link)}
-                        onClick={() => setMenuOpen(false)}
-                        sx={{
-                          color: '#1f2733',
-                          pl: 3,
-                          '&.Mui-selected': {
-                            backgroundColor: 'rgba(91, 97, 230, 0.12)',
-                          },
-                          '&.Mui-selected:hover': {
-                            backgroundColor: 'rgba(91, 97, 230, 0.18)',
-                          },
-                        }}
-                      >
-                        <ListItemText primary={link.label} />
-                      </ListItemButton>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </List>
-            <div
-              style={{
-                marginTop: 'auto',
-                padding: '16px',
-                borderTop: '1px solid #e3e7ec',
-              }}
-            >
-              {isAuthenticated && user?.email && (
-                <span style={{ color: '#6b7280', fontSize: 13, wordBreak: 'break-all' }}>
-                  {user.email}
-                </span>
-              )}
-            </div>
-          </Drawer>
-        </>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-          {brandBlock}
-          {categories.map((cat) => (
-            <NavCategoryDropdown key={cat.id} category={cat} pathname={location.pathname} />
-          ))}
-        </div>
-      )}
-      {authActions}
-    </nav>
+    <TopNav
+      label="メインナビゲーション"
+      heading={
+        <TopNavHeading
+          heading={SYSTEM_NAME}
+          headingHref="/"
+          subheading={companyName || undefined}
+        />
+      }
+      startContent={categories.map((category) => (
+        <TopNavMenu
+          key={category.id}
+          label={category.label}
+          items={category.items.map((item) => ({
+            title: item.label,
+            href: item.to,
+            icon: navItemIcon(item.to),
+            description: isNavItemActive(location.pathname, item) ? '現在のページ' : undefined,
+          }))}
+        />
+      ))}
+      endContent={
+        isAuthenticated ? (
+          <HStack gap={2} vAlign="center">
+            {user?.email ? <Text color="secondary">{user.email}</Text> : null}
+            <Button label="ログアウト" variant="ghost" size="sm" onClick={handleLogout} />
+          </HStack>
+        ) : (
+          <Button label="ログイン" variant="primary" size="sm" href="/login" />
+        )
+      }
+    />
   )
 }
 
 function AppRoutes() {
   return (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route
-          path="/dispatch"
-          element={
-            <DispatchPinGate>
-              <DispatchBoard />
-            </DispatchPinGate>
-          }
-        />
-        <Route path="/shift" element={<ShiftCalendar />} />
-        <Route path="/shift/request" element={<ShiftRequestPage />} />
-        <Route
-          path="/shift/requests"
-          element={
-            <ProtectedRoute>
-              <ShiftRequestsAdminPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/reservations" element={<ReservationLedgerPage />} />
-        <Route path="/liff/order" element={<LiffOrderForm />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/line-queue"
-          element={
-            <ProtectedRoute>
-              <LineQueuePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/line-settings"
-          element={
-            <ProtectedRoute>
-              <LineSettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/shift/edit"
-          element={
-            <ProtectedRoute>
-              <ShiftEditPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/employees"
-          element={
-            <ProtectedRoute>
-              <EmployeeManagement />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/sales"
-          element={
-            <ProtectedRoute>
-              <DailySalesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/receivables"
-          element={
-            <ProtectedRoute>
-              <ReceivablesListPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/invoices"
-          element={
-            <ProtectedRoute>
-              <InvoicesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/receivables/import"
-          element={
-            <ProtectedRoute>
-              <ReceivablesImportPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/companies"
-          element={
-            <ProtectedRoute>
-              <CompaniesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/company-profile"
-          element={
-            <ProtectedRoute>
-              <CompanyProfilePage />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </div>
+    <Routes>
+      <Route path="/" element={<DashboardPage />} />
+      <Route
+        path="/dispatch"
+        element={
+          <DispatchPinGate>
+            <DispatchBoard />
+          </DispatchPinGate>
+        }
+      />
+      <Route path="/shift" element={<ShiftCalendar />} />
+      <Route path="/shift/request" element={<ShiftRequestPage />} />
+      <Route
+        path="/shift/requests"
+        element={
+          <ProtectedRoute>
+            <ShiftRequestsAdminPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/reservations" element={<ReservationLedgerPage />} />
+      <Route path="/liff/order" element={<LiffOrderForm />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/line-queue"
+        element={
+          <ProtectedRoute>
+            <LineQueuePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/line-settings"
+        element={
+          <ProtectedRoute>
+            <LineSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shift/edit"
+        element={
+          <ProtectedRoute>
+            <ShiftEditPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employees"
+        element={
+          <ProtectedRoute>
+            <EmployeeManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/sales"
+        element={
+          <ProtectedRoute>
+            <DailySalesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/receivables"
+        element={
+          <ProtectedRoute>
+            <ReceivablesListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/invoices"
+        element={
+          <ProtectedRoute>
+            <InvoicesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/receivables/import"
+        element={
+          <ProtectedRoute>
+            <ReceivablesImportPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/companies"
+        element={
+          <ProtectedRoute>
+            <CompaniesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/company-profile"
+        element={
+          <ProtectedRoute>
+            <CompanyProfilePage />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   )
 }
 
-function AppShell() {
+function AppFrame() {
   const location = useLocation()
   const isLiff = location.pathname.startsWith('/liff')
+
+  if (isLiff) {
+    return <AppRoutes />
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      {!isLiff && <NavBar />}
-      {!isLiff && <LineHoldingAlertHost />}
+    <AppShell height="fill" contentPadding={0} variant="section" topNav={<AppTopNav />}>
+      <LineHoldingAlertHost />
       <AppRoutes />
-    </div>
+    </AppShell>
   )
 }
 
@@ -483,7 +257,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppShell />
+        <AppFrame />
       </BrowserRouter>
     </AuthProvider>
   )

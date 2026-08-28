@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react'
-import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Chip from '@mui/material/Chip'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Heading } from '@astryxdesign/core/Heading'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { List, ListItem } from '@astryxdesign/core/List'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+import { PageFrame } from '@/components/PageFrame'
 import { useAdminLineUnitAction, useApproveLineUnit, useLineQueue } from '@/hooks/useLineIntake'
-import './LineQueuePage.css'
 
 const UNIT_STATUS_LABELS = {
   HOLDING: '仮受付',
@@ -20,10 +19,10 @@ const UNIT_STATUS_LABELS = {
 }
 
 const UNIT_STATUS_COLORS = {
-  HOLDING: 'warning',
-  CONFIRMED: 'success',
-  EXPIRED: 'default',
-  CANCELLED: 'default',
+  HOLDING: 'yellow',
+  CONFIRMED: 'green',
+  EXPIRED: 'gray',
+  CANCELLED: 'gray',
 }
 
 function unitStatusLabel(status) {
@@ -52,6 +51,10 @@ export function LineQueuePage() {
     setActionError('')
   }
 
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) setSelected(null)
+  }
+
   const handleApprove = async () => {
     setActionError('')
     try {
@@ -78,99 +81,125 @@ export function LineQueuePage() {
   }
 
   return (
-    <Box className="line-queue-page" sx={{ p: 2, overflow: 'auto', height: '100%' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" component="h1">
-          LINE 仮受付
-        </Typography>
-        <Button onClick={() => refetch()}>更新</Button>
-      </Stack>
+    <PageFrame>
+      <VStack gap={4}>
+        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+          <Heading level={1}>LINE 仮受付</Heading>
+          <Button label="更新" variant="secondary" onClick={() => refetch()} />
+        </HStack>
 
-      {isLoading && <Typography>読み込み中…</Typography>}
-      {error && <Alert severity="error">{error.message}</Alert>}
+        {isLoading ? <Spinner label="読み込み中…" /> : null}
+        {error ? <Banner status="error" title={error.message} collapsible={false} /> : null}
 
-      <Stack spacing={1.5}>
-        {rows.map((unit) => {
-          const booking = unit.line_bookings
-          const discount = booking?.discount_snapshot
-          return (
-            <Box
-              key={unit.id}
-              className="line-queue-card"
-              onClick={() => openDetail(unit)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') openDetail(unit)
-              }}
-            >
-              <Stack direction="row" spacing={1} flexWrap="wrap" mb={1}>
-                <Chip
-                  size="small"
-                  label={unitStatusLabel(unit.status)}
-                  color={UNIT_STATUS_COLORS[unit.status] || 'default'}
+        {!isLoading && rows.length === 0 ? (
+          <Text color="secondary">仮受付・確定の表示対象はありません</Text>
+        ) : null}
+
+        {rows.length > 0 ? (
+          <List hasDividers density="compact">
+            {rows.map((unit) => {
+              const booking = unit.line_bookings
+              const discount = booking?.discount_snapshot
+              return (
+                <ListItem
+                  key={unit.id}
+                  label={new Date(unit.pickup_at).toLocaleString('ja-JP')}
+                  description={
+                    <VStack gap={0.5}>
+                      <HStack gap={1} wrap="wrap">
+                        <Token
+                          size="sm"
+                          label={unitStatusLabel(unit.status)}
+                          color={UNIT_STATUS_COLORS[unit.status] || 'gray'}
+                        />
+                        {unit.uses_extra_capacity ? (
+                          <Token size="sm" color="red" label="要手配" />
+                        ) : null}
+                        {unit.status === 'HOLDING' ? (
+                          <Token size="sm" label={holdRemainingLabel(unit.hold_until)} />
+                        ) : null}
+                        {discount?.applied ? (
+                          <Token size="sm" color="green" label={discount.label} />
+                        ) : null}
+                      </HStack>
+                      <Text type="supporting">
+                        {unit.pickup_address} → {unit.dropoff_address}
+                      </Text>
+                      <Text type="supporting">
+                        TEL {booking?.contact_phone} / LINE {booking?.line_user_id}
+                      </Text>
+                    </VStack>
+                  }
+                  onClick={() => openDetail(unit)}
                 />
-                {unit.uses_extra_capacity && <Chip size="small" color="error" label="要手配" />}
-                {unit.status === 'HOLDING' && (
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={holdRemainingLabel(unit.hold_until)}
-                  />
-                )}
-                {discount?.applied && <Chip size="small" color="success" label={discount.label} />}
-              </Stack>
-              <Typography fontWeight={600}>
-                {new Date(unit.pickup_at).toLocaleString('ja-JP')}
-              </Typography>
-              <Typography variant="body2">
-                {unit.pickup_address} → {unit.dropoff_address}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                TEL {booking?.contact_phone} / LINE {booking?.line_user_id}
-              </Typography>
-            </Box>
-          )
-        })}
-        {!isLoading && rows.length === 0 && (
-          <Typography color="text.secondary">仮受付・確定の表示対象はありません</Typography>
-        )}
-      </Stack>
+              )
+            })}
+          </List>
+        ) : null}
 
-      <Dialog open={Boolean(selected)} onClose={() => setSelected(null)} fullWidth maxWidth="sm">
-        <DialogTitle>台詳細</DialogTitle>
-        <DialogContent>
-          {selected && (
-            <Stack spacing={1.5} mt={1}>
-              <Typography>
-                {selected.pickup_address} → {selected.dropoff_address}
-              </Typography>
-              <Typography variant="body2">車両: {selected.vehicle_info || '—'}</Typography>
-              <Typography variant="body2">電話: {selected.line_bookings?.contact_phone}</Typography>
-              <Typography variant="body2">LINE: {selected.line_bookings?.line_user_id}</Typography>
-              <Typography variant="body2">状態: {unitStatusLabel(selected.status)}</Typography>
-              <Typography variant="body2">
-                割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}
-              </Typography>
-              {selected.projection_error && (
-                <Alert severity="warning">投影エラー: {selected.projection_error}</Alert>
-              )}
-              {actionError && <Alert severity="error">{actionError}</Alert>}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelected(null)}>閉じる</Button>
-          <Button color="error" onClick={handleDelete} disabled={adminAction.isPending}>
-            削除
-          </Button>
-          {selected?.status === 'HOLDING' && (
-            <Button variant="contained" onClick={handleApprove} disabled={approve.isPending}>
-              確定にする
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-    </Box>
+        <Dialog isOpen={Boolean(selected)} onOpenChange={handleOpenChange} purpose="info">
+          <Layout
+            height="auto"
+            padding={4}
+            header={<DialogHeader title="台詳細" onOpenChange={handleOpenChange} />}
+            content={
+              <LayoutContent>
+                {selected ? (
+                  <VStack gap={3}>
+                    <Text>
+                      {selected.pickup_address} → {selected.dropoff_address}
+                    </Text>
+                    <Text>車両: {selected.vehicle_info || '—'}</Text>
+                    <Text>電話: {selected.line_bookings?.contact_phone}</Text>
+                    <Text>LINE: {selected.line_bookings?.line_user_id}</Text>
+                    <Text>状態: {unitStatusLabel(selected.status)}</Text>
+                    <Text>
+                      割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}
+                    </Text>
+                    {selected.projection_error ? (
+                      <Banner
+                        status="warning"
+                        title={`投影エラー: ${selected.projection_error}`}
+                        collapsible={false}
+                      />
+                    ) : null}
+                    {actionError ? (
+                      <Banner status="error" title={actionError} collapsible={false} />
+                    ) : null}
+                  </VStack>
+                ) : null}
+              </LayoutContent>
+            }
+            footer={
+              <LayoutFooter>
+                <HStack gap={2} hAlign="end" wrap="wrap">
+                  <Button
+                    label="閉じる"
+                    variant="secondary"
+                    onClick={() => setSelected(null)}
+                  />
+                  <Button
+                    label="削除"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    isDisabled={adminAction.isPending}
+                    isLoading={adminAction.isPending}
+                  />
+                  {selected?.status === 'HOLDING' ? (
+                    <Button
+                      label="確定にする"
+                      variant="primary"
+                      onClick={handleApprove}
+                      isDisabled={approve.isPending}
+                      isLoading={approve.isPending}
+                    />
+                  ) : null}
+                </HStack>
+              </LayoutFooter>
+            }
+          />
+        </Dialog>
+      </VStack>
+    </PageFrame>
   )
 }

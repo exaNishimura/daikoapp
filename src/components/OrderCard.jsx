@@ -1,9 +1,29 @@
 import { useDraggable } from '@dnd-kit/core'
 import { shortenAddress } from '@/utils/addressUtils'
-import Card from '@mui/material/Card'
-import Chip from '@mui/material/Chip'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
+import { Card } from '@astryxdesign/core/Card'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+
+const STATUS_TOKEN_COLOR = {
+  UNASSIGNED: 'gray',
+  TENTATIVE: 'yellow',
+  CONFIRMED: 'green',
+  ARRIVED: 'cyan',
+  PICKING_UP: 'cyan',
+  IN_TRANSIT: 'blue',
+  COMPLETED: 'green',
+}
+
+const STATUS_LABEL = {
+  UNASSIGNED: '未割当',
+  TENTATIVE: '仮配置',
+  CONFIRMED: '確定',
+  ARRIVED: '現地到着',
+  PICKING_UP: '客車引取',
+  IN_TRANSIT: '送客中',
+  COMPLETED: '送客完了',
+}
 
 function formatRouteSummary(order) {
   const pickup = shortenAddress(order.pickup_address, 14)
@@ -58,40 +78,26 @@ export function OrderCard({ order, isSelected, onClick }) {
   if (order.car_plate) carInfoParts.push(order.car_plate.slice(-4))
   const carInfoText = carInfoParts.join(' ')
 
-  const statusColor =
-    {
-      UNASSIGNED: 'default',
-      TENTATIVE: 'warning',
-      CONFIRMED: 'success',
-      ARRIVED: 'info',
-      PICKING_UP: 'info',
-      IN_TRANSIT: 'primary',
-      COMPLETED: 'success',
-    }[order.status] || 'default'
-
-  const statusLabel =
-    order.status === 'UNASSIGNED'
-      ? '未割当'
-      : order.status === 'TENTATIVE'
-        ? '仮配置'
-        : order.status === 'CONFIRMED'
-          ? '確定'
-          : order.status === 'ARRIVED'
-            ? '現地到着'
-            : order.status === 'PICKING_UP'
-              ? '客車引取'
-              : order.status === 'IN_TRANSIT'
-                ? '送客中'
-                : order.status === 'COMPLETED'
-                  ? '送客完了'
-                  : '確定'
-
+  const statusLabel = STATUS_LABEL[order.status] || '確定'
+  const statusColor = STATUS_TOKEN_COLOR[order.status] || 'gray'
   const routeSummary = formatRouteSummary(order)
+
+  const className = [
+    'order-card',
+    isSelected ? 'selected' : '',
+    isDragging ? 'dragging' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <Card
       ref={setNodeRef}
       data-order-id={order.id}
+      className={className}
+      padding={1}
+      elevation="low"
+      variant={isSelected ? 'blue' : 'default'}
       style={{
         ...style,
         cursor: isDragging ? 'grabbing' : 'grab',
@@ -102,123 +108,38 @@ export function OrderCard({ order, isSelected, onClick }) {
       {...attributes}
       {...listeners}
       onClick={handleClick}
-      sx={{
-        backgroundColor: 'background.paper',
-        border: isSelected ? '1px solid' : '1px solid',
-        borderColor: isSelected ? 'primary.main' : 'divider',
-        borderLeft: isSelected ? '4px solid' : '4px solid',
-        borderLeftColor: isSelected ? 'primary.main' : 'divider',
-        borderRadius: 0,
-        boxShadow: '0 1px 2px rgba(16, 24, 40, 0.06)',
-        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
-        '&:hover': {
-          borderColor: 'primary.main',
-          boxShadow: '0 4px 12px rgba(16, 24, 40, 0.1)',
-        },
-        '&:active': {
-          cursor: 'grabbing',
-        },
-      }}
     >
-      <Box sx={{ px: 1, py: 0.75, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.75,
-            minWidth: 0,
-          }}
-        >
-          <Chip
-            label={statusLabel}
-            color={statusColor}
-            size="small"
-            sx={{
-              height: 18,
-              flexShrink: 0,
-              fontSize: '0.65rem',
-              '& .MuiChip-label': { px: 0.75, py: 0 },
-            }}
-          />
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.primary',
-              fontWeight: 600,
-              fontSize: '0.7rem',
-              flexShrink: 0,
-            }}
-          >
-            {orderTypeText}
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              fontSize: '0.65rem',
-              flexShrink: 0,
-            }}
-          >
-            {totalDuration}分
-          </Typography>
-          {order.parking_note && (
-            <Typography
-              component="span"
-              variant="caption"
-              sx={{ fontSize: '0.7rem', flexShrink: 0, ml: 'auto' }}
-              title="メモあり"
-            >
+      <VStack className="order-card-body" gap={0.5}>
+        <HStack className="order-card-header" gap={1} vAlign="center" hAlign="between">
+          <HStack gap={1} vAlign="center">
+            <Token className="status-badge" size="sm" color={statusColor} label={statusLabel} />
+            <Text className="order-type" size="2xs" weight="semibold">
+              {orderTypeText}
+            </Text>
+            <Text className="duration-info" size="2xs" color="secondary">
+              {totalDuration}分
+            </Text>
+          </HStack>
+          {order.parking_note ? (
+            <Text className="note-icon" size="2xs">
               📝
-            </Typography>
-          )}
-        </Box>
-        {order.pickup_location && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              fontSize: '0.65rem',
-              lineHeight: 1.3,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={order.pickup_location}
-          >
+            </Text>
+          ) : null}
+        </HStack>
+        {order.pickup_location ? (
+          <Text className="pickup" size="2xs" color="secondary" maxLines={1}>
             {order.pickup_location}
-          </Typography>
-        )}
-        {carInfoText && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              fontSize: '0.65rem',
-              lineHeight: 1.3,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-            title={carInfoText}
-          >
+          </Text>
+        ) : null}
+        {carInfoText ? (
+          <Text className="car-info" size="2xs" color="secondary" maxLines={1}>
             {carInfoText}
-          </Typography>
-        )}
-        <Typography
-          variant="caption"
-          sx={{
-            color: 'text.primary',
-            fontSize: '0.7rem',
-            lineHeight: 1.3,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-          title={routeSummary}
-        >
+          </Text>
+        ) : null}
+        <Text className="route-info" size="2xs" maxLines={1}>
           {routeSummary}
-        </Typography>
-      </Box>
+        </Text>
+      </VStack>
     </Card>
   )
 }

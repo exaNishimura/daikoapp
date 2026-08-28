@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import TextField from '@mui/material/TextField'
+import { useId, useState } from 'react'
+import { Field } from '@astryxdesign/core/Field'
 
 const ALLOWED_INPUT_RE = /^[¥0-9,\s]*$/
 
@@ -18,31 +18,34 @@ function formatAmount(value) {
   return `¥${n.toLocaleString('ja-JP')}`
 }
 
+const INPUT_STYLE = {
+  width: '100%',
+  boxSizing: 'border-box',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  paddingBlock: 'var(--spacing-2)',
+  paddingInline: 'var(--spacing-3)',
+  font: 'inherit',
+  background: 'var(--color-bg)',
+  color: 'var(--color-text)',
+}
+
 /**
  * 金額入力。
  *
  * - 非フォーカス時は `¥X,XXX` 表示、フォーカス時は素の数字に切替
  * - `¥` `,` 含む入力も許容、保存値は number
  * - 空欄は null で親に返す
- *
- * @param {Object} props
- * @param {number|null} props.value
- * @param {(value: number|null) => void} props.onChange
- * @param {string} [props.label]
- * @param {string} [props.size]
- * @param {string} [props.placeholder]
  */
 export function AmountInput({
   value,
   onChange,
   label = '金額',
-  size = 'small',
   placeholder = '¥0',
-  inputProps,
-  ...rest
+  disabled = false,
 }) {
+  const inputId = useId()
   const [draft, setDraft] = useState(null)
-
   const display = draft !== null ? draft : formatAmount(value)
 
   const handleFocus = () => {
@@ -61,16 +64,18 @@ export function AmountInput({
   }
 
   return (
-    <TextField
-      label={label}
-      size={size}
-      value={display}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onChange={handleChange}
-      placeholder={placeholder}
-      inputProps={{ inputMode: 'numeric', ...inputProps }}
-      {...rest}
-    />
+    <Field label={label} inputID={inputId} width="100%">
+      <input
+        id={inputId}
+        value={display}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        inputMode="numeric"
+        style={INPUT_STYLE}
+      />
+    </Field>
   )
 }

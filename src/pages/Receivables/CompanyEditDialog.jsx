@@ -1,16 +1,14 @@
 import { useMemo, useState } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import Box from '@mui/material/Box'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Switch from '@mui/material/Switch'
-import Autocomplete from '@mui/material/Autocomplete'
-import SaveIcon from '@mui/icons-material/Save'
-import CancelIcon from '@mui/icons-material/Cancel'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Switch } from '@astryxdesign/core/Switch'
+import { Text } from '@astryxdesign/core/Text'
+import { TextArea } from '@astryxdesign/core/TextArea'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { Tokenizer } from '@astryxdesign/core/Tokenizer'
+import { Save } from 'lucide-react'
 import { normalizeAliases, validateCompanyForm } from '@/lib/billing/companyForm'
 
 const EMPTY_FORM = {
@@ -20,6 +18,11 @@ const EMPTY_FORM = {
   display_order: 0,
   is_active: true,
   memo: '',
+}
+
+const EMPTY_ALIAS_SOURCE = {
+  search: () => [],
+  bootstrap: () => [],
 }
 
 function initialFormFor(company, existingCompanies) {
@@ -38,7 +41,11 @@ function initialFormFor(company, existingCompanies) {
   return { ...EMPTY_FORM, display_order: nextOrder }
 }
 
-function DialogBody({ company, existingCompanies, onSave, onClose, loading }) {
+function aliasToItem(alias) {
+  return { id: alias, label: alias }
+}
+
+function DialogBody({ company, existingCompanies, onSave, onClose, loading, handleOpenChange }) {
   const isEdit = company != null
   const [form, setForm] = useState(() => initialFormFor(company, existingCompanies))
   const [submitError, setSubmitError] = useState(null)
@@ -68,92 +75,104 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading }) {
     }
   }
 
+  const title = isEdit ? '取引先を編集' : '取引先を新規追加'
+
   return (
-    <>
-      <DialogTitle>{isEdit ? '取引先を編集' : '取引先を新規追加'}</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-          <TextField
-            label="取引先名 (マスタ)"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            error={!!errors.name}
-            helperText={errors.name || '社内で識別する正式名称'}
-            required
-            fullWidth
-            disabled={loading}
-            autoFocus
-          />
-          <TextField
-            label="請求書表記名 (任意)"
-            value={form.invoice_display_name ?? ''}
-            onChange={(e) => setForm({ ...form, invoice_display_name: e.target.value })}
-            helperText="空欄ならマスタ名をそのまま使用"
-            fullWidth
-            disabled={loading}
-          />
-          <Autocomplete
-            multiple
-            freeSolo
-            options={[]}
-            value={form.aliases}
-            onChange={(_e, next) => setForm({ ...form, aliases: normalizeAliases(next) })}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="別名 / 表記ゆれ (Enter で追加)"
-                helperText="「鈴友」「(株)鈴友」など。半角化と空白 trim は保存時に自動適用"
-                disabled={loading}
-              />
-            )}
-          />
-          <TextField
-            label="並び順"
-            type="number"
-            value={form.display_order}
-            onChange={(e) => setForm({ ...form, display_order: e.target.value })}
-            error={!!errors.display_order}
-            helperText={errors.display_order || '数値が小さいほど上に表示'}
-            inputProps={{ step: 1 }}
-            fullWidth
-            disabled={loading}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={form.is_active}
-                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                disabled={loading}
-              />
-            }
-            label="有効"
-          />
-          <TextField
-            label="メモ"
-            value={form.memo ?? ''}
-            onChange={(e) => setForm({ ...form, memo: e.target.value })}
-            fullWidth
-            multiline
-            minRows={2}
-            disabled={loading}
-          />
-          {submitError && <Box sx={{ color: 'error.main', fontSize: 13 }}>{submitError}</Box>}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} startIcon={<CancelIcon />} disabled={loading}>
-          キャンセル
-        </Button>
-        <Button
-          onClick={handleSave}
-          variant="contained"
-          startIcon={<SaveIcon />}
-          disabled={loading || Object.keys(errors).length > 0}
-        >
-          保存
-        </Button>
-      </DialogActions>
-    </>
+    <Layout
+      height="auto"
+      padding={4}
+      header={<DialogHeader title={title} onOpenChange={handleOpenChange} />}
+      content={
+        <LayoutContent>
+          <VStack gap={3}>
+            <TextInput
+              label="取引先名 (マスタ)"
+              value={form.name}
+              onChange={(name) => setForm({ ...form, name })}
+              status={errors.name ? { type: 'error', message: errors.name } : undefined}
+              description={errors.name ? undefined : '社内で識別する正式名称'}
+              isRequired
+              width="100%"
+              isDisabled={loading}
+              hasAutoFocus
+            />
+            <TextInput
+              label="請求書表記名 (任意)"
+              value={form.invoice_display_name ?? ''}
+              onChange={(invoice_display_name) => setForm({ ...form, invoice_display_name })}
+              description="空欄ならマスタ名をそのまま使用"
+              width="100%"
+              isDisabled={loading}
+            />
+            <Tokenizer
+              label="別名 / 表記ゆれ"
+              description="Enter で追加。半角化と空白 trim は保存時に自動適用"
+              searchSource={EMPTY_ALIAS_SOURCE}
+              value={form.aliases.map(aliasToItem)}
+              onChange={(items) =>
+                setForm({
+                  ...form,
+                  aliases: normalizeAliases(items.map((i) => i.label ?? i.id)),
+                })
+              }
+              hasCreate
+              width="100%"
+              isDisabled={loading}
+            />
+            <TextInput
+              label="並び順"
+              value={String(form.display_order ?? '')}
+              onChange={(display_order) => setForm({ ...form, display_order })}
+              status={
+                errors.display_order ? { type: 'error', message: errors.display_order } : undefined
+              }
+              description={errors.display_order ? undefined : '数値が小さいほど上に表示'}
+              width="100%"
+              isDisabled={loading}
+            />
+            <Switch
+              label="有効"
+              value={form.is_active}
+              onChange={(is_active) => setForm({ ...form, is_active })}
+              isDisabled={loading}
+            />
+            <TextArea
+              label="メモ"
+              value={form.memo ?? ''}
+              onChange={(memo) => setForm({ ...form, memo })}
+              width="100%"
+              rows={2}
+              isDisabled={loading}
+            />
+            {submitError ? (
+              <Text size="sm" style={{ color: 'var(--color-text-red)' }}>
+                {submitError}
+              </Text>
+            ) : null}
+          </VStack>
+        </LayoutContent>
+      }
+      footer={
+        <LayoutFooter>
+          <HStack gap={2} hAlign="end">
+            <Button
+              label="キャンセル"
+              variant="secondary"
+              onClick={onClose}
+              isDisabled={loading}
+            />
+            <Button
+              label="保存"
+              variant="primary"
+              icon={<Save />}
+              onClick={handleSave}
+              isDisabled={loading || Object.keys(errors).length > 0}
+              isLoading={loading}
+            />
+          </HStack>
+        </LayoutFooter>
+      }
+    />
   )
 }
 
@@ -179,17 +198,22 @@ export function CompanyEditDialog({
   onSave,
   loading = false,
 }) {
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      {open && (
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+      {open ? (
         <DialogBody
           company={company}
           existingCompanies={existingCompanies}
           onSave={onSave}
           onClose={onClose}
           loading={loading}
+          handleOpenChange={handleOpenChange}
         />
-      )}
+      ) : null}
     </Dialog>
   )
 }

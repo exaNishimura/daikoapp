@@ -1,43 +1,23 @@
-import { createContext, useCallback, useContext, useState } from 'react'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
+import { createContext, useCallback, useContext } from 'react'
+import { useToast as useAstryxToast } from '@astryxdesign/core/Toast'
 
 const ToastContext = createContext(null)
 
 export function ToastProvider({ children }) {
-  const [toast, setToast] = useState({ open: false, message: '', severity: 'info' })
+  const toast = useAstryxToast()
 
-  const showToast = useCallback((message, severity = 'info') => {
-    setToast({ open: true, message, severity })
-  }, [])
-
-  const handleClose = (_event, reason) => {
-    if (reason === 'clickaway') return
-    setToast((prev) => ({ ...prev, open: false }))
-  }
-
-  return (
-    <ToastContext.Provider value={{ showToast }}>
-      {children}
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={5000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleClose}
-          severity={toast.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-          role="alert"
-          aria-live="polite"
-        >
-          {toast.message}
-        </Alert>
-      </Snackbar>
-    </ToastContext.Provider>
+  const showToast = useCallback(
+    (message, severity = 'info') => {
+      toast({
+        body: message,
+        type: severity === 'error' ? 'error' : 'info',
+        isAutoHide: severity !== 'error',
+      })
+    },
+    [toast],
   )
+
+  return <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>
 }
 
 export function useToast() {

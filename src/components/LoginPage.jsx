@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Center } from '@astryxdesign/core/Center'
+import { Heading } from '@astryxdesign/core/Heading'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { VStack } from '@astryxdesign/core/Layout'
 import { useAuth } from '@/contexts/AuthContext'
-import Box from '@mui/material/Box'
-import TextField from '@mui/material/TextField'
-import Button from '@mui/material/Button'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import Paper from '@mui/material/Paper'
-import Container from '@mui/material/Container'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -45,57 +46,55 @@ export function LoginPage() {
   }
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          py: 4,
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 3 }}>
-            ログイン
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
-            登録済みのメールアドレスを入力すると、
-            <br />
-            ログイン用のリンクをメールで送信します。
-          </Typography>
+    <Center height="100%" padding={4}>
+      <Card padding={4} width="100%">
+        <VStack gap={4} as="form" onSubmit={handleSubmit} noValidate>
+          <VStack gap={2} hAlign="center">
+            <Heading level={1}>ログイン</Heading>
+            <Text color="secondary">
+              登録済みのメールアドレスを入力すると、ログイン用のリンクをメールで送信します。
+            </Text>
+          </VStack>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-          {info && (
-            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setInfo(null)}>
-              {info}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit}>
-            <TextField
-              label="メールアドレス"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              fullWidth
-              required
-              autoFocus
-              autoComplete="email"
-              disabled={submitting}
-              sx={{ mb: 2 }}
+          {error ? (
+            <Banner
+              status="error"
+              title={error}
+              isDismissable
+              onDismiss={() => setError(null)}
+              collapsible={false}
             />
-            <Button type="submit" variant="contained" fullWidth disabled={submitting || !email}>
-              {submitting ? '送信中...' : 'ログインリンクを送信'}
-            </Button>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+          ) : null}
+          {info ? (
+            <Banner
+              status="success"
+              title={info}
+              isDismissable
+              onDismiss={() => setInfo(null)}
+              collapsible={false}
+            />
+          ) : null}
+
+          <TextInput
+            label="メールアドレス"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            isRequired
+            hasAutoFocus
+            isDisabled={submitting}
+            width="100%"
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            width="100%"
+            isDisabled={submitting || !email}
+            isLoading={submitting}
+            label={submitting ? '送信中...' : 'ログインリンクを送信'}
+          />
+        </VStack>
+      </Card>
+    </Center>
   )
 }

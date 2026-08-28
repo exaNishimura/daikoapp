@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Theme } from '@astryxdesign/core/theme'
+import { stoneTheme } from '@/theme/astryx/stoneTheme'
 import { CompanySelect } from './CompanySelect'
+
+function renderWithTheme(ui) {
+  return render(
+    <Theme theme={stoneTheme} mode="light">
+      {ui}
+    </Theme>
+  )
+}
 
 const companies = [
   {
@@ -29,18 +39,18 @@ const companies = [
 
 describe('CompanySelect', () => {
   it('renders selected company by id', () => {
-    render(<CompanySelect companies={companies} value={1} onChange={() => {}} />)
-    expect(screen.getByDisplayValue('株式会社 鈴友')).toBeInTheDocument()
+    renderWithTheme(<CompanySelect companies={companies} value={1} onChange={() => {}} />)
+    expect(screen.getByText('株式会社 鈴友')).toBeInTheDocument()
   })
 
   it('renders empty when value is null', () => {
-    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
     expect(screen.getByRole('combobox')).toHaveValue('')
   })
 
   it('filters options by alias (鈴友 hits 株式会社 鈴友)', async () => {
     const user = userEvent.setup()
-    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
     const input = screen.getByRole('combobox')
     await user.click(input)
     await user.type(input, '鈴友')
@@ -51,7 +61,7 @@ describe('CompanySelect', () => {
 
   it('filters options by name fragment', async () => {
     const user = userEvent.setup()
-    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
     const input = screen.getByRole('combobox')
     await user.click(input)
     await user.type(input, '田中')
@@ -62,7 +72,7 @@ describe('CompanySelect', () => {
 
   it('hides inactive companies by default', async () => {
     const user = userEvent.setup()
-    render(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
+    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={() => {}} />)
     const input = screen.getByRole('combobox')
     await user.click(input)
 
@@ -71,7 +81,7 @@ describe('CompanySelect', () => {
 
   it('shows inactive companies with (無効) badge when includeInactive', async () => {
     const user = userEvent.setup()
-    render(<CompanySelect companies={companies} value={null} onChange={() => {}} includeInactive />)
+    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={() => {}} includeInactive />)
     const input = screen.getByRole('combobox')
     await user.click(input)
 
@@ -82,7 +92,7 @@ describe('CompanySelect', () => {
   it('calls onChange with selected company id', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    render(<CompanySelect companies={companies} value={null} onChange={onChange} />)
+    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={onChange} />)
     const input = screen.getByRole('combobox')
     await user.click(input)
     await user.click(screen.getByText('田中商店'))
@@ -93,8 +103,8 @@ describe('CompanySelect', () => {
   it('calls onChange with null when cleared', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    render(<CompanySelect companies={companies} value={1} onChange={onChange} />)
-    const clearBtn = screen.getByLabelText('Clear')
+    renderWithTheme(<CompanySelect companies={companies} value={1} onChange={onChange} />)
+    const clearBtn = screen.getByLabelText(/clear/i)
     await user.click(clearBtn)
 
     expect(onChange).toHaveBeenCalledWith(null)
@@ -102,7 +112,7 @@ describe('CompanySelect', () => {
 
   it('shows create option when creatable and no exact match', async () => {
     const user = userEvent.setup()
-    render(
+    renderWithTheme(
       <CompanySelect
         companies={companies}
         value={null}
@@ -120,7 +130,7 @@ describe('CompanySelect', () => {
 
   it('does not show create option when exact name already exists', async () => {
     const user = userEvent.setup()
-    render(
+    renderWithTheme(
       <CompanySelect
         companies={companies}
         value={null}
@@ -141,7 +151,7 @@ describe('CompanySelect', () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     const onCreate = vi.fn().mockResolvedValue({ id: 99, name: '新規株式会社' })
-    render(
+    renderWithTheme(
       <CompanySelect
         companies={companies}
         value={null}
@@ -163,7 +173,7 @@ describe('CompanySelect', () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     const onCreate = vi.fn().mockResolvedValue({ id: 88, name: 'ブラー商事' })
-    render(
+    renderWithTheme(
       <div>
         <CompanySelect
           companies={companies}

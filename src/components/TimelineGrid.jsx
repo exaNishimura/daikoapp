@@ -8,10 +8,8 @@ import {
 } from '@/utils/operationStatusUtils'
 import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUtils'
 import { TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
-import IconButton from '@mui/material/IconButton'
-import OpenInFullIcon from '@mui/icons-material/OpenInFull'
-import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen'
-import Tooltip from '@mui/material/Tooltip'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { Maximize2, Minimize2 } from 'lucide-react'
 import './TimelineGrid.css'
 
 export function TimelineGrid({
@@ -267,29 +265,19 @@ export function TimelineGrid({
                       aria-label={isOperational ? '稼働中' : '非稼働中'}
                     />
                     <span>{vehicle.name}</span>
-                    <Tooltip title={isFocused ? '全号車表示に戻す' : 'この号車を全幅表示'}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleVehicleFocus(vehicle.id)
-                        }}
-                        aria-label={isFocused ? '全号車表示に戻す' : '号車列を全幅表示'}
-                        sx={{
-                          color: 'text.secondary',
-                          p: 0.25,
-                          '&:hover': {
-                            backgroundColor: 'action.hover',
-                          },
-                        }}
-                      >
-                        {isFocused ? (
-                          <CloseFullscreenIcon fontSize="small" />
-                        ) : (
-                          <OpenInFullIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton
+                      size="sm"
+                      variant="ghost"
+                      label={isFocused ? '全号車表示に戻す' : '号車列を全幅表示'}
+                      tooltip={isFocused ? '全号車表示に戻す' : 'この号車を全幅表示'}
+                      icon={
+                        isFocused ? <Minimize2 size={14} /> : <Maximize2 size={14} />
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleVehicleFocus(vehicle.id)
+                      }}
+                    />
                   </div>
                 </div>
               )

@@ -35,19 +35,13 @@ import {
   markTonightDialogDismissed,
   wasTonightDialogDismissed,
 } from '@/lib/reservation/tonightReservations'
-import EditIcon from '@mui/icons-material/Edit'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import SearchIcon from '@mui/icons-material/Search'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Collapse from '@mui/material/Collapse'
+import { Button } from '@astryxdesign/core/Button'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack } from '@astryxdesign/core/Layout'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Text } from '@astryxdesign/core/Text'
+import { ChevronLeft, ChevronRight, Pencil, Search } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import './ShiftCalendar.css'
 
 // ============================================
@@ -277,238 +271,91 @@ export function ShiftCalendar() {
   }
 
   return (
-    <div className="shift-calendar-page">
+    <PageFrame>
+      <div className="shift-calendar-page">
       <div className={`shift-header ${headerCollapsed ? 'shift-header--collapsed' : ''}`}>
         <div className="shift-header-compact">
           <div className="shift-header-title-row">
             <h1>運転代行シフト表</h1>
-            {isAuthenticated && (
+            {isAuthenticated ? (
               <Button
-                variant="contained"
+                variant="primary"
+                size="sm"
+                label="シフト編集"
+                icon={<Pencil size={16} />}
                 onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
-                startIcon={<EditIcon />}
-                size="small"
-                sx={{
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  fontSize: { xs: '12px', sm: '14px' },
-                }}
-              >
-                シフト編集
-              </Button>
-            )}
+              />
+            ) : null}
           </div>
-          <Box
+          <div
             className="shift-header-month-nav"
-            sx={{
+            style={{
               display: 'grid',
               gridTemplateColumns: '1fr auto 1fr',
               alignItems: 'center',
               width: '100%',
             }}
           >
-            <Box />
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                justifyContent: 'center',
-              }}
-            >
+            <div />
+            <HStack gap={1} vAlign="center">
               <IconButton
+                label="前月"
+                tooltip="前月"
+                variant="ghost"
+                icon={<ChevronLeft />}
                 onClick={handlePrevMonth}
-                disabled={loading}
-                size="medium"
-                aria-label="前月"
-                sx={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                  },
-                  '&:disabled': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                  },
-                  color: '#1976d2',
-                }}
-              >
-                <ChevronLeftIcon />
-              </IconButton>
-              <Typography
-                variant="h6"
-                component="div"
-                sx={{
-                  minWidth: { xs: '100px', sm: '120px' },
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  fontSize: { xs: '16px', sm: '20px' },
-                }}
-              >
+                isDisabled={loading}
+              />
+              <Text weight="bold">
                 {selectedYear}年{selectedMonth}月
-              </Typography>
+              </Text>
               <IconButton
+                label="次月"
+                tooltip="次月"
+                variant="ghost"
+                icon={<ChevronRight />}
                 onClick={handleNextMonth}
-                disabled={loading}
-                size="medium"
-                aria-label="次月"
-                sx={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                  },
-                  '&:disabled': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                  },
-                  color: '#1976d2',
-                }}
-              >
-                <ChevronRightIcon />
-              </IconButton>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                isDisabled={loading}
+              />
+            </HStack>
+            <HStack hAlign="end">
               <IconButton
-                aria-label="検索・フィルター"
-                aria-expanded={searchExpanded}
+                label="検索・フィルター"
+                tooltip="検索・フィルター"
+                variant={searchExpanded ? 'secondary' : 'ghost'}
+                size="sm"
+                icon={<Search size={18} />}
                 onClick={() => setSearchExpanded(!searchExpanded)}
-                size="small"
-                sx={{
-                  backgroundColor: searchExpanded
-                    ? 'rgba(25, 118, 210, 0.12)'
-                    : 'rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  color: '#1976d2',
-                  '&:hover': {
-                    backgroundColor: searchExpanded
-                      ? 'rgba(25, 118, 210, 0.2)'
-                      : 'rgba(0, 0, 0, 0.08)',
-                  },
-                  '& .MuiSvgIcon-root': {
-                    fontSize: 18,
-                  },
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-            </Box>
-          </Box>
+              />
+            </HStack>
+          </div>
         </div>
 
         <div className="shift-header-expandable">
-          <Collapse
-            in={searchExpanded}
-            sx={{
-              overflow: 'visible',
-              '& .MuiCollapse-wrapper': { overflow: 'visible' },
-              '& .MuiCollapse-wrapperInner': { overflow: 'visible' },
-            }}
-          >
+          {searchExpanded ? (
             <div className="shift-controls">
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 1.5,
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  justifyContent: { xs: 'center', sm: 'flex-start' },
-                  width: '100%',
-                  overflow: 'visible',
-                }}
-              >
-                <FormControl
-                  size="small"
-                  sx={{
-                    minWidth: { xs: '110px', sm: '120px' },
-                    backgroundColor: 'white',
-                    borderRadius: '4px',
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'white',
-                      '& fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.23)',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.87)',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#1976d2',
-                        borderWidth: '2px',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: 'rgba(0, 0, 0, 0.6)',
-                      '&.Mui-focused': {
-                        color: '#1976d2',
-                      },
-                    },
-                    '& .MuiSelect-select': {
-                      color: 'rgba(0, 0, 0, 0.87)',
-                      fontWeight: 500,
-                    },
-                  }}
-                >
-                  <InputLabel id="shift-year-label">年</InputLabel>
-                  <Select
-                    labelId="shift-year-label"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    label="年"
-                  >
-                    {[2024, 2025, 2026, 2027, 2028].map((year) => (
-                      <MenuItem key={year} value={year}>
-                        {year}年
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl
-                  size="small"
-                  sx={{
-                    minWidth: { xs: '90px', sm: '100px' },
-                    backgroundColor: 'white',
-                    borderRadius: '4px',
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'white',
-                      '& fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.23)',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'rgba(0, 0, 0, 0.87)',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#1976d2',
-                        borderWidth: '2px',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: 'rgba(0, 0, 0, 0.6)',
-                      '&.Mui-focused': {
-                        color: '#1976d2',
-                      },
-                    },
-                    '& .MuiSelect-select': {
-                      color: 'rgba(0, 0, 0, 0.87)',
-                      fontWeight: 500,
-                    },
-                  }}
-                >
-                  <InputLabel id="shift-month-label">月</InputLabel>
-                  <Select
-                    labelId="shift-month-label"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                    label="月"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => (
-                      <MenuItem key={month} value={month}>
-                        {month}月
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
+              <HStack gap={2} vAlign="center" wrap="wrap">
+                <Selector
+                  label="年"
+                  size="sm"
+                  options={[2024, 2025, 2026, 2027, 2028].map((year) => ({
+                    value: String(year),
+                    label: `${year}年`,
+                  }))}
+                  value={String(selectedYear)}
+                  onChange={(value) => setSelectedYear(Number(value))}
+                />
+                <Selector
+                  label="月"
+                  size="sm"
+                  options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => ({
+                    value: String(month),
+                    label: `${month}月`,
+                  }))}
+                  value={String(selectedMonth)}
+                  onChange={(value) => setSelectedMonth(Number(value))}
+                />
+              </HStack>
               <div className="filter-group">
                 {filterEmployees.map((emp) => (
                   <label key={emp.id}>
@@ -531,7 +378,7 @@ export function ShiftCalendar() {
                 onChange={(e) => setSearchText(e.target.value)}
               />
             </div>
-          </Collapse>
+          ) : null}
           <div className="legend">
             {getEmployeeSelectOptions(employees, shifts).map((emp) => (
               <div key={emp.id} className="legend-item">
@@ -615,7 +462,8 @@ export function ShiftCalendar() {
         employees={employees}
         onClose={() => setVehicleSummaryTarget(null)}
       />
-    </div>
+      </div>
+    </PageFrame>
   )
 }
 
@@ -662,17 +510,16 @@ function DayBlock({
               <span className="day-dow">({dayData.dow})</span>
             </div>
             {isClosed && <div className="status-label closed-day">締め済</div>}
-            {isClosed && isAdmin && (
+            {isClosed && isAdmin ? (
               <Button
-                size="small"
-                variant="outlined"
+                size="sm"
+                variant="secondary"
                 className="day-resend-close-btn"
-                disabled={resendPending}
+                label={resendPending ? '再送中…' : '締め報告を再送'}
+                isDisabled={resendPending}
                 onClick={() => onResendCloseReport?.(dayData.date)}
-              >
-                {resendPending ? '再送中…' : '締め報告を再送'}
-              </Button>
-            )}
+              />
+            ) : null}
             {dayData.status && (
               <div
                 className={`status-label ${dayData.status === '休業' ? 'closed' : dayData.status === '定休日' ? 'holiday' : ''}`}
@@ -807,24 +654,20 @@ function CarBlock({
       <div className="car-header">
         <span>{carNum}号車</span>
         <Button
-          size="small"
-          variant="outlined"
+          size="sm"
+          variant="secondary"
           className="car-sales-btn"
+          label={`${salesLocked ? '締め済' : '売上入力'}${hasSales ? ` ¥${Number(salesAmount).toLocaleString('ja-JP')}` : ''}`}
           onClick={() => onOpenVehicleSales?.(carNum)}
-        >
-          {salesLocked ? '締め済' : '売上入力'}
-          {hasSales ? ` ¥${Number(salesAmount).toLocaleString('ja-JP')}` : ''}
-        </Button>
+        />
         <Button
-          size="small"
-          variant="contained"
-          color="error"
+          size="sm"
+          variant="destructive"
           className="car-summary-btn"
-          disabled={!hasSales}
+          label="集計結果"
+          isDisabled={!hasSales}
           onClick={() => onOpenVehicleSummary?.(carNum)}
-        >
-          集計結果
-        </Button>
+        />
       </div>
       <Lane
         role="代行"

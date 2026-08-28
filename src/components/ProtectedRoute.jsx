@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
+import { Center } from '@astryxdesign/core/Center'
+import { Spinner } from '@astryxdesign/core/Spinner'
 import { useAuth } from '@/contexts/AuthContext'
-import Box from '@mui/material/Box'
-import CircularProgress from '@mui/material/CircularProgress'
 
 export function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
@@ -9,21 +9,13 @@ export function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <Center height="100%">
+        <Spinner size="lg" label="読み込み中" />
+      </Center>
     )
   }
 
   if (!isAuthenticated) {
-    // ログイン後に元のページに戻るために現在のパスを保存
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

@@ -1,23 +1,21 @@
-import { useEffect, useState } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import Stack from '@mui/material/Stack'
-import Box from '@mui/material/Box'
-import Alert from '@mui/material/Alert'
-import Typography from '@mui/material/Typography'
-import CircularProgress from '@mui/material/CircularProgress'
-import Divider from '@mui/material/Divider'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
+import { useEffect, useId, useState } from 'react'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Center } from '@astryxdesign/core/Center'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Field } from '@astryxdesign/core/Field'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
 import { useDailySaleByDate, useUpsertDailySale } from '@/hooks/billing/useDailySales'
 import {
   useDailyStaffSalesByDate,
@@ -32,6 +30,7 @@ import { ReceivableLinesEditor } from '@/components/Receivables/ReceivableLinesE
 import { useUpdateShiftsBulk } from '@/hooks/useShifts'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { calcDailyDerived } from '@/lib/billing/dailySalesCalc'
 import { sumShiftTimesHours } from '@/lib/billing/shiftStaffHours'
 import { sumReceivableAmounts, isShiftEditableReceivable } from '@/lib/billing/shiftReceivables'
@@ -51,20 +50,32 @@ const EMPTY_FORM = {
   receivables: [{ company_id: null, amount: '', note: '' }],
 }
 
-function ShiftTimeField({ label, value, onChange, disabled, fullWidth = false }) {
+const NATIVE_INPUT_STYLE = {
+  width: '100%',
+  boxSizing: 'border-box',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  paddingBlock: 'var(--spacing-2)',
+  paddingInline: 'var(--spacing-3)',
+  font: 'inherit',
+  background: 'var(--color-bg)',
+  color: 'var(--color-text)',
+  fontVariantNumeric: 'tabular-nums',
+}
+
+function TimeField({ label, value, onChange, disabled, isLabelHidden = false }) {
+  const inputId = useId()
   return (
-    <TextField
-      label={label}
-      type="time"
-      value={value}
-      onChange={onChange}
-      size="small"
-      disabled={disabled}
-      fullWidth={fullWidth}
-      InputLabelProps={{ shrink: true }}
-      inputProps={{ style: { fontVariantNumeric: 'tabular-nums' } }}
-      sx={fullWidth ? undefined : { maxWidth: 108 }}
-    />
+    <Field label={label} inputID={inputId} width="100%" isDisabled={disabled} isLabelHidden={isLabelHidden}>
+      <input
+        id={inputId}
+        type="time"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        style={NATIVE_INPUT_STYLE}
+      />
+    </Field>
   )
 }
 
@@ -78,8 +89,7 @@ export function VehicleSalesModal({
   isAdmin = false,
   onClose,
 }) {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery('(max-width: 639px)')
   const { isAuthenticated } = useAuth()
   const { showToast } = useToast()
   const adminCanEdit = isAdmin || isAuthenticated
@@ -126,6 +136,7 @@ export function VehicleSalesModal({
     setReassignError(null)
   }, [open, workDate, carNum])
 
+  // dayShifts/employees はデータ取得完了時のスナップショットを使用
   useEffect(() => {
     if (!open || !carNum || dataLoading) return
     const next = readVehicleSalesForm({
@@ -138,6 +149,7 @@ export function VehicleSalesModal({
     })
     setForm(next)
     setInitialForm(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 取得完了スナップショットのみ同期
   }, [
     open,
     workDate,
@@ -146,13 +158,15 @@ export function VehicleSalesModal({
     saleQuery.dataUpdatedAt,
     staffSalesQuery.dataUpdatedAt,
     receivablesQuery.dataUpdatedAt,
-    // dayShifts/employees はデータ取得完了時のスナップショットを使用
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   ])
 
   const handleClose = () => {
     if (saving) return
     onClose()
+  }
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) handleClose()
   }
 
   const handleOpenReassign = () => {
@@ -276,308 +290,279 @@ export function VehicleSalesModal({
 
   const formDisabled = loading || isLocked
 
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      fullScreen={isMobile}
-      maxWidth="md"
-      fullWidth
-      scroll="paper"
-    >
-      <DialogTitle sx={{ py: isMobile ? 1.5 : 2, fontSize: isMobile ? '1rem' : undefined }}>
-        {dateLabel} {carNum}号車 売上入力
-      </DialogTitle>
-      <DialogContent
-        dividers
-        sx={{
-          px: isMobile ? 2 : 3,
-          py: isMobile ? 2 : undefined,
-        }}
-      >
-        {dataLoading ? (
-          <Stack alignItems="center" py={3}>
-            <CircularProgress size={28} />
-          </Stack>
-        ) : (
-          <Stack spacing={2.5} sx={{ pt: 1 }}>
-            {isDayClosed && (
-              <Alert severity={adminCanEdit ? 'info' : 'warning'}>
-                {adminCanEdit
-                  ? '締め済みです。下の「締め報告を再送」で最新内容を LINE に送れます。'
-                  : '締め済みのため編集できません。'}
-              </Alert>
-            )}
-            {error && <Alert severity="error">{error}</Alert>}
-            {success && <Alert severity="success">{success}</Alert>}
-
-            <Typography variant="subtitle2" color="text.secondary">
-              号車売上
-            </Typography>
-            <TextField
-              label="走行距離 (km)"
-              type="number"
-              value={form.distance_km}
-              onChange={(e) => setForm((prev) => ({ ...prev, distance_km: e.target.value }))}
-              inputProps={{ step: 0.1, min: 0 }}
-              fullWidth
-              disabled={formDisabled}
-              size="small"
-            />
-            <TextField
-              label="燃料代 (円)"
-              type="number"
-              value={form.fuel_yen}
-              onChange={(e) => setForm((prev) => ({ ...prev, fuel_yen: e.target.value }))}
-              inputProps={{ step: 1, min: 0 }}
-              fullWidth
-              disabled={formDisabled}
-              size="small"
-            />
-            <TextField
-              label="売上 (円)"
-              type="number"
-              value={form.sales}
-              onChange={(e) => setForm((prev) => ({ ...prev, sales: e.target.value }))}
-              inputProps={{ step: 1, min: 0 }}
-              fullWidth
-              required
-              disabled={formDisabled}
-              size="small"
-            />
-
-            <Divider />
-
-            <Stack
-              direction={isMobile ? 'column' : 'row'}
-              alignItems={isMobile ? 'stretch' : 'baseline'}
-              justifyContent="space-between"
-              spacing={isMobile ? 0.5 : 0}
-            >
-              <Typography variant="subtitle2" color="text.secondary">
-                {carNum}号車 実績勤務時間
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                合計 {sumShiftTimesHours(form.shiftTimes)}h
-              </Typography>
-            </Stack>
-            {form.shiftTimes.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                この号車のシフトがありません
-              </Typography>
-            ) : isMobile ? (
-              <Stack spacing={1.5}>
-                {form.shiftTimes.map((row) => (
-                  <Box
-                    key={row.shiftId}
-                    sx={{
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      p: 1.5,
-                    }}
-                  >
-                    <Typography variant="body2" fontWeight={600}>
-                      {row.staffName}
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ ml: 1 }}
-                      >
-                        {row.role}
-                      </Typography>
-                    </Typography>
-                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                      <ShiftTimeField
-                        label="開始"
-                        value={row.start}
-                        onChange={(e) =>
-                          handleShiftTimeChange(row.shiftId, 'start', e.target.value)
-                        }
-                        disabled={formDisabled}
-                        fullWidth
-                      />
-                      <ShiftTimeField
-                        label="終了"
-                        value={row.end}
-                        onChange={(e) => handleShiftTimeChange(row.shiftId, 'end', e.target.value)}
-                        disabled={formDisabled}
-                        fullWidth
-                      />
-                    </Stack>
-                  </Box>
-                ))}
-              </Stack>
-            ) : (
-              <Table size="small" sx={{ '& td, & th': { py: 0.5, px: 1 } }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>スタッフ</TableCell>
-                    <TableCell width={56}>役割</TableCell>
-                    <TableCell width={110}>開始</TableCell>
-                    <TableCell width={110}>終了</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {form.shiftTimes.map((row) => (
-                    <TableRow key={row.shiftId}>
-                      <TableCell>{row.staffName}</TableCell>
-                      <TableCell>{row.role}</TableCell>
-                      <TableCell>
-                        <ShiftTimeField
-                          value={row.start}
-                          onChange={(e) =>
-                            handleShiftTimeChange(row.shiftId, 'start', e.target.value)
-                          }
-                          disabled={formDisabled}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <ShiftTimeField
-                          value={row.end}
-                          onChange={(e) =>
-                            handleShiftTimeChange(row.shiftId, 'end', e.target.value)
-                          }
-                          disabled={formDisabled}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-            <Typography variant="caption" color="text.secondary">
-              保存するとシフト表のタイムラインにも反映されます
-            </Typography>
-
-            <Divider />
-
-            <Typography variant="subtitle2" color="text.secondary">
-              その他経費
-            </Typography>
-            <TextField
-              label="経費内容"
-              value={form.expense_note}
-              onChange={(e) => setForm((prev) => ({ ...prev, expense_note: e.target.value }))}
-              fullWidth
-              disabled={formDisabled}
-              size="small"
-            />
-            <TextField
-              label="経費額 (円)"
-              type="number"
-              value={form.expense_amount}
-              onChange={(e) => setForm((prev) => ({ ...prev, expense_amount: e.target.value }))}
-              inputProps={{ step: 1, min: 0 }}
-              fullWidth
-              disabled={formDisabled}
-              size="small"
-            />
-
-            <Divider />
-
-            <Typography variant="subtitle2" color="text.secondary">
-              未収（売掛・請求書払い）
-            </Typography>
-            <ReceivableLinesEditor
-              lines={form.receivables}
-              onChange={(receivables) => setForm((prev) => ({ ...prev, receivables }))}
-              disabled={formDisabled}
-              companies={companiesQuery.data ?? []}
-              creatable
-              onCreateCompany={async (name) => {
-                const trimmed = name.trim()
-                const findExisting = (list) =>
-                  (list ?? []).find(
-                    (c) =>
-                      String(c.name ?? '')
-                        .trim()
-                        .toLowerCase() === trimmed.toLowerCase()
-                  )
-                const existing = findExisting(companiesQuery.data)
-                if (existing) return existing
-                const nextOrder =
-                  (companiesQuery.data ?? []).reduce(
-                    (max, c) => Math.max(max, c.display_order ?? 0),
-                    0
-                  ) + 10
-                try {
-                  return await createCompanyMutation.mutateAsync({
-                    name: trimmed,
-                    invoice_display_name: null,
-                    aliases: [],
-                    display_order: nextOrder,
-                    is_active: true,
-                    memo: null,
-                  })
-                } catch (err) {
-                  const { data: refreshed } = await companiesQuery.refetch()
-                  const raced = findExisting(refreshed)
-                  if (raced) return raced
-                  throw err
-                }
-              }}
-            />
-            <Typography variant="caption" color="text.secondary" display="block">
-              複数行入力可。請求先がなければ名前を入力して新規追加できます。
-              {receivablesQuery.data?.length > 0 && (
-                <>
-                  {' '}
-                  当日合計: ¥{sumReceivableAmounts(receivablesQuery.data).toLocaleString('ja-JP')}
-                </>
-              )}
-            </Typography>
-
-            <Typography variant="caption" color="text.secondary">
-              ログイン不要で保存できます
-            </Typography>
-          </Stack>
-        )}
-      </DialogContent>
-      <DialogActions
-        sx={{
-          flexDirection: isMobile ? 'column-reverse' : 'row',
-          alignItems: 'stretch',
-          gap: 1,
-          px: isMobile ? 2 : undefined,
-          py: isMobile ? 2 : undefined,
-          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
-        }}
-      >
-        {adminCanEdit && (
-          <Button
-            onClick={handleOpenReassign}
-            disabled={loading}
-            fullWidth={isMobile}
-            sx={isMobile ? undefined : { mr: 'auto' }}
-          >
-            号車変更
-          </Button>
-        )}
-        {isDayClosed && adminCanEdit && (
-          <Button
-            variant="outlined"
-            color="primary"
-            onClick={handleResendCloseReport}
-            disabled={loading || !workDate}
-            fullWidth={isMobile}
-          >
-            {resendCloseMutation.isPending ? '再送中…' : '締め報告を再送'}
-          </Button>
-        )}
-        <Button onClick={handleClose} disabled={saving} fullWidth={isMobile}>
-          閉じる
-        </Button>
+  const startActions = (
+    <>
+      {adminCanEdit ? (
+        <Button label="号車変更" variant="secondary" onClick={handleOpenReassign} isDisabled={loading} />
+      ) : null}
+      {isDayClosed && adminCanEdit ? (
         <Button
-          variant="contained"
-          onClick={handleSave}
-          disabled={formDisabled}
-          fullWidth={isMobile}
-        >
-          保存
-        </Button>
-      </DialogActions>
+          label={resendCloseMutation.isPending ? '再送中…' : '締め報告を再送'}
+          variant="secondary"
+          onClick={handleResendCloseReport}
+          isDisabled={loading || !workDate}
+        />
+      ) : null}
+    </>
+  )
+  const endActions = (
+    <>
+      <Button label="閉じる" variant="secondary" onClick={handleClose} isDisabled={saving} />
+      <Button label="保存" variant="primary" onClick={handleSave} isDisabled={formDisabled} />
+    </>
+  )
+
+  return (
+    <>
+      <Dialog
+        isOpen={open}
+        onOpenChange={handleOpenChange}
+        purpose="form"
+        variant={isMobile ? 'fullscreen' : 'standard'}
+      >
+        <Layout
+          height="auto"
+          padding={4}
+          header={
+            <DialogHeader
+              title={`${dateLabel} ${carNum}号車 売上入力`}
+              onOpenChange={handleOpenChange}
+            />
+          }
+          content={
+            <LayoutContent>
+              {dataLoading ? (
+                <Center padding={4}>
+                  <Spinner />
+                </Center>
+              ) : (
+                <VStack gap={4}>
+                  {isDayClosed ? (
+                    <Banner
+                      status={adminCanEdit ? 'info' : 'warning'}
+                      title={
+                        adminCanEdit
+                          ? '締め済みです。下の「締め報告を再送」で最新内容を LINE に送れます。'
+                          : '締め済みのため編集できません。'
+                      }
+                      collapsible={false}
+                    />
+                  ) : null}
+                  {error ? <Banner status="error" title={error} collapsible={false} /> : null}
+                  {success ? <Banner status="success" title={success} collapsible={false} /> : null}
+
+                  <Text color="secondary" weight="semibold">
+                    号車売上
+                  </Text>
+                  <TextInput
+                    label="走行距離 (km)"
+                    value={form.distance_km}
+                    onChange={(value) => setForm((prev) => ({ ...prev, distance_km: value }))}
+                    isDisabled={formDisabled}
+                    width="100%"
+                    size="sm"
+                  />
+                  <TextInput
+                    label="燃料代 (円)"
+                    value={form.fuel_yen}
+                    onChange={(value) => setForm((prev) => ({ ...prev, fuel_yen: value }))}
+                    isDisabled={formDisabled}
+                    width="100%"
+                    size="sm"
+                  />
+                  <TextInput
+                    label="売上 (円)"
+                    value={form.sales}
+                    onChange={(value) => setForm((prev) => ({ ...prev, sales: value }))}
+                    isDisabled={formDisabled}
+                    isRequired
+                    width="100%"
+                    size="sm"
+                  />
+
+                  {isMobile ? (
+                    <VStack gap={1}>
+                      <Text color="secondary" weight="semibold">
+                        {carNum}号車 実績勤務時間
+                      </Text>
+                      <Text color="secondary">合計 {sumShiftTimesHours(form.shiftTimes)}h</Text>
+                    </VStack>
+                  ) : (
+                    <HStack hAlign="between" vAlign="baseline" wrap="wrap" gap={1}>
+                      <Text color="secondary" weight="semibold">
+                        {carNum}号車 実績勤務時間
+                      </Text>
+                      <Text color="secondary">合計 {sumShiftTimesHours(form.shiftTimes)}h</Text>
+                    </HStack>
+                  )}
+                  {form.shiftTimes.length === 0 ? (
+                    <Text color="secondary">この号車のシフトがありません</Text>
+                  ) : isMobile ? (
+                    <VStack gap={2}>
+                      {form.shiftTimes.map((row) => (
+                        <VStack key={row.shiftId} gap={2}>
+                          <Text weight="semibold">
+                            {row.staffName}{' '}
+                            <Text as="span" color="secondary">
+                              {row.role}
+                            </Text>
+                          </Text>
+                          <HStack gap={2}>
+                            <TimeField
+                              label="開始"
+                              value={row.start}
+                              onChange={(value) => handleShiftTimeChange(row.shiftId, 'start', value)}
+                              disabled={formDisabled}
+                            />
+                            <TimeField
+                              label="終了"
+                              value={row.end}
+                              onChange={(value) => handleShiftTimeChange(row.shiftId, 'end', value)}
+                              disabled={formDisabled}
+                            />
+                          </HStack>
+                        </VStack>
+                      ))}
+                    </VStack>
+                  ) : (
+                    <Table density="compact">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHeaderCell>スタッフ</TableHeaderCell>
+                          <TableHeaderCell>役割</TableHeaderCell>
+                          <TableHeaderCell>開始</TableHeaderCell>
+                          <TableHeaderCell>終了</TableHeaderCell>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {form.shiftTimes.map((row) => (
+                          <TableRow key={row.shiftId}>
+                            <TableCell>{row.staffName}</TableCell>
+                            <TableCell>{row.role}</TableCell>
+                            <TableCell>
+                              <TimeField
+                                label="開始"
+                                value={row.start}
+                                onChange={(value) =>
+                                  handleShiftTimeChange(row.shiftId, 'start', value)
+                                }
+                                disabled={formDisabled}
+                                isLabelHidden
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TimeField
+                                label="終了"
+                                value={row.end}
+                                onChange={(value) =>
+                                  handleShiftTimeChange(row.shiftId, 'end', value)
+                                }
+                                disabled={formDisabled}
+                                isLabelHidden
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                  <Text color="secondary">保存するとシフト表のタイムラインにも反映されます</Text>
+
+                  <Text color="secondary" weight="semibold">
+                    その他経費
+                  </Text>
+                  <TextInput
+                    label="経費内容"
+                    value={form.expense_note}
+                    onChange={(value) => setForm((prev) => ({ ...prev, expense_note: value }))}
+                    isDisabled={formDisabled}
+                    width="100%"
+                    size="sm"
+                  />
+                  <TextInput
+                    label="経費額 (円)"
+                    value={form.expense_amount}
+                    onChange={(value) => setForm((prev) => ({ ...prev, expense_amount: value }))}
+                    isDisabled={formDisabled}
+                    width="100%"
+                    size="sm"
+                  />
+
+                  <Text color="secondary" weight="semibold">
+                    未収（売掛・請求書払い）
+                  </Text>
+                  <ReceivableLinesEditor
+                    lines={form.receivables}
+                    onChange={(receivables) => setForm((prev) => ({ ...prev, receivables }))}
+                    disabled={formDisabled}
+                    companies={companiesQuery.data ?? []}
+                    creatable
+                    onCreateCompany={async (name) => {
+                      const trimmed = name.trim()
+                      const findExisting = (list) =>
+                        (list ?? []).find(
+                          (c) =>
+                            String(c.name ?? '')
+                              .trim()
+                              .toLowerCase() === trimmed.toLowerCase()
+                        )
+                      const existing = findExisting(companiesQuery.data)
+                      if (existing) return existing
+                      const nextOrder =
+                        (companiesQuery.data ?? []).reduce(
+                          (max, c) => Math.max(max, c.display_order ?? 0),
+                          0
+                        ) + 10
+                      try {
+                        return await createCompanyMutation.mutateAsync({
+                          name: trimmed,
+                          invoice_display_name: null,
+                          aliases: [],
+                          display_order: nextOrder,
+                          is_active: true,
+                          memo: null,
+                        })
+                      } catch (err) {
+                        const { data: refreshed } = await companiesQuery.refetch()
+                        const raced = findExisting(refreshed)
+                        if (raced) return raced
+                        throw err
+                      }
+                    }}
+                  />
+                  <Text color="secondary">
+                    複数行入力可。請求先がなければ名前を入力して新規追加できます。
+                    {receivablesQuery.data?.length > 0
+                      ? ` 当日合計: ¥${sumReceivableAmounts(receivablesQuery.data).toLocaleString('ja-JP')}`
+                      : ''}
+                  </Text>
+
+                  <Text color="secondary">ログイン不要で保存できます</Text>
+                </VStack>
+              )}
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              {isMobile ? (
+                <VStack gap={2}>
+                  {endActions}
+                  {startActions}
+                </VStack>
+              ) : (
+                <HStack gap={2} hAlign="between" wrap="wrap">
+                  <HStack gap={2} wrap="wrap">
+                    {startActions}
+                  </HStack>
+                  <HStack gap={2}>
+                    {endActions}
+                  </HStack>
+                </HStack>
+              )}
+            </LayoutFooter>
+          }
+        />
+      </Dialog>
 
       <ReassignVehicleDialog
         open={reassignOpen}
@@ -594,6 +579,6 @@ export function VehicleSalesModal({
         }}
         onConfirm={handleConfirmReassign}
       />
-    </Dialog>
+    </>
   )
 }

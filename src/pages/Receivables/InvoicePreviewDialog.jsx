@@ -1,13 +1,8 @@
-import { useEffect } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import Box from '@mui/material/Box'
-import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { TabList, Tab } from '@astryxdesign/core/TabList'
 
 /**
  * 請求書プレビューダイアログ。
@@ -17,10 +12,10 @@ import { useState } from 'react'
  * 閉じる時に各 Blob URL を revoke してメモリ解放する。
  */
 export function InvoicePreviewDialog({ open, onClose, companyName, previews }) {
-  const [tab, setTab] = useState(0)
+  const [tab, setTab] = useState('0')
 
   useEffect(() => {
-    if (open) setTab(0)
+    if (open) setTab('0')
   }, [open])
 
   // ダイアログが閉じられたタイミングで Blob URL を解放
@@ -36,55 +31,73 @@ export function InvoicePreviewDialog({ open, onClose, companyName, previews }) {
     }
   }, [open, previews])
 
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
+
   if (!previews || previews.length === 0) return null
-  const current = previews[tab] ?? previews[0]
+  const tabIndex = Number(tab) || 0
+  const current = previews[tabIndex] ?? previews[0]
+  const title = `プレビュー：${companyName}${
+    current?.sequence ? `（${current.sequence.index} / ${current.sequence.total} 枚目）` : ''
+  }`
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle>
-        プレビュー：{companyName}
-        {current?.sequence ? `（${current.sequence.index} / ${current.sequence.total} 枚目）` : ''}
-      </DialogTitle>
-      {previews.length > 1 && (
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3 }}>
-          {previews.map((p, idx) => (
-            <Tab
-              key={idx}
-              label={p.sequence ? `${p.sequence.index} / ${p.sequence.total}` : `${idx + 1}`}
-            />
-          ))}
-        </Tabs>
-      )}
-      <DialogContent dividers sx={{ p: 0, height: '80vh' }}>
-        <Box
-          component="iframe"
-          src={current.url}
-          title={`invoice-preview-${tab}`}
-          sx={{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            display: 'block',
-          }}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={() => {
-            const a = document.createElement('a')
-            a.href = current.url
-            a.download = `${companyName}-preview${current.sequence ? `-${current.sequence.index}of${current.sequence.total}` : ''}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            a.remove()
-          }}
-        >
-          このプレビューをダウンロード
-        </Button>
-        <Button onClick={onClose} variant="contained">
-          閉じる
-        </Button>
-      </DialogActions>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+      <Layout
+        height="auto"
+        padding={4}
+        header={<DialogHeader title={title} onOpenChange={handleOpenChange} />}
+        content={
+          <LayoutContent>
+            <VStack gap={2}>
+              {previews.length > 1 ? (
+                <TabList value={tab} onChange={setTab} role="tablist">
+                  {previews.map((p, idx) => (
+                    <Tab
+                      key={idx}
+                      value={String(idx)}
+                      label={p.sequence ? `${p.sequence.index} / ${p.sequence.total}` : `${idx + 1}`}
+                      panelId={`invoice-preview-panel-${idx}`}
+                    />
+                  ))}
+                </TabList>
+              ) : null}
+              <iframe
+                id={`invoice-preview-panel-${tabIndex}`}
+                role="tabpanel"
+                src={current.url}
+                title={`invoice-preview-${tab}`}
+                style={{
+                  width: '100%',
+                  height: '80vh',
+                  border: 'none',
+                  display: 'block',
+                }}
+              />
+            </VStack>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              <Button
+                variant="secondary"
+                label="このプレビューをダウンロード"
+                onClick={() => {
+                  const a = document.createElement('a')
+                  a.href = current.url
+                  a.download = `${companyName}-preview${current.sequence ? `-${current.sequence.index}of${current.sequence.total}` : ''}.pdf`
+                  document.body.appendChild(a)
+                  a.click()
+                  a.remove()
+                }}
+              />
+              <Button label="閉じる" variant="primary" onClick={onClose} />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

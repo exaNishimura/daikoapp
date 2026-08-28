@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
-import CircularProgress from '@mui/material/CircularProgress'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Text } from '@astryxdesign/core/Text'
 import {
   decideReassignMode,
   getReassignableCarNums,
@@ -38,6 +31,10 @@ export function ReassignVehicleDialog({
     const nextOptions = getReassignableCarNums(fromCar)
     setToCar(nextOptions[0] ?? '')
   }, [open, fromCar])
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen && !loading) onClose()
+  }
 
   const hasToData =
     toCar !== '' &&
@@ -68,45 +65,52 @@ export function ReassignVehicleDialog({
   }
 
   return (
-    <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>号車変更</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            現在: {formatVehicleNumLabel(fromCar)}
-          </Typography>
-          <FormControl fullWidth size="small" disabled={loading || options.length === 0}>
-            <InputLabel id="reassign-to-car-label">変更先号車</InputLabel>
-            <Select
-              labelId="reassign-to-car-label"
-              label="変更先号車"
-              value={toCar}
-              onChange={(e) => setToCar(e.target.value)}
-            >
-              {options.map((car) => (
-                <MenuItem key={car} value={car}>
-                  {formatVehicleNumLabel(car)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {modeLabel && <Alert severity={mode === 'swap' ? 'warning' : 'info'}>{modeLabel}</Alert>}
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          キャンセル
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleConfirm}
-          disabled={loading || !toCar}
-          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
-        >
-          実行
-        </Button>
-      </DialogActions>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+      <Layout
+        height="auto"
+        padding={4}
+        header={<DialogHeader title="号車変更" onOpenChange={handleOpenChange} />}
+        content={
+          <LayoutContent>
+            <VStack gap={3}>
+              <Text color="secondary">現在: {formatVehicleNumLabel(fromCar)}</Text>
+              <Selector
+                label="変更先号車"
+                options={options.map((car) => ({
+                  value: String(car),
+                  label: formatVehicleNumLabel(car),
+                }))}
+                value={toCar}
+                onChange={setToCar}
+                isDisabled={loading || options.length === 0}
+                width="100%"
+              />
+              {modeLabel ? (
+                <Banner
+                  status={mode === 'swap' ? 'warning' : 'info'}
+                  title={modeLabel}
+                  collapsible={false}
+                />
+              ) : null}
+              {error ? <Banner status="error" title={error} collapsible={false} /> : null}
+            </VStack>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              <Button label="キャンセル" variant="secondary" onClick={onClose} isDisabled={loading} />
+              <Button
+                label="実行"
+                variant="primary"
+                onClick={handleConfirm}
+                isDisabled={loading || !toCar}
+                isLoading={loading}
+              />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

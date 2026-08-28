@@ -1,22 +1,68 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import dayjs from 'dayjs'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { DateInput } from '@astryxdesign/core/DateInput'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Field } from '@astryxdesign/core/Field'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { TextArea } from '@astryxdesign/core/TextArea'
+import { TextInput } from '@astryxdesign/core/TextInput'
 import { missingReservationFields } from '@/services/reservationService'
+import './ReservationFormDialog.css'
 
-function ReservationFormFields({ initial, onClose, onSubmit, isMobile }) {
-  const [reservedAt, setReservedAt] = useState(() =>
-    initial?.reserved_at ? dayjs(initial.reserved_at) : dayjs()
+const NATIVE_INPUT_STYLE = {
+  boxSizing: 'border-box',
+  width: '100%',
+  minWidth: 0,
+  padding: 'var(--spacing-2) var(--spacing-3)',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--color-border)',
+  font: 'inherit',
+  background: 'var(--color-bg)',
+  color: 'var(--color-text)',
+  fontVariantNumeric: 'tabular-nums',
+}
+
+function splitDateTime(iso) {
+  const d = iso ? dayjs(iso) : dayjs()
+  return {
+    date: d.isValid() ? d.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+    time: d.isValid() ? d.format('HH:mm') : dayjs().format('HH:mm'),
+  }
+}
+
+function buildReservedAtIso(date, time) {
+  if (!date || !time) return ''
+  const d = dayjs(`${date}T${time}`)
+  return d.isValid() ? d.toISOString() : ''
+}
+
+function TimeField({ label, value, onChange, isRequired, status }) {
+  const inputId = useId()
+  return (
+    <Field
+      label={label}
+      inputID={inputId}
+      width="100%"
+      isRequired={isRequired}
+      status={status}
+    >
+      <input
+        id={inputId}
+        type="time"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={NATIVE_INPUT_STYLE}
+      />
+    </Field>
   )
+}
+
+function ReservationFormFields({ initial, onClose, onSubmit }) {
+  const initialDateTime = splitDateTime(initial?.reserved_at)
+  const [reservedDate, setReservedDate] = useState(() => initialDateTime.date)
+  const [reservedTime, setReservedTime] = useState(() => initialDateTime.time)
   const [customerName, setCustomerName] = useState(() => initial?.customer_name ?? '')
   const [phone, setPhone] = useState(() => initial?.phone ?? '')
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
@@ -24,9 +70,13 @@ function ReservationFormFields({ initial, onClose, onSubmit, isMobile }) {
   const [submitError, setSubmitError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const reservedAtError = fieldErrors.reserved_at
+    ? { type: 'error', message: '必須です' }
+    : undefined
+
   const handleSave = async () => {
     const payload = {
-      reserved_at: reservedAt?.isValid?.() ? reservedAt.toISOString() : '',
+      reserved_at: buildReservedAtIso(reservedDate, reservedTime),
       customer_name: customerName,
       phone,
       memo,
@@ -53,66 +103,89 @@ function ReservationFormFields({ initial, onClose, onSubmit, isMobile }) {
   }
 
   return (
-    <>
-      <DialogTitle>{initial?.id ? '予約を編集' : '予約を登録'}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {submitError && <Alert severity="error">{submitError}</Alert>}
-          <DateTimePicker
-            label="予約日時"
-            value={reservedAt}
-            onChange={(v) => setReservedAt(v)}
-            ampm={false}
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                error: Boolean(fieldErrors.reserved_at),
-                required: true,
-              },
-            }}
-          />
-          <TextField
-            label="顧客名"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            required
-            error={Boolean(fieldErrors.customer_name)}
-            fullWidth
-          />
-          <TextField
-            label="電話番号"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-            error={Boolean(fieldErrors.phone)}
-            fullWidth
-          />
-          <TextField
-            label="メモ（備忘）"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            multiline
-            minRows={2}
-            fullWidth
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions
-        sx={{
-          flexDirection: isMobile ? 'column-reverse' : 'row',
-          gap: isMobile ? 1 : 0,
-          px: isMobile ? 2 : undefined,
-          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : undefined,
-        }}
-      >
-        <Button onClick={onClose} disabled={saving} fullWidth={isMobile}>
-          キャンセル
-        </Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving} fullWidth={isMobile}>
-          保存
-        </Button>
-      </DialogActions>
-    </>
+    <Layout
+      className="reservation-form-dialog"
+      height="auto"
+      padding={4}
+      header={
+        <DialogHeader
+          title={initial?.id ? '予約を編集' : '予約を登録'}
+          onOpenChange={(isOpen) => {
+            if (!isOpen && !saving) onClose()
+          }}
+        />
+      }
+      content={
+        <LayoutContent>
+          <VStack gap={4} className="reservation-form-dialog__fields">
+            {submitError ? (
+              <Banner status="error" title={submitError} collapsible={false} />
+            ) : null}
+            <DateInput
+              label="予約日"
+              value={reservedDate || undefined}
+              onChange={(value) => setReservedDate(value ?? '')}
+              isRequired
+              weekStartsOn="mon"
+              size="sm"
+              width="100%"
+              status={reservedAtError}
+            />
+            <TimeField
+              label="予約時刻"
+              value={reservedTime}
+              onChange={setReservedTime}
+              isRequired
+              status={reservedAtError}
+            />
+            <TextInput
+              label="顧客名"
+              value={customerName}
+              onChange={setCustomerName}
+              isRequired
+              width="100%"
+              status={
+                fieldErrors.customer_name ? { type: 'error', message: '必須です' } : undefined
+              }
+            />
+            <TextInput
+              label="電話番号"
+              value={phone}
+              onChange={setPhone}
+              isRequired
+              width="100%"
+              status={fieldErrors.phone ? { type: 'error', message: '必須です' } : undefined}
+            />
+            <TextArea
+              label="メモ（備忘）"
+              value={memo}
+              onChange={setMemo}
+              rows={2}
+              width="100%"
+            />
+          </VStack>
+        </LayoutContent>
+      }
+      footer={
+        <LayoutFooter>
+          <HStack className="reservation-form-dialog__footer" gap={2} hAlign="end" wrap="wrap">
+            <Button
+              label="キャンセル"
+              variant="secondary"
+              onClick={onClose}
+              isDisabled={saving}
+            />
+            <Button
+              label="保存"
+              variant="primary"
+              onClick={handleSave}
+              isDisabled={saving}
+              isLoading={saving}
+            />
+          </HStack>
+        </LayoutFooter>
+      }
+    />
   )
 }
 
@@ -125,18 +198,19 @@ function ReservationFormFields({ initial, onClose, onSubmit, isMobile }) {
  * }} props
  */
 export function ReservationFormDialog({ open, initial = null, onClose, onSubmit }) {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const formKey = `${initial?.id ?? 'new'}:${initial?.updated_at ?? 'create'}`
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
       {open ? (
         <ReservationFormFields
           key={formKey}
           initial={initial}
           onClose={onClose}
           onSubmit={onSubmit}
-          isMobile={isMobile}
         />
       ) : null}
     </Dialog>

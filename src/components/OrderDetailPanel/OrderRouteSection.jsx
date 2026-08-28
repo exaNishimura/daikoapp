@@ -1,23 +1,16 @@
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Stack from '@mui/material/Stack'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import IconButton from '@mui/material/IconButton'
-import AddIcon from '@mui/icons-material/Add'
-import DeleteIcon from '@mui/icons-material/Delete'
-import RouteIcon from '@mui/icons-material/Route'
+import { Plus, Route, Trash2 } from 'lucide-react'
+import { Button } from '@astryxdesign/core/Button'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, StackItem, VStack } from '@astryxdesign/core/Layout'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import { getAddressFromCity } from '@/utils/addressUtils'
 
-const sectionTitleSx = {
-  fontWeight: 600,
-  mb: 2,
-  pb: 1.5,
-  borderBottom: 1,
-  borderColor: 'divider',
+function namedChange(handleChange, name) {
+  return (value) => handleChange({ target: { name, value: value ?? '' } })
 }
-const labelSx = { display: 'block', mb: 0.5 }
 
 function MapEmbed({ order }) {
   if (!order.pickup_address || !order.dropoff_address) return null
@@ -37,7 +30,6 @@ function MapEmbed({ order }) {
   }
 
   const openExternalNav = () => {
-    // origin を省略することで現在地が使われる
     const destination = encodeURIComponent(order.dropoff_address)
     let url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`
     if (order.waypoints && order.waypoints.length > 0) {
@@ -51,20 +43,13 @@ function MapEmbed({ order }) {
   }
 
   return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+    <VStack gap={1}>
+      <Text size="xsm" color="secondary">
         ルート表示
-      </Typography>
-      <Box
-        sx={{
-          width: '100%',
-          height: '300px',
-          borderRadius: 1,
-          overflow: 'hidden',
-          border: 1,
-          borderColor: 'divider',
-          mb: 1.5,
-        }}
+      </Text>
+      <VStack
+        height={300}
+        style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}
       >
         <iframe
           width="100%"
@@ -76,17 +61,14 @@ function MapEmbed({ order }) {
           src={buildEmbedUrl()}
           title="ルート地図"
         />
-      </Box>
+      </VStack>
       <Button
-        variant="contained"
-        color="primary"
-        fullWidth
+        variant="primary"
+        width="100%"
         onClick={openExternalNav}
-        sx={{ mt: 1 }}
-      >
-        Googleマップでナビゲーション開始
-      </Button>
-    </Box>
+        label="Googleマップでナビゲーション開始"
+      />
+    </VStack>
   )
 }
 
@@ -111,13 +93,13 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
 
   return (
     <>
-      <TextField
+      <TextInput
         label="お迎え場所"
-        name="pickup_location"
+        htmlName="pickup_location"
         value={formData.pickup_location}
-        onChange={handleChange}
+        onChange={namedChange(handleChange, 'pickup_location')}
         placeholder="例: モンガータ"
-        fullWidth
+        width="100%"
       />
       <PlacesAutocompleteField
         label="出発地"
@@ -127,54 +109,44 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
         placeholder="例: 三重県鈴鹿市..."
         required
       />
-      <Box>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            mb: 1,
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
+      <VStack gap={1.5}>
+        <HStack hAlign="between" vAlign="center">
+          <Text size="xsm" color="secondary">
             経由地
-          </Typography>
-          <Button size="small" startIcon={<AddIcon />} onClick={addWaypoint}>
-            追加
-          </Button>
-        </Box>
-        <Stack spacing={1.5}>
-          {formData.waypoints.map((waypoint, index) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <Box sx={{ flex: 1 }}>
-                <PlacesAutocompleteField
-                  label={`経由地 ${index + 1}`}
-                  value={waypoint}
-                  onChange={(address) => updateWaypoint(index, address)}
-                  placeholder="例: 三重県鈴鹿市..."
-                />
-              </Box>
-              <IconButton
-                onClick={() => removeWaypoint(index)}
-                sx={{ mt: 0.5 }}
-                color="error"
-                size="small"
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-          {formData.waypoints.length === 0 && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ fontStyle: 'italic', fontSize: '0.75rem' }}
-            >
-              経由地はありません
-            </Typography>
-          )}
-        </Stack>
-      </Box>
+          </Text>
+          <Button
+            size="sm"
+            variant="secondary"
+            label="追加"
+            icon={<Plus />}
+            onClick={addWaypoint}
+          />
+        </HStack>
+        {formData.waypoints.map((waypoint, index) => (
+          <HStack key={index} gap={1} vAlign="start">
+            <StackItem size="fill">
+              <PlacesAutocompleteField
+                label={`経由地 ${index + 1}`}
+                value={waypoint}
+                onChange={(address) => updateWaypoint(index, address)}
+                placeholder="例: 三重県鈴鹿市..."
+              />
+            </StackItem>
+            <IconButton
+              label={`経由地 ${index + 1} を削除`}
+              icon={<Trash2 />}
+              variant="destructive"
+              size="sm"
+              onClick={() => removeWaypoint(index)}
+            />
+          </HStack>
+        ))}
+        {formData.waypoints.length === 0 ? (
+          <Text color="secondary" size="xsm">
+            経由地はありません
+          </Text>
+        ) : null}
+      </VStack>
       <PlacesAutocompleteField
         label="目的地"
         name="dropoff_address"
@@ -195,117 +167,91 @@ function RouteViewFields({
 }) {
   return (
     <>
-      {order.pickup_location && (
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+      {order.pickup_location ? (
+        <VStack gap={0.5}>
+          <Text size="xsm" color="secondary">
             お迎え場所
-          </Typography>
-          <Typography variant="body2">{order.pickup_location}</Typography>
-        </Box>
-      )}
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={labelSx}>
+          </Text>
+          <Text>{order.pickup_location}</Text>
+        </VStack>
+      ) : null}
+      <VStack gap={0.5}>
+        <Text size="xsm" color="secondary">
           出発地
-        </Typography>
-        <Typography variant="body2">{getAddressFromCity(order.pickup_address)}</Typography>
-      </Box>
-      {order.waypoints && order.waypoints.length > 0 && (
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+        </Text>
+        <Text>{getAddressFromCity(order.pickup_address)}</Text>
+      </VStack>
+      {order.waypoints && order.waypoints.length > 0 ? (
+        <VStack gap={0.5}>
+          <Text size="xsm" color="secondary">
             経由地
-          </Typography>
-          <Stack spacing={0.5}>
+          </Text>
+          <VStack gap={0.5}>
             {order.waypoints.map((waypoint, index) => (
-              <Typography
-                key={index}
-                variant="body2"
-                sx={{ pl: 1, borderLeft: 2, borderColor: 'divider' }}
-              >
+              <Text key={index}>
                 {index + 1}. {getAddressFromCity(waypoint)}
-              </Typography>
+              </Text>
             ))}
-          </Stack>
-        </Box>
-      )}
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={labelSx}>
+          </VStack>
+        </VStack>
+      ) : null}
+      <VStack gap={0.5}>
+        <Text size="xsm" color="secondary">
           目的地
-        </Typography>
-        <Typography variant="body2">{getAddressFromCity(order.dropoff_address)}</Typography>
-      </Box>
-      {relatedVehicle?.waiting_location_address && (
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+        </Text>
+        <Text>{getAddressFromCity(order.dropoff_address)}</Text>
+      </VStack>
+      {relatedVehicle?.waiting_location_address ? (
+        <VStack gap={0.5}>
+          <Text size="xsm" color="secondary">
             待機場所住所（{relatedVehicle.name}）
-          </Typography>
-          <Typography variant="body2">{relatedVehicle.waiting_location_address}</Typography>
+          </Text>
+          <Text>{relatedVehicle.waiting_location_address}</Text>
           {calculatingWaitingDuration ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              所要時間を計算中...
-            </Typography>
+            <Text color="secondary">所要時間を計算中...</Text>
           ) : waitingLocationDuration !== null ? (
-            <Typography variant="body2" color="primary" sx={{ mt: 0.5, fontWeight: 500 }}>
+            <Text color="accent" weight="medium">
               目的地から待機場所まで: 約{waitingLocationDuration}分
-            </Typography>
+            </Text>
           ) : (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5, fontStyle: 'italic' }}
-            >
-              所要時間を計算できませんでした
-            </Typography>
+            <Text color="secondary">所要時間を計算できませんでした</Text>
           )}
-        </Box>
-      )}
+        </VStack>
+      ) : null}
     </>
   )
 }
 
 function DurationFields({ editing, order, formData, handleChange }) {
   return (
-    <Box>
-      <Typography variant="caption" color="text.secondary" sx={labelSx}>
+    <VStack gap={0.5}>
+      <Text size="xsm" color="secondary">
         所要時間
-      </Typography>
+      </Text>
       {editing ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ minWidth: '80px' }}>
-              基本時間:
-            </Typography>
-            <TextField
-              type="number"
-              name="base_duration_min"
-              value={formData.base_duration_min}
-              onChange={handleChange}
-              size="small"
-              inputProps={{ min: 1, step: 1 }}
-              sx={{ width: '100px' }}
-            />
-            <Typography variant="body2">分</Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ minWidth: '80px' }}>
-              バッファ:
-            </Typography>
-            <TextField
-              type="number"
-              name="buffer_min"
-              value={formData.buffer_min}
-              onChange={handleChange}
-              size="small"
-              inputProps={{ min: 0, step: 1 }}
-              sx={{ width: '100px' }}
-            />
-            <Typography variant="body2">分</Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary">
+        <VStack gap={1.5}>
+          <TextInput
+            label="基本時間（分）"
+            htmlName="base_duration_min"
+            value={String(formData.base_duration_min ?? '')}
+            onChange={namedChange(handleChange, 'base_duration_min')}
+            size="sm"
+            width="100%"
+          />
+          <TextInput
+            label="バッファ（分）"
+            htmlName="buffer_min"
+            value={String(formData.buffer_min ?? '')}
+            onChange={namedChange(handleChange, 'buffer_min')}
+            size="sm"
+            width="100%"
+          />
+          <Text color="secondary">
             合計: {parseInt(formData.base_duration_min, 10) + parseInt(formData.buffer_min, 10)}分
-          </Typography>
-        </Box>
+          </Text>
+        </VStack>
       ) : (
-        <Typography variant="body2">
+        <Text>
           {order.base_duration_min ? (
             <>
               {order.base_duration_min}分（基本）+ {order.buffer_min || 0}
@@ -316,9 +262,9 @@ function DurationFields({ editing, order, formData, handleChange }) {
               未計算（仮30分 + {order.buffer_min || 0}分 = {30 + (order.buffer_min || 0)}分）
             </>
           )}
-        </Typography>
+        </Text>
       )}
-    </Box>
+    </VStack>
   )
 }
 
@@ -335,11 +281,9 @@ export function OrderRouteSection({
   onRecalculateRoute,
 }) {
   return (
-    <Box>
-      <Typography variant="subtitle1" sx={sectionTitleSx}>
-        ルート情報
-      </Typography>
-      <Stack spacing={2.5}>
+    <VStack gap={2}>
+      <Heading level={3}>ルート情報</Heading>
+      <VStack gap={2}>
         {editing ? (
           <RouteEditFields
             formData={formData}
@@ -362,20 +306,20 @@ export function OrderRouteSection({
           handleChange={handleChange}
         />
 
-        {!order.base_duration_min && (
+        {!order.base_duration_min ? (
           <Button
-            variant="outlined"
-            startIcon={<RouteIcon />}
+            variant="secondary"
+            size="sm"
+            icon={<Route />}
             onClick={onRecalculateRoute}
-            disabled={recalculating}
-            size="small"
-          >
-            {recalculating ? '計算中...' : 'ルート再計算'}
-          </Button>
-        )}
+            isDisabled={recalculating}
+            isLoading={recalculating}
+            label={recalculating ? '計算中...' : 'ルート再計算'}
+          />
+        ) : null}
 
         <MapEmbed order={order} />
-      </Stack>
-    </Box>
+      </VStack>
+    </VStack>
   )
 }

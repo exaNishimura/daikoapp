@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { Theme } from '@astryxdesign/core/theme'
+import { stoneTheme } from '@/theme/astryx/stoneTheme'
 import { StatusBadge } from './StatusBadge'
 import { receivableStatus, invoiceStatus } from './statusUtils'
+
+function renderWithTheme(ui) {
+  return render(
+    <Theme theme={stoneTheme} mode="light">
+      {ui}
+    </Theme>
+  )
+}
 
 describe('StatusBadge', () => {
   it.each([
@@ -9,12 +19,12 @@ describe('StatusBadge', () => {
     ['billed', '請求済'],
     ['paid', '入金済'],
   ])('renders status=%s as label %s', (status, label) => {
-    render(<StatusBadge status={status} />)
+    renderWithTheme(<StatusBadge status={status} />)
     expect(screen.getByText(label)).toBeInTheDocument()
   })
 
   it('falls back to raw value for unknown status', () => {
-    render(<StatusBadge status="weird" />)
+    renderWithTheme(<StatusBadge status="weird" />)
     expect(screen.getByText('weird')).toBeInTheDocument()
   })
 })

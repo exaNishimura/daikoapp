@@ -8,14 +8,11 @@ import {
 } from '@/utils/rowUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
 import './SlotComponent.css'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import Typography from '@mui/material/Typography'
-import Box from '@mui/material/Box'
-import Stack from '@mui/material/Stack'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Link } from '@astryxdesign/core/Link'
+import { Text } from '@astryxdesign/core/Text'
 
 export function SlotComponent({ slot, order, isConflict, isSelected, conflictTooltip, onClick }) {
   const [showInfoDialog, setShowInfoDialog] = useState(false)
@@ -228,87 +225,68 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
         </div>
       )}
 
-      <Dialog open={showInfoDialog} onClose={handleCloseInfoDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>依頼詳細情報</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2}>
-            {order.pickup_location && (
-              <Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', mb: 0.5 }}
-                >
-                  お迎え場所
-                </Typography>
-                <Typography variant="body2">{order.pickup_location}</Typography>
-              </Box>
-            )}
-            {order.contact_phone && (
-              <Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', mb: 0.5 }}
-                >
-                  電話番号
-                </Typography>
-                <Typography
-                  variant="body2"
-                  component="a"
-                  href={`tel:${order.contact_phone}`}
-                  sx={{
-                    color: 'primary.main',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  📞 {order.contact_phone}
-                </Typography>
-              </Box>
-            )}
-            {order.parking_note && (
-              <Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', mb: 0.5 }}
-                >
-                  駐車メモ
-                </Typography>
-                <Typography variant="body2">📝 {order.parking_note}</Typography>
-              </Box>
-            )}
-            {order.buffer_manual && (
-              <Box>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: 'block', mb: 0.5 }}
-                >
-                  手動調整
-                </Typography>
-                <Typography variant="body2">✋ 所要時間が手動で調整されています</Typography>
-              </Box>
-            )}
-            {!order.pickup_location &&
-              !order.contact_phone &&
-              !order.parking_note &&
-              !order.buffer_manual && (
-                <Typography variant="body2" color="text.secondary">
-                  追加情報はありません
-                </Typography>
-              )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseInfoDialog}>閉じる</Button>
-        </DialogActions>
+      <Dialog
+        isOpen={showInfoDialog}
+        onOpenChange={(next) => {
+          if (!next) handleCloseInfoDialog()
+        }}
+        purpose="info"
+      >
+        <Layout
+          height="auto"
+          padding={4}
+          header={
+            <DialogHeader
+              title="依頼詳細情報"
+              onOpenChange={(next) => {
+                if (!next) handleCloseInfoDialog()
+              }}
+            />
+          }
+          content={
+            <LayoutContent>
+              <VStack gap={3}>
+                {order.pickup_location ? (
+                  <VStack gap={1}>
+                    <Text color="secondary">お迎え場所</Text>
+                    <Text>{order.pickup_location}</Text>
+                  </VStack>
+                ) : null}
+                {order.contact_phone ? (
+                  <VStack gap={1}>
+                    <Text color="secondary">電話番号</Text>
+                    <Link href={`tel:${order.contact_phone}`}>📞 {order.contact_phone}</Link>
+                  </VStack>
+                ) : null}
+                {order.parking_note ? (
+                  <VStack gap={1}>
+                    <Text color="secondary">駐車メモ</Text>
+                    <Text>📝 {order.parking_note}</Text>
+                  </VStack>
+                ) : null}
+                {order.buffer_manual ? (
+                  <VStack gap={1}>
+                    <Text color="secondary">手動調整</Text>
+                    <Text>✋ 所要時間が手動で調整されています</Text>
+                  </VStack>
+                ) : null}
+                {!order.pickup_location &&
+                !order.contact_phone &&
+                !order.parking_note &&
+                !order.buffer_manual ? (
+                  <Text color="secondary">追加情報はありません</Text>
+                ) : null}
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack hAlign="end">
+                <Button label="閉じる" variant="secondary" onClick={handleCloseInfoDialog} />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
     </div>
   )

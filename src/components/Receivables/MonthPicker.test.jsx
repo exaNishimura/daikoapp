@@ -1,32 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { LocalizationProvider } from '@mui/x-date-pickers'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { Theme } from '@astryxdesign/core/theme'
+import { stoneTheme } from '@/theme/astryx/stoneTheme'
 import dayjs from 'dayjs'
-import 'dayjs/locale/ja'
 import { MonthPicker } from './MonthPicker'
 import { toMonthString, fromMonthString, monthRange, dayjsToMonthString } from './monthUtils'
 
-function renderWithLocale(ui) {
+function renderWithTheme(ui) {
   return render(
-    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ja">
+    <Theme theme={stoneTheme} mode="light">
       {ui}
-    </LocalizationProvider>
+    </Theme>
   )
 }
 
 describe('MonthPicker (smoke)', () => {
-  it('renders MUI X DatePicker with the given value formatted as YYYY年MM月', () => {
-    renderWithLocale(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" />)
-    const group = screen.getByRole('group', { name: '対象月' })
-    expect(group.textContent).toContain('2026')
-    expect(group.textContent).toContain('05')
+  it('renders the given value formatted as YYYY年MM月', () => {
+    renderWithTheme(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" />)
+    expect(screen.getByText('対象月')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('2026年05月')).toBeInTheDocument()
   })
 
   it('renders an empty picker when value is null', () => {
-    renderWithLocale(<MonthPicker value={null} onChange={() => {}} label="対象月" />)
-    const group = screen.getByRole('group', { name: '対象月' })
-    expect(group.textContent).not.toContain('2026')
+    renderWithTheme(<MonthPicker value={null} onChange={() => {}} label="対象月" />)
+    expect(screen.queryByDisplayValue(/2026/)).not.toBeInTheDocument()
   })
 })
 

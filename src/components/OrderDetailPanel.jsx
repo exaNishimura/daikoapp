@@ -1,11 +1,10 @@
 import { useMemo } from 'react'
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
-import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
-import CloseIcon from '@mui/icons-material/Close'
+import { X } from 'lucide-react'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Text } from '@astryxdesign/core/Text'
 import { useOrderDetail } from '@/hooks/useOrderDetail'
 import { getOrderConflictMessages } from '@/lib/slotConflictUtils'
 import { OrderInfoSection } from './OrderDetailPanel/OrderInfoSection'
@@ -49,80 +48,73 @@ export function OrderDetailPanel({
   } = useOrderDetail({ order, vehicles, slots, onUpdate, onDelete, onClose })
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2.5,
-          borderBottom: 1,
-          borderColor: 'divider',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          依頼詳細
-        </Typography>
-        <IconButton size="small" onClick={onClose} aria-label="詳細パネルを閉じる">
-          <CloseIcon />
-        </IconButton>
-      </Paper>
-
-      <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
-        <Stack spacing={3.5}>
-          {conflictMessages.length > 0 && (
-            <Alert severity="error" role="alert">
-              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                時間が重複しています
-              </Typography>
-              {conflictMessages.map((message) => (
-                <Typography key={message} variant="body2">
-                  {message}
-                </Typography>
-              ))}
-            </Alert>
-          )}
-          <OrderInfoSection order={order} statusLabel={statusLabel} statusColor={statusColor} />
-          <OrderRouteSection
-            editing={editing}
-            order={order}
-            formData={formData}
-            handleChange={handleChange}
-            setFormData={setFormData}
-            relatedVehicle={relatedVehicle}
-            waitingLocationDuration={waitingLocationDuration}
-            calculatingWaitingDuration={calculatingWaitingDuration}
-            recalculating={recalculating}
-            onRecalculateRoute={handleRecalculateRoute}
+    <Layout
+      height="fill"
+      padding={4}
+      header={
+        <HStack paddingBlock={2} hAlign="between" vAlign="center">
+          <Heading level={2}>依頼詳細</Heading>
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="詳細パネルを閉じる"
+            icon={<X />}
+            onClick={onClose}
           />
-          <OrderContactSection
-            editing={editing}
+        </HStack>
+      }
+      content={
+        <LayoutContent>
+          <VStack gap={4}>
+            {conflictMessages.length > 0 ? (
+              <Banner status="error" title="時間が重複しています" collapsible={false}>
+                <VStack gap={1}>
+                  {conflictMessages.map((message) => (
+                    <Text key={message}>{message}</Text>
+                  ))}
+                </VStack>
+              </Banner>
+            ) : null}
+            <OrderInfoSection order={order} statusLabel={statusLabel} statusColor={statusColor} />
+            <OrderRouteSection
+              editing={editing}
+              order={order}
+              formData={formData}
+              handleChange={handleChange}
+              setFormData={setFormData}
+              relatedVehicle={relatedVehicle}
+              waitingLocationDuration={waitingLocationDuration}
+              calculatingWaitingDuration={calculatingWaitingDuration}
+              recalculating={recalculating}
+              onRecalculateRoute={handleRecalculateRoute}
+            />
+            <OrderContactSection
+              editing={editing}
+              order={order}
+              formData={formData}
+              handleChange={handleChange}
+            />
+          </VStack>
+        </LayoutContent>
+      }
+      footer={
+        <LayoutFooter>
+          <OrderActionFooter
             order={order}
-            formData={formData}
-            handleChange={handleChange}
+            editing={editing}
+            loading={loading}
+            advanceStatus={advanceStatus}
+            hasConflict={conflictMessages.length > 0}
+            onSave={handleSave}
+            onCancelEdit={() => setEditing(false)}
+            onStartEdit={() => setEditing(true)}
+            onConfirm={handleConfirm}
+            onRevertStatus={handleRevertStatus}
+            onAdvanceStatus={handleAdvanceStatus}
+            onCancel={handleCancel}
           />
-        </Stack>
-      </Box>
-
-      <OrderActionFooter
-        order={order}
-        editing={editing}
-        loading={loading}
-        advanceStatus={advanceStatus}
-        hasConflict={conflictMessages.length > 0}
-        onSave={handleSave}
-        onCancelEdit={() => setEditing(false)}
-        onStartEdit={() => setEditing(true)}
-        onConfirm={handleConfirm}
-        onRevertStatus={handleRevertStatus}
-        onAdvanceStatus={handleAdvanceStatus}
-        onCancel={handleCancel}
-      />
-    </Box>
+        </LayoutFooter>
+      }
+    />
   )
 }

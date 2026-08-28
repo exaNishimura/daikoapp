@@ -1,23 +1,21 @@
 import { useState } from 'react'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableRow from '@mui/material/TableRow'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import Checkbox from '@mui/material/Checkbox'
-import IconButton from '@mui/material/IconButton'
-import CircularProgress from '@mui/material/CircularProgress'
-import Alert from '@mui/material/Alert'
-import Typography from '@mui/material/Typography'
-import DownloadIcon from '@mui/icons-material/Download'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import FolderZipIcon from '@mui/icons-material/FolderZip'
-import ReplayIcon from '@mui/icons-material/Replay'
-import Tooltip from '@mui/material/Tooltip'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Center } from '@astryxdesign/core/Center'
+import { CheckboxInput } from '@astryxdesign/core/CheckboxInput'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { Download, FolderArchive, RefreshCw, Trash2 } from 'lucide-react'
 import {
   useInvoices,
   useDownloadInvoice,
@@ -132,143 +130,144 @@ export function InvoiceIssuedTab({ year, month }) {
     }
   }
 
-  if (invoicesQuery.isLoading) return <CircularProgress />
+  if (invoicesQuery.isLoading) {
+    return (
+      <Center padding={4}>
+        <Spinner />
+      </Center>
+    )
+  }
 
   return (
-    <Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {zipWarning && (
-        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setZipWarning(null)}>
-          {zipWarning}
-        </Alert>
-      )}
-      {invoicesQuery.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          請求書の取得に失敗: {invoicesQuery.error.message}
-        </Alert>
-      )}
+    <VStack gap={3}>
+      {error ? (
+        <Banner
+          status="error"
+          title={error}
+          isDismissable
+          onDismiss={() => setError(null)}
+          collapsible={false}
+        />
+      ) : null}
+      {zipWarning ? (
+        <Banner
+          status="warning"
+          title={zipWarning}
+          isDismissable
+          onDismiss={() => setZipWarning(null)}
+          collapsible={false}
+        />
+      ) : null}
+      {invoicesQuery.error ? (
+        <Banner
+          status="error"
+          title={`請求書の取得に失敗: ${invoicesQuery.error.message}`}
+          collapsible={false}
+        />
+      ) : null}
 
       {rows.length === 0 ? (
-        <Alert severity="info">
-          {year} 年 {month} 月の発行済請求書はありません。
-        </Alert>
+        <Banner
+          status="info"
+          title={`${year} 年 ${month} 月の発行済請求書はありません。`}
+          collapsible={false}
+        />
       ) : (
-        <>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 1.5,
-              gap: 1,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
+        <VStack gap={2}>
+          <HStack gap={1} wrap="wrap" vAlign="center" hAlign="between">
+            <Text color="secondary">
               {rows.length} 件
               {downloadableCount < rows.length ? `（うち DL 可 ${downloadableCount} 件）` : null}
-            </Typography>
+            </Text>
             <Button
-              variant="outlined"
-              size="small"
-              startIcon={zipBusy ? <CircularProgress size={16} /> : <FolderZipIcon />}
+              variant="secondary"
+              size="sm"
+              icon={<FolderArchive />}
+              label={zipBusy ? 'zip 生成中…' : '全件 zip で DL'}
               onClick={handleZipDownload}
-              disabled={zipBusy || downloadableCount === 0}
-            >
-              {zipBusy ? 'zip 生成中…' : '全件 zip で DL'}
-            </Button>
-          </Box>
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>請求月</TableCell>
-                  <TableCell>取引先</TableCell>
-                  <TableCell>発行日</TableCell>
-                  <TableCell align="right">件数</TableCell>
-                  <TableCell align="right">金額</TableCell>
-                  <TableCell align="center">入金</TableCell>
-                  <TableCell align="center">操作</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id} hover>
-                    <TableCell>{fmtMonth(r.billing_month)}</TableCell>
-                    <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
-                    <TableCell>{fmtDate(r.issue_date)}</TableCell>
-                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {r.line_count}
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                      ¥{Number(r.total_amount).toLocaleString('ja-JP')}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Checkbox
-                        checked={!!r.paid_at}
+              isDisabled={zipBusy || downloadableCount === 0}
+              isLoading={zipBusy}
+            />
+          </HStack>
+          <Table density="compact" hasHover>
+            <TableHeader>
+              <TableRow isHeaderRow>
+                <TableHeaderCell>請求月</TableHeaderCell>
+                <TableHeaderCell>取引先</TableHeaderCell>
+                <TableHeaderCell>発行日</TableHeaderCell>
+                <TableHeaderCell>件数</TableHeaderCell>
+                <TableHeaderCell>金額</TableHeaderCell>
+                <TableHeaderCell>入金</TableHeaderCell>
+                <TableHeaderCell>操作</TableHeaderCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>{fmtMonth(r.billing_month)}</TableCell>
+                  <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
+                  <TableCell>{fmtDate(r.issue_date)}</TableCell>
+                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    {r.line_count}
+                  </TableCell>
+                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    ¥{Number(r.total_amount).toLocaleString('ja-JP')}
+                  </TableCell>
+                  <TableCell>
+                    <VStack gap={0} hAlign="center">
+                      <CheckboxInput
+                        label={`${r.companies?.name ?? r.id} 入金済`}
+                        isLabelHidden
+                        value={!!r.paid_at}
                         onChange={() => handleTogglePaid(r)}
-                        disabled={markPaid.isPending}
+                        isDisabled={markPaid.isPending}
+                        size="sm"
                       />
-                      {r.paid_at && (
-                        <Typography variant="caption" display="block" color="text.secondary">
+                      {r.paid_at ? (
+                        <Text size="sm" color="secondary">
                           {fmtDate(r.paid_at.slice(0, 10))}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Tooltip title="ダウンロード">
-                        <span>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDownload(r)}
-                            disabled={!r.file_path || dlInvoice.isPending || zipBusy}
-                            aria-label="ダウンロード"
-                          >
-                            <DownloadIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      <Tooltip
-                        title={
+                        </Text>
+                      ) : null}
+                    </VStack>
+                  </TableCell>
+                  <TableCell>
+                    <HStack gap={0} hAlign="center">
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        label="ダウンロード"
+                        tooltip="ダウンロード"
+                        icon={<Download />}
+                        onClick={() => handleDownload(r)}
+                        isDisabled={!r.file_path || dlInvoice.isPending || zipBusy}
+                      />
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        label="修正して再発行"
+                        tooltip={
                           r.paid_at ? '入金済みのため修正不可（先に入金解除）' : '修正して再発行'
                         }
-                      >
-                        <span>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => setReissueTarget(r)}
-                            disabled={!!r.paid_at || revoke.isPending || zipBusy}
-                            aria-label="修正して再発行"
-                          >
-                            <ReplayIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      <Tooltip title={r.paid_at ? '入金済みのため取消不可' : '取消'}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleRevoke(r)}
-                            disabled={!!r.paid_at || revoke.isPending || zipBusy}
-                            aria-label="取消"
-                          >
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
+                        icon={<RefreshCw />}
+                        onClick={() => setReissueTarget(r)}
+                        isDisabled={!!r.paid_at || revoke.isPending || zipBusy}
+                      />
+                      <IconButton
+                        size="sm"
+                        variant="destructive"
+                        label="取消"
+                        tooltip={r.paid_at ? '入金済みのため取消不可' : '取消'}
+                        icon={<Trash2 />}
+                        onClick={() => handleRevoke(r)}
+                        isDisabled={!!r.paid_at || revoke.isPending || zipBusy}
+                      />
+                    </HStack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </VStack>
       )}
 
       <InvoiceReissueDialog
@@ -278,6 +277,6 @@ export function InvoiceIssuedTab({ year, month }) {
         month={month}
         onClose={() => setReissueTarget(null)}
       />
-    </Box>
+    </VStack>
   )
 }

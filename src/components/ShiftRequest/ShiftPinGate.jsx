@@ -1,12 +1,9 @@
 import { useState } from 'react'
-import Alert from '@mui/material/Alert'
-import Button from '@mui/material/Button'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogTitle from '@mui/material/DialogTitle'
-import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { TextInput } from '@astryxdesign/core/TextInput'
 import { verifyShiftPin } from '@/services/employeeShiftService'
 import {
   clearEmployeeShiftSession,
@@ -18,10 +15,23 @@ import {
  * シフト希望提出画面用 PIN ゲート（配車 PIN とは別）
  */
 export function ShiftPinGate({ children }) {
+  const navigate = useNavigate()
   const [session, setSession] = useState(() => getEmployeeShiftSession())
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const handleCancel = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate('/')
+  }
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) handleCancel()
+  }
 
   const submit = async (event) => {
     event?.preventDefault?.()
@@ -50,35 +60,55 @@ export function ShiftPinGate({ children }) {
   }
 
   return (
-    <Dialog open disableEscapeKeyDown fullWidth maxWidth="xs">
-      <form onSubmit={submit}>
-        <DialogTitle>シフト希望提出</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            管理者から通知された6桁のPINを入力してください。
-          </Typography>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="PIN（6桁）"
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            inputProps={{ inputMode: 'numeric', maxLength: 6, autoComplete: 'one-time-code' }}
-            fullWidth
-            required
-          />
-          {error ? (
-            <Alert severity="error" sx={{ mt: 1.5 }}>
-              {error}
-            </Alert>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button type="submit" variant="contained" disabled={pin.length !== 6 || submitting}>
-            ログイン
-          </Button>
-        </DialogActions>
-      </form>
+    <Dialog isOpen onOpenChange={handleOpenChange} purpose="form">
+      <VStack as="form" onSubmit={submit} gap={0}>
+        <Layout
+          height="auto"
+          padding={4}
+          header={
+            <DialogHeader
+              title="シフト希望提出"
+              subtitle="管理者から通知された6桁のPINを入力してください。"
+              onOpenChange={handleOpenChange}
+            />
+          }
+          content={
+            <LayoutContent>
+              <TextInput
+                label="PIN（6桁）"
+                value={pin}
+                onChange={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+                isRequired
+                hasAutoFocus
+                isDisabled={submitting}
+                htmlName="pin"
+                width="100%"
+                status={error ? { type: 'error', message: error } : undefined}
+              />
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} hAlign="end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  isDisabled={submitting}
+                  label="キャンセル"
+                  onClick={handleCancel}
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isDisabled={pin.length !== 6 || submitting}
+                  isLoading={submitting}
+                  label="ログイン"
+                />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
+      </VStack>
     </Dialog>
   )
 }

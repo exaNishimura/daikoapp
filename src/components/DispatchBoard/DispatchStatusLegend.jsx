@@ -1,55 +1,26 @@
-import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
+import { HStack } from '@astryxdesign/core/Layout'
+import { Token } from '@astryxdesign/core/Token'
 
 const LEGEND_ITEMS = [
-  {
-    label: '配置不可',
-    color: '#eef1f5',
-    textColor: '#6b7280',
-    border: '1px dashed #c4cad2',
-  },
-  { label: '仮配置', color: '#fef0d5', textColor: '#8a5a00', border: '1px solid #f2c777' },
-  { label: '確定', color: '#16a34a', textColor: '#fff' },
-  { label: '送客中', color: '#7c3aed', textColor: '#fff' },
-  { label: '競合', color: '#dc2626', textColor: '#fff' },
+  { label: '配置不可', color: 'gray' },
+  { label: '仮配置', color: 'yellow' },
+  { label: '確定', color: 'green' },
+  { label: '送客中', color: 'purple' },
+  { label: '競合', color: 'red' },
 ]
 
 /**
- * タイムライン上のスロット色の凡例（タブレット以上のみ表示）。
+ * タイムライン上のスロット色の凡例。
+ * スロット本体の色は DispatchBoard.css / SlotComponent.css の --dsp-* を使う。
  */
 export function DispatchStatusLegend() {
   return (
-    <Box
-      sx={{
-        display: { xs: 'none', sm: 'flex' },
-        alignItems: 'center',
-        gap: 0.5,
-        px: 2,
-        py: 0.25,
-        bgcolor: 'background.paper',
-        borderBottom: 1,
-        borderColor: 'divider',
-        flexShrink: 0,
-        overflowX: 'auto',
-      }}
-      aria-label="ステータス凡例"
-    >
-      {LEGEND_ITEMS.map((item) => (
-        <Chip
-          key={item.label}
-          label={item.label}
-          size="small"
-          sx={{
-            height: 18,
-            fontSize: '0.65rem',
-            fontWeight: 600,
-            bgcolor: item.color,
-            color: item.textColor,
-            border: item.border ?? 'none',
-            '& .MuiChip-label': { px: 0.75, py: 0 },
-          }}
-        />
-      ))}
-    </Box>
+    <div className="dispatch-legend">
+      <HStack gap={1} padding={1} paddingInline={2} vAlign="center" wrap="wrap">
+        {LEGEND_ITEMS.map((item) => (
+          <Token key={item.label} size="sm" color={item.color} label={item.label} />
+        ))}
+      </HStack>
+    </div>
   )
 }

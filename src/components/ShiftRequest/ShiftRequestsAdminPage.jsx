@@ -1,24 +1,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import dayjs from 'dayjs'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Container from '@mui/material/Container'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import IconButton from '@mui/material/IconButton'
-import Chip from '@mui/material/Chip'
-import Collapse from '@mui/material/Collapse'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import { listShiftAvailabilityRequests } from '@/services/employeeShiftService'
 
 function RequestDetailRow({ row }) {
@@ -30,56 +29,56 @@ function RequestDetailRow({ row }) {
 
   return (
     <>
-      <TableRow hover>
+      <TableRow>
         <TableCell>
-          <IconButton size="small" onClick={() => setOpen(!open)} aria-label="詳細">
-            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-          </IconButton>
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="詳細"
+            tooltip="詳細"
+            icon={open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            onClick={() => setOpen(!open)}
+          />
         </TableCell>
         <TableCell>{row.employee_name}</TableCell>
         <TableCell>{row.license_type}</TableCell>
         <TableCell>
-          <Chip
-            size="small"
+          <Token
+            size="sm"
             label={row.shift_pin_configured ? 'PIN設定済' : 'PIN未設定'}
-            color={row.shift_pin_configured ? 'success' : 'default'}
+            color={row.shift_pin_configured ? 'green' : 'gray'}
           />
         </TableCell>
-        <TableCell align="right">{row.has_request ? row.available_days : '—'}</TableCell>
+        <TableCell>{row.has_request ? row.available_days : '—'}</TableCell>
         <TableCell>{row.updated_at ? dayjs(row.updated_at).format('M/D HH:mm') : '—'}</TableCell>
       </TableRow>
-      <TableRow>
-        <TableCell colSpan={6} sx={{ py: 0, borderBottom: open ? undefined : 0 }}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ py: 2 }}>
+      {open ? (
+        <TableRow>
+          <TableCell>
+            <VStack gap={2}>
               {!row.has_request ? (
-                <Typography variant="body2" color="text.secondary">
-                  未提出
-                </Typography>
+                <Text color="secondary">未提出</Text>
               ) : entries.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  出勤可の日がありません
-                </Typography>
+                <Text color="secondary">出勤可の日がありません</Text>
               ) : (
-                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                <VStack gap={1}>
                   {entries.map(([date, d]) => (
-                    <li key={date}>
-                      <Typography variant="body2" component="span">
-                        {dayjs(date).format('M/D（ddd）')} {d.start}〜{d.end}
-                      </Typography>
-                    </li>
+                    <Text key={date}>
+                      {dayjs(date).format('M/D（ddd）')} {d.start}〜{d.end}
+                    </Text>
                   ))}
-                </Box>
+                </VStack>
               )}
-              {row.payload?.notes ? (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  備考: {row.payload.notes}
-                </Typography>
-              ) : null}
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
+              {row.payload?.notes ? <Text>備考: {row.payload.notes}</Text> : null}
+            </VStack>
+          </TableCell>
+          <TableCell />
+          <TableCell />
+          <TableCell />
+          <TableCell />
+          <TableCell />
+        </TableRow>
+      ) : null}
     </>
   )
 }
@@ -112,60 +111,56 @@ export function ShiftRequestsAdminPage() {
   }
 
   return (
-    <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflowY: 'auto' }}>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Typography variant="h5" component="h1" sx={{ mb: 2 }}>
-          シフト希望一覧（管理者）
-        </Typography>
+    <PageFrame>
+      <VStack gap={4}>
+        <Heading level={1}>シフト希望一覧（管理者）</Heading>
 
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-            <IconButton onClick={() => shiftMonth(-1)} aria-label="前の月">
-              <ChevronLeftIcon />
-            </IconButton>
-            <Typography variant="h6">{dayjs(`${month}-01`).format('YYYY年M月')}</Typography>
-            <IconButton onClick={() => shiftMonth(1)} aria-label="次の月">
-              <ChevronRightIcon />
-            </IconButton>
-          </Box>
-        </Paper>
+        <Card padding={4}>
+          <HStack hAlign="center" vAlign="center" gap={1}>
+            <IconButton
+              label="前の月"
+              tooltip="前の月"
+              variant="ghost"
+              icon={<ChevronLeft />}
+              onClick={() => shiftMonth(-1)}
+            />
+            <Heading level={3}>{dayjs(`${month}-01`).format('YYYY年M月')}</Heading>
+            <IconButton
+              label="次の月"
+              tooltip="次の月"
+              variant="ghost"
+              icon={<ChevronRight />}
+              onClick={() => shiftMonth(1)}
+            />
+          </HStack>
+        </Card>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+        {error ? <Banner status="error" title={error} collapsible={false} /> : null}
 
         {loading ? (
-          <Typography>読み込み中...</Typography>
+          <Text>読み込み中...</Text>
         ) : (
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell />
-                  <TableCell>名前</TableCell>
-                  <TableCell>免許</TableCell>
-                  <TableCell>PIN</TableCell>
-                  <TableCell align="right">出勤可日数</TableCell>
-                  <TableCell>更新日時</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((row) => (
-                  <RequestDetailRow key={row.employee_id} row={row} />
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Table density="compact" hasHover>
+            <TableHeader>
+              <TableRow>
+                <TableHeaderCell>{'\u00a0'}</TableHeaderCell>
+                <TableHeaderCell>名前</TableHeaderCell>
+                <TableHeaderCell>免許</TableHeaderCell>
+                <TableHeaderCell>PIN</TableHeaderCell>
+                <TableHeaderCell>出勤可日数</TableHeaderCell>
+                <TableHeaderCell>更新日時</TableHeaderCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <RequestDetailRow key={row.employee_id} row={row} />
+              ))}
+            </TableBody>
+          </Table>
         )}
 
-        <Box sx={{ mt: 2 }}>
-          <Button onClick={load} disabled={loading}>
-            再読み込み
-          </Button>
-        </Box>
-      </Container>
-    </Box>
+        <Button label="再読み込み" variant="secondary" onClick={load} isDisabled={loading} />
+      </VStack>
+    </PageFrame>
   )
 }

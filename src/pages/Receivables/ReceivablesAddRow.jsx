@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
-import TextField from '@mui/material/TextField'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import Typography from '@mui/material/Typography'
-import AddIcon from '@mui/icons-material/Add'
-import SaveIcon from '@mui/icons-material/Save'
-import CloseIcon from '@mui/icons-material/Close'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { DateInput } from '@astryxdesign/core/DateInput'
+import { Grid, GridSpan } from '@astryxdesign/core/Grid'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Text } from '@astryxdesign/core/Text'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { Plus, Save, X } from 'lucide-react'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
@@ -23,6 +23,10 @@ function defaultWorkDate(year, month) {
   const isCurrent = today.getFullYear() === year && today.getMonth() + 1 === month
   const day = isCurrent ? today.getDate() : 1
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function monthBound(year, month, day) {
+  return `${year}-${String(month).padStart(2, '0')}-${day}`
 }
 
 /**
@@ -85,110 +89,102 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
 
   if (!open) {
     return (
-      <Button startIcon={<AddIcon />} onClick={handleOpen} variant="outlined" sx={{ mb: 2 }}>
-        売掛を追加
-      </Button>
+      <Button
+        icon={<Plus />}
+        label="売掛を追加"
+        variant="secondary"
+        onClick={handleOpen}
+      />
     )
   }
 
   return (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 1,
-        }}
-      >
-        <Typography variant="subtitle2" color="text.secondary">
-          新規追加 — {year}年{month}月
-        </Typography>
-        <IconButton size="small" onClick={handleClose}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Box>
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 1.5,
-          gridTemplateColumns: 'repeat(12, 1fr)',
-          alignItems: 'start',
-        }}
-      >
-        <TextField
-          type="date"
-          label="日付"
-          size="small"
-          value={form.work_date}
-          onChange={(e) => setForm({ ...form, work_date: e.target.value })}
-          error={!!errors.work_date}
-          helperText={errors.work_date}
-          inputProps={{
-            min: `${year}-${String(month).padStart(2, '0')}-01`,
-            max: `${year}-${String(month).padStart(2, '0')}-31`,
-          }}
-          sx={{ gridColumn: 'span 3' }}
-        />
-        <Box sx={{ gridColumn: 'span 5' }}>
-          <CompanySelect
-            companies={companies}
-            value={form.company_id}
-            onChange={(id) => setForm({ ...form, company_id: id })}
+    <Card padding={3}>
+      <VStack gap={2}>
+        <HStack hAlign="between" vAlign="center">
+          <Text size="sm" color="secondary">
+            新規追加 — {year}年{month}月
+          </Text>
+          <IconButton
+            size="sm"
+            variant="ghost"
+            label="閉じる"
+            icon={<X />}
+            onClick={handleClose}
           />
-          {errors.company_id && (
-            <Typography variant="caption" color="error">
-              {errors.company_id}
-            </Typography>
-          )}
-        </Box>
-        <Box sx={{ gridColumn: 'span 2' }}>
+        </HStack>
+        <Grid columns={{ minWidth: 160, max: 4 }} gap={2}>
+          <DateInput
+            label="日付"
+            value={form.work_date || undefined}
+            onChange={(work_date) => setForm({ ...form, work_date: work_date ?? '' })}
+            min={monthBound(year, month, '01')}
+            max={monthBound(year, month, '31')}
+            size="sm"
+            status={errors.work_date ? { type: 'error', message: errors.work_date } : undefined}
+            width="100%"
+          />
+          <GridSpan columns={2}>
+            <VStack gap={0}>
+              <CompanySelect
+                companies={companies}
+                value={form.company_id}
+                onChange={(id) => setForm({ ...form, company_id: id })}
+              />
+              {errors.company_id ? (
+                <Text size="sm" style={{ color: 'var(--color-text-red)' }}>
+                  {errors.company_id}
+                </Text>
+              ) : null}
+            </VStack>
+          </GridSpan>
           <VehicleNumSelect
             value={form.vehicle_num}
             onChange={(vehicle_num) => setForm({ ...form, vehicle_num })}
           />
-        </Box>
-        <AmountInput
-          value={form.amount}
-          onChange={(v) => setForm({ ...form, amount: v })}
-          label="金額"
-          sx={{ gridColumn: 'span 2' }}
-        />
-        <TextField
-          label="出発"
-          size="small"
-          value={form.departure}
-          onChange={(e) => setForm({ ...form, departure: e.target.value })}
-          sx={{ gridColumn: 'span 3' }}
-        />
-        <TextField
-          label="到着"
-          size="small"
-          value={form.destination}
-          onChange={(e) => setForm({ ...form, destination: e.target.value })}
-          sx={{ gridColumn: 'span 3' }}
-        />
-        <TextField
-          label="備考"
-          size="small"
-          value={form.note}
-          onChange={(e) => setForm({ ...form, note: e.target.value })}
-          sx={{ gridColumn: 'span 6' }}
-        />
-        <Box sx={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button onClick={handleClose} disabled={isSaving}>
-            閉じる
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            disabled={!isValid || isSaving}
-          >
-            {isSaving ? '保存中...' : '保存して続けて入力'}
-          </Button>
-        </Box>
-      </Box>
-    </Paper>
+          <AmountInput
+            value={form.amount}
+            onChange={(v) => setForm({ ...form, amount: v })}
+            label="金額"
+          />
+          <TextInput
+            label="出発"
+            size="sm"
+            value={form.departure}
+            onChange={(departure) => setForm({ ...form, departure })}
+            width="100%"
+          />
+          <TextInput
+            label="到着"
+            size="sm"
+            value={form.destination}
+            onChange={(destination) => setForm({ ...form, destination })}
+            width="100%"
+          />
+          <GridSpan columns={2}>
+            <TextInput
+              label="備考"
+              size="sm"
+              value={form.note}
+              onChange={(note) => setForm({ ...form, note })}
+              width="100%"
+            />
+          </GridSpan>
+          <GridSpan columns="full">
+            <HStack gap={1} hAlign="end">
+              <Button label="閉じる" variant="secondary" onClick={handleClose} isDisabled={isSaving} />
+              <Button
+                variant="primary"
+                icon={<Save />}
+                label={isSaving ? '保存中...' : '保存して続けて入力'}
+                onClick={handleSave}
+                isDisabled={!isValid || isSaving}
+                isLoading={isSaving}
+              />
+            </HStack>
+          </GridSpan>
+        </Grid>
+      </VStack>
+    </Card>
   )
 }

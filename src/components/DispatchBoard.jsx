@@ -15,21 +15,18 @@ import { getOrderById } from '@/services/orderService'
 import { createSlot, getSlotsByOrderId } from '@/services/slotService'
 import { findAutoPlacementSlot } from '@/lib/orderPlacement'
 import { detectAllConflicts } from '@/lib/slotConflictUtils'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
-import Drawer from '@mui/material/Drawer'
-import Alert from '@mui/material/Alert'
-import CircularProgress from '@mui/material/CircularProgress'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { ThemeProvider, useTheme } from '@mui/material/styles'
-import RefreshIcon from '@mui/icons-material/Refresh'
-import { dispatchLightTheme } from '@/theme/dispatchTheme'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Center } from '@astryxdesign/core/Center'
+import { Dialog } from '@astryxdesign/core/Dialog'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import { Text } from '@astryxdesign/core/Text'
+import { VStack } from '@astryxdesign/core/Layout'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import './DispatchBoard.css'
 
 export function DispatchBoard() {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const { showToast } = useToast()
 
   const {
@@ -228,236 +225,163 @@ export function DispatchBoard() {
     }
   }
 
-  const detailDrawerWidth = isMobile ? '100%' : 384
-
   if (loading) {
     return (
-      <ThemeProvider theme={dispatchLightTheme}>
-        <Box
-          className="dispatch-root"
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-            minHeight: 0,
-            gap: 2,
-            bgcolor: 'background.default',
-          }}
-        >
-          <CircularProgress />
-          <Typography variant="body1" color="text.secondary">
-            読み込み中…
-          </Typography>
-        </Box>
-      </ThemeProvider>
+      <div className="dispatch-root dispatch-loading">
+        <Center height="100%">
+          <VStack gap={2} hAlign="center">
+            <Spinner size="lg" label="読み込み中" />
+            <Text color="secondary">読み込み中…</Text>
+          </VStack>
+        </Center>
+      </div>
     )
   }
 
+  const detailPanel = selectedOrder ? (
+    <OrderDetailPanel
+      order={selectedOrder}
+      onUpdate={handleOrderUpdate}
+      onDelete={handleOrderDelete}
+      onClose={() => setSelectedOrder(null)}
+      vehicles={vehicles}
+      slots={slots}
+    />
+  ) : null
+
   return (
-    <ThemeProvider theme={dispatchLightTheme}>
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <Box
-          className="dispatch-root"
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            minHeight: 0,
-            overflow: 'hidden',
-            bgcolor: 'background.default',
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="dispatch-root">
+        <DispatchHeader
+          businessDayText={businessDayText}
+          earliestAvailableTime={earliestAvailableTime}
+          vehicles={vehicles}
+          conflictCount={conflictCount}
+          onOpenSettings={() => {
+            if (vehicles.length === 0) return
+            if (vehicles.length === 1) {
+              setSelectedVehicleForStatus(vehicles[0])
+              setIsOperationStatusModalOpen(true)
+            } else {
+              setIsVehicleSelectDialogOpen(true)
+            }
           }}
-        >
-          <DispatchHeader
-            businessDayText={businessDayText}
-            earliestAvailableTime={earliestAvailableTime}
-            vehicles={vehicles}
-            conflictCount={conflictCount}
-            onOpenSettings={() => {
-              if (vehicles.length === 0) return
-              if (vehicles.length === 1) {
-                setSelectedVehicleForStatus(vehicles[0])
-                setIsOperationStatusModalOpen(true)
-              } else {
-                setIsVehicleSelectDialogOpen(true)
-              }
-            }}
-            onOpenOrderForm={() => setIsModalOpen(true)}
+          onOpenOrderForm={() => setIsModalOpen(true)}
+        />
+
+        {vehicles.length > 0 ? <DispatchStatusLegend /> : null}
+
+        {error ? (
+          <Banner
+            status="error"
+            title={error}
+            collapsible={false}
+            endContent={<Button label="再読み込み" variant="secondary" size="sm" onClick={loadData} />}
           />
+        ) : null}
 
-          {vehicles.length > 0 && <DispatchStatusLegend />}
-
-          {error && (
-            <Alert
-              severity="error"
-              action={
-                <Button color="inherit" size="small" startIcon={<RefreshIcon />} onClick={loadData}>
-                  再読み込み
-                </Button>
-              }
-              sx={{ borderRadius: 0 }}
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-            {!isMobile && vehicles.length > 0 && (
-              <Box
-                sx={{
-                  width: 280,
-                  flexShrink: 0,
-                  borderRight: 1,
-                  borderColor: 'divider',
-                  bgcolor: 'background.paper',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignSelf: 'stretch',
-                  minHeight: 0,
-                }}
-              >
-                <OrderCardList
-                  orders={orders}
-                  onOrderSelect={handleOrderSelect}
-                  selectedOrderId={selectedOrder?.id}
-                  defaultExpanded
-                  fillHeight
-                />
-              </Box>
-            )}
-
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                bgcolor: 'background.default',
-                minWidth: 0,
-              }}
-            >
-              {vehicles.length === 0 ? (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    gap: 1,
-                  }}
-                >
-                  <Typography variant="h6" color="text.secondary">
-                    車両データがありません
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Supabaseに車両データを追加してください
-                  </Typography>
-                </Box>
-              ) : (
-                <TimelineGrid
-                  vehicles={vehicles}
-                  orders={orders}
-                  slots={slots}
-                  operationStatuses={operationStatuses}
-                  dragOverPosition={dragOverPosition}
-                  draggingSlotVehicleId={draggingSlotVehicleId}
-                  selectedOrderId={selectedOrder?.id}
-                  onOrderSelect={handleOrderSelect}
-                  onOrderUpdate={handleOrderUpdate}
-                  onSlotsUpdate={loadSlots}
-                />
-              )}
-            </Box>
-
-            {selectedOrder && (
-              <Drawer
-                anchor="right"
-                open={!!selectedOrder}
-                variant={isMobile ? 'temporary' : 'persistent'}
-                onClose={() => setSelectedOrder(null)}
-                ModalProps={{ keepMounted: true }}
-                sx={{
-                  width: detailDrawerWidth,
-                  flexShrink: 0,
-                  zIndex: (t) => t.zIndex.drawer + 10,
-                  '& .MuiDrawer-paper': {
-                    width: detailDrawerWidth,
-                    boxSizing: 'border-box',
-                    borderLeft: 1,
-                    borderColor: 'divider',
-                    zIndex: (t) => t.zIndex.drawer + 10,
-                  },
-                }}
-              >
-                <OrderDetailPanel
-                  order={selectedOrder}
-                  onUpdate={handleOrderUpdate}
-                  onDelete={handleOrderDelete}
-                  onClose={() => setSelectedOrder(null)}
-                  vehicles={vehicles}
-                  slots={slots}
-                />
-              </Drawer>
-            )}
-          </Box>
-
-          {isMobile && vehicles.length > 0 && pendingCount > 0 && (
-            <Box
-              sx={{
-                flexShrink: 0,
-                borderTop: 1,
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                overflow: 'hidden',
-              }}
-            >
+        <div className="dispatch-body">
+          {!isMobile && vehicles.length > 0 ? (
+            <aside className="dispatch-sidebar">
               <OrderCardList
                 orders={orders}
                 onOrderSelect={handleOrderSelect}
                 selectedOrderId={selectedOrder?.id}
                 defaultExpanded
+                fillHeight
               />
-            </Box>
-          )}
+            </aside>
+          ) : null}
 
-          <OrderFormModal
-            open={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onOrderCreated={handleOrderCreated}
-          />
-          <VehicleSelectDialog
-            open={isVehicleSelectDialogOpen}
-            vehicles={vehicles}
-            onClose={() => setIsVehicleSelectDialogOpen(false)}
-            onSelect={(vehicle) => {
-              setSelectedVehicleForStatus(vehicle)
-              setIsVehicleSelectDialogOpen(false)
-              setIsOperationStatusModalOpen(true)
+          <main className="dispatch-main">
+            {vehicles.length === 0 ? (
+              <div className="dispatch-empty">
+                <Text weight="semibold" color="secondary">
+                  車両データがありません
+                </Text>
+                <Text color="secondary">Supabaseに車両データを追加してください</Text>
+              </div>
+            ) : (
+              <TimelineGrid
+                vehicles={vehicles}
+                orders={orders}
+                slots={slots}
+                operationStatuses={operationStatuses}
+                dragOverPosition={dragOverPosition}
+                draggingSlotVehicleId={draggingSlotVehicleId}
+                selectedOrderId={selectedOrder?.id}
+                onOrderSelect={handleOrderSelect}
+                onOrderUpdate={handleOrderUpdate}
+                onSlotsUpdate={loadSlots}
+              />
+            )}
+          </main>
+
+          {!isMobile && selectedOrder ? (
+            <aside className="dispatch-detail-panel">{detailPanel}</aside>
+          ) : null}
+        </div>
+
+        {isMobile && vehicles.length > 0 && pendingCount > 0 ? (
+          <div className="dispatch-mobile-queue">
+            <OrderCardList
+              orders={orders}
+              onOrderSelect={handleOrderSelect}
+              selectedOrderId={selectedOrder?.id}
+              defaultExpanded
+            />
+          </div>
+        ) : null}
+
+        {isMobile && selectedOrder ? (
+          <Dialog
+            isOpen
+            onOpenChange={(next) => {
+              if (!next) setSelectedOrder(null)
             }}
-          />
-          <VehicleOperationStatusModal
-            open={isOperationStatusModalOpen}
-            onClose={() => {
-              setIsOperationStatusModalOpen(false)
-              setSelectedVehicleForStatus(null)
-            }}
-            onStatusUpdated={() => {
-              if (vehicles.length > 0) {
-                loadOperationStatuses(vehicles)
-              }
-            }}
-            vehicleId={selectedVehicleForStatus?.id}
-            vehicleName={selectedVehicleForStatus?.name}
-          />
-        </Box>
-      </DndContext>
-    </ThemeProvider>
+            purpose="info"
+            variant="fullscreen"
+          >
+            {detailPanel}
+          </Dialog>
+        ) : null}
+
+        <OrderFormModal
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onOrderCreated={handleOrderCreated}
+        />
+        <VehicleSelectDialog
+          open={isVehicleSelectDialogOpen}
+          vehicles={vehicles}
+          onClose={() => setIsVehicleSelectDialogOpen(false)}
+          onSelect={(vehicle) => {
+            setSelectedVehicleForStatus(vehicle)
+            setIsVehicleSelectDialogOpen(false)
+            setIsOperationStatusModalOpen(true)
+          }}
+        />
+        <VehicleOperationStatusModal
+          open={isOperationStatusModalOpen}
+          onClose={() => {
+            setIsOperationStatusModalOpen(false)
+            setSelectedVehicleForStatus(null)
+          }}
+          onStatusUpdated={() => {
+            if (vehicles.length > 0) {
+              loadOperationStatuses(vehicles)
+            }
+          }}
+          vehicleId={selectedVehicleForStatus?.id}
+          vehicleName={selectedVehicleForStatus?.name}
+        />
+      </div>
+    </DndContext>
   )
 }

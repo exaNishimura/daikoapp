@@ -1,61 +1,56 @@
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
+import { Heading } from '@astryxdesign/core/Heading'
+import { Link } from '@astryxdesign/core/Link'
+import { Text } from '@astryxdesign/core/Text'
+import { TextArea } from '@astryxdesign/core/TextArea'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { VStack } from '@astryxdesign/core/Layout'
 
-const sectionTitleSx = {
-  fontWeight: 600,
-  mb: 2,
-  pb: 1.5,
-  borderBottom: 1,
-  borderColor: 'divider',
+function namedChange(handleChange, name) {
+  return (value) => handleChange({ target: { name, value: value ?? '' } })
 }
-const labelSx = { display: 'block', mb: 0.5 }
 
 function ContactEditFields({ formData, handleChange }) {
   return (
     <>
-      <TextField
+      <TextInput
         label="電話番号"
-        type="tel"
-        name="contact_phone"
+        htmlName="contact_phone"
         value={formData.contact_phone}
-        onChange={handleChange}
-        fullWidth
-        size="small"
+        onChange={namedChange(handleChange, 'contact_phone')}
+        width="100%"
+        size="sm"
       />
-      <TextField
+      <TextInput
         label="車種"
-        name="car_model"
+        htmlName="car_model"
         value={formData.car_model}
-        onChange={handleChange}
-        fullWidth
-        size="small"
+        onChange={namedChange(handleChange, 'car_model')}
+        width="100%"
+        size="sm"
       />
-      <TextField
+      <TextInput
         label="ナンバー"
-        name="car_plate"
+        htmlName="car_plate"
         value={formData.car_plate}
-        onChange={handleChange}
-        fullWidth
-        size="small"
+        onChange={namedChange(handleChange, 'car_plate')}
+        width="100%"
+        size="sm"
       />
-      <TextField
+      <TextInput
         label="色"
-        name="car_color"
+        htmlName="car_color"
         value={formData.car_color}
-        onChange={handleChange}
-        fullWidth
-        size="small"
+        onChange={namedChange(handleChange, 'car_color')}
+        width="100%"
+        size="sm"
       />
-      <TextField
+      <TextArea
         label="駐車位置メモ"
-        name="parking_note"
+        htmlName="parking_note"
         value={formData.parking_note}
-        onChange={handleChange}
-        multiline
+        onChange={namedChange(handleChange, 'parking_note')}
         rows={3}
-        fullWidth
+        width="100%"
       />
     </>
   )
@@ -64,70 +59,57 @@ function ContactEditFields({ formData, handleChange }) {
 function ContactViewFields({ order }) {
   return (
     <>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={labelSx}>
+      <VStack gap={0.5}>
+        <Text size="xsm" color="secondary">
           電話番号
-        </Typography>
+        </Text>
         {order.contact_phone ? (
-          <Typography
-            variant="body2"
-            component="a"
-            href={`tel:${order.contact_phone}`}
-            sx={{
-              color: 'primary.main',
-              textDecoration: 'none',
-              '&:hover': { textDecoration: 'underline' },
-            }}
-          >
-            {order.contact_phone}
-          </Typography>
+          <Link href={`tel:${order.contact_phone}`}>{order.contact_phone}</Link>
         ) : (
-          <Typography variant="body2">未設定</Typography>
+          <Text>未設定</Text>
         )}
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={labelSx}>
+      </VStack>
+      <VStack gap={0.5}>
+        <Text size="xsm" color="secondary">
           車種
-        </Typography>
-        <Typography variant="body2">{order.car_model || '未設定'}</Typography>
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={labelSx}>
+        </Text>
+        <Text>{order.car_model || '未設定'}</Text>
+      </VStack>
+      <VStack gap={0.5}>
+        <Text size="xsm" color="secondary">
           ナンバー
-        </Typography>
-        <Typography variant="body2">{order.car_plate || '未設定'}</Typography>
-      </Box>
-      <Box>
-        <Typography variant="caption" color="text.secondary" sx={labelSx}>
+        </Text>
+        <Text>{order.car_plate || '未設定'}</Text>
+      </VStack>
+      <VStack gap={0.5}>
+        <Text size="xsm" color="secondary">
           色
-        </Typography>
-        <Typography variant="body2">{order.car_color || '未設定'}</Typography>
-      </Box>
-      {order.parking_note && (
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={labelSx}>
+        </Text>
+        <Text>{order.car_color || '未設定'}</Text>
+      </VStack>
+      {order.parking_note ? (
+        <VStack gap={0.5}>
+          <Text size="xsm" color="secondary">
             駐車位置メモ
-          </Typography>
-          <Typography variant="body2">{order.parking_note}</Typography>
-        </Box>
-      )}
+          </Text>
+          <Text>{order.parking_note}</Text>
+        </VStack>
+      ) : null}
     </>
   )
 }
 
 export function OrderContactSection({ editing, order, formData, handleChange }) {
   return (
-    <Box>
-      <Typography variant="subtitle1" sx={sectionTitleSx}>
-        連絡先・車情報
-      </Typography>
-      <Stack spacing={2.5}>
+    <VStack gap={2}>
+      <Heading level={3}>連絡先・車情報</Heading>
+      <VStack gap={2}>
         {editing ? (
           <ContactEditFields formData={formData} handleChange={handleChange} />
         ) : (
           <ContactViewFields order={order} />
         )}
-      </Stack>
-    </Box>
+      </VStack>
+    </VStack>
   )
 }

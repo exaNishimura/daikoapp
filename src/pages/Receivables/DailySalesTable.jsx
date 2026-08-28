@@ -1,15 +1,15 @@
 import { useMemo, useRef, useState } from 'react'
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
-import Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableRow from '@mui/material/TableRow'
-import TableContainer from '@mui/material/TableContainer'
-import Typography from '@mui/material/Typography'
-import InputBase from '@mui/material/InputBase'
-import { useTheme, alpha } from '@mui/material/styles'
+import { Card } from '@astryxdesign/core/Card'
+import { VStack } from '@astryxdesign/core/Layout'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
 import { calcDailyDerived, toWorkDateKey } from '@/lib/billing/dailySalesCalc'
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback'
 
@@ -24,6 +24,19 @@ const STICKY_DOW_LEFT = STICKY_DAY_WIDTH
 const DIST_COL = 60
 const AMOUNT_COL = 80
 const EXPENSE_NOTE_MIN = 120
+
+const CELL_INPUT_STYLE = {
+  width: '100%',
+  boxSizing: 'border-box',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-sm)',
+  paddingBlock: 'var(--spacing-1)',
+  paddingInline: 'var(--spacing-2)',
+  font: 'inherit',
+  background: 'color-mix(in srgb, var(--color-background-surface) 55%, transparent)',
+  color: 'var(--color-text-primary)',
+  fontVariantNumeric: 'tabular-nums',
+}
 
 /** 列グループ（ヘッダ2段 + 縦線で区分） */
 const COLUMN_GROUPS = [
@@ -118,7 +131,7 @@ const COLUMN_GROUPS = [
   },
 ]
 
-function fieldColSx(field) {
+function fieldColStyle(field) {
   if (field.width != null) {
     return {
       width: field.width,
@@ -140,67 +153,39 @@ const DERIVED_COLUMNS = [
   { key: 'profit', label: '推定利益', minWidth: 88 },
 ]
 
-function cellBorderSx(theme, { groupEdge = false, strong = false } = {}) {
+function cellBorderStyle({ groupEdge = false } = {}) {
   return {
-    borderRight: `${strong || groupEdge ? 2 : 1}px solid ${
-      strong || groupEdge ? theme.palette.divider : alpha(theme.palette.divider, 0.7)
+    borderRight: `${groupEdge ? 2 : 1}px solid ${
+      groupEdge ? 'var(--color-border-emphasized)' : 'var(--color-border)'
     }`,
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    borderBottom: '1px solid var(--color-border)',
   }
 }
 
-function groupTint(theme, tint) {
-  if (tint === 'primary') return alpha(theme.palette.primary.main, 0.06)
-  if (tint === 'info') return alpha(theme.palette.info.main, 0.06)
-  if (tint === 'success') return alpha(theme.palette.success.main, 0.05)
+function groupTint(tint) {
+  if (tint === 'primary') {
+    return 'color-mix(in srgb, var(--color-background-blue) 55%, var(--color-background-surface))'
+  }
+  if (tint === 'info') {
+    return 'color-mix(in srgb, var(--color-background-cyan) 55%, var(--color-background-surface))'
+  }
+  if (tint === 'success') {
+    return 'color-mix(in srgb, var(--color-background-green) 55%, var(--color-background-surface))'
+  }
   return 'transparent'
 }
 
-function rowBackground(theme, dow) {
-  if (dow === 0) return alpha(theme.palette.error.main, 0.05)
-  if (dow === 6) return alpha(theme.palette.primary.main, 0.05)
-  return theme.palette.background.paper
-}
-
-function parseCssColor(color) {
-  if (typeof color !== 'string') return [255, 255, 255]
-  if (color.startsWith('#')) {
-    const h = color.slice(1)
-    const full =
-      h.length === 3
-        ? h
-            .split('')
-            .map((c) => c + c)
-            .join('')
-        : h
-    return [
-      parseInt(full.slice(0, 2), 16),
-      parseInt(full.slice(2, 4), 16),
-      parseInt(full.slice(4, 6), 16),
-    ]
-  }
-  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
-  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])]
-  return [255, 255, 255]
-}
-
-/** 固定列用: paper に色を混ぜた不透明背景（横スクロール時の透け防止） */
-function stickyRowBackground(theme, dow) {
-  const paperRgb = parseCssColor(theme.palette.background.paper)
+function rowBackground(dow) {
   if (dow === 0) {
-    const fg = parseCssColor(theme.palette.error.main)
-    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.05 + paperRgb[i] * 0.95))
-    return `rgb(${r}, ${g}, ${b})`
+    return 'color-mix(in srgb, var(--color-text-red) 5%, var(--color-background-surface))'
   }
   if (dow === 6) {
-    const fg = parseCssColor(theme.palette.primary.main)
-    const [r, g, b] = fg.map((c, i) => Math.round(c * 0.05 + paperRgb[i] * 0.95))
-    return `rgb(${r}, ${g}, ${b})`
+    return 'color-mix(in srgb, var(--color-accent) 5%, var(--color-background-surface))'
   }
-  return theme.palette.background.paper
+  return 'var(--color-background-surface)'
 }
 
-function stickyColSx({ left, width, bg, header = false, edge = false, theme }) {
+function stickyColStyle({ left, width, bg, header = false, edge = false }) {
   return {
     position: 'sticky',
     left,
@@ -208,9 +193,9 @@ function stickyColSx({ left, width, bg, header = false, edge = false, theme }) {
     minWidth: width,
     width,
     maxWidth: width,
-    bgcolor: bg,
-    ...cellBorderSx(theme, { groupEdge: edge, strong: edge }),
-    ...(edge ? { boxShadow: '4px 0 8px -4px rgba(0,0,0,0.12)' } : {}),
+    backgroundColor: bg,
+    ...cellBorderStyle({ groupEdge: edge }),
+    ...(edge ? { boxShadow: '4px 0 8px -4px var(--color-overlay)' } : {}),
   }
 }
 
@@ -224,30 +209,15 @@ function toDateString(year, month, day) {
 
 function CellInput({ value, onChange, type, step }) {
   return (
-    <InputBase
+    <input
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value)}
       type={type}
-      inputProps={{
-        step,
-        style: {
-          textAlign: type === 'number' ? 'right' : 'left',
-          fontVariantNumeric: 'tabular-nums',
-          padding: '2px 4px',
-        },
-      }}
-      sx={{
-        width: '100%',
-        fontSize: 13,
-        bgcolor: 'rgba(255,255,255,0.55)',
-        borderRadius: 0.5,
-        border: '1px solid',
-        borderColor: 'divider',
-        '&:hover': { borderColor: 'primary.light' },
-        '&.Mui-focused, &:focus-within': {
-          borderColor: 'primary.main',
-          bgcolor: '#fff',
-        },
+      step={step}
+      aria-label={type === 'number' ? '数値' : 'テキスト'}
+      style={{
+        ...CELL_INPUT_STYLE,
+        textAlign: type === 'number' ? 'right' : 'left',
       }}
     />
   )
@@ -260,7 +230,6 @@ function CellInput({ value, onChange, type, step }) {
  * - 500ms 静止したら `onUpsert(payload)` に送る (debounce)
  */
 export function DailySalesTable({ year, month, rows, receivableByDate = new Map(), onUpsert }) {
-  const theme = useTheme()
   const totalDays = daysInMonth(year, month)
   const rowsByDate = useMemo(() => {
     const map = new Map()
@@ -320,303 +289,267 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
     return row?.[fieldKey] ?? ''
   }
 
-  const headerBg = theme.palette.grey[50]
-  const derivedHeaderBg = alpha(theme.palette.success.main, 0.06)
+  const headerBg = 'var(--color-background-muted)'
+  const derivedHeaderBg = groupTint('success')
 
   return (
-    <TableContainer
-      component={Paper}
-      variant="outlined"
-      sx={{
-        width: '100%',
-        overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        borderColor: 'divider',
-      }}
-    >
-      <Table
-        size="small"
-        sx={{
-          width: 'max-content',
-          minWidth: '100%',
-          borderCollapse: 'separate',
-          borderSpacing: 0,
-          '& td, & th': {
-            px: 0.75,
-            py: 0.5,
-            whiteSpace: 'nowrap',
-          },
-        }}
-      >
-        <TableHead>
-          {/* グループ行 */}
-          <TableRow>
-            <TableCell
-              rowSpan={2}
-              sx={{
-                ...stickyColSx({
-                  left: 0,
-                  width: STICKY_DAY_WIDTH,
-                  bg: headerBg,
-                  header: true,
-                  theme,
-                }),
-                verticalAlign: 'middle',
-                fontWeight: 700,
-                textAlign: 'center',
-              }}
-            >
-              日
-            </TableCell>
-            <TableCell
-              rowSpan={2}
-              sx={{
-                ...stickyColSx({
-                  left: STICKY_DOW_LEFT,
-                  width: STICKY_DOW_WIDTH,
-                  bg: headerBg,
-                  header: true,
-                  edge: true,
-                  theme,
-                }),
-                verticalAlign: 'middle',
-                fontWeight: 700,
-                textAlign: 'center',
-              }}
-            >
-              曜
-            </TableCell>
-            {COLUMN_GROUPS.map((g) => (
-              <TableCell
-                key={g.id}
-                align="center"
-                colSpan={g.fields.length}
-                sx={{
-                  ...cellBorderSx(theme, { groupEdge: true, strong: true }),
-                  bgcolor: groupTint(theme, g.tint) || headerBg,
-                  fontWeight: 700,
-                  fontSize: 13,
-                  letterSpacing: '0.04em',
-                  borderTop: `2px solid ${
-                    g.tint === 'primary'
-                      ? theme.palette.primary.main
-                      : g.tint === 'info'
-                        ? theme.palette.info.main
-                        : theme.palette.divider
-                  }`,
-                }}
-              >
-                {g.label}
-              </TableCell>
-            ))}
-            <TableCell
-              align="center"
-              colSpan={DERIVED_COLUMNS.length}
-              sx={{
-                ...cellBorderSx(theme, { groupEdge: true, strong: true }),
-                bgcolor: derivedHeaderBg,
-                fontWeight: 700,
-                fontSize: 13,
-                letterSpacing: '0.04em',
-                borderTop: `2px solid ${theme.palette.success.main}`,
-              }}
-            >
-              集計
-            </TableCell>
-          </TableRow>
-
-          {/* 項目行 */}
-          <TableRow>
-            {COLUMN_GROUPS.map((g) =>
-              g.fields.map((f, idx) => (
-                <TableCell
-                  key={f.key}
-                  align={f.type === 'number' ? 'right' : 'left'}
-                  title={f.unit ? `${f.label} (${f.unit})` : f.label}
-                  sx={{
-                    ...cellBorderSx(theme, {
-                      groupEdge: idx === g.fields.length - 1,
-                      strong: idx === g.fields.length - 1,
-                    }),
-                    ...fieldColSx(f),
-                    bgcolor: groupTint(theme, g.tint) || headerBg,
-                    fontWeight: 600,
-                    fontSize: 12,
-                    color: 'text.secondary',
-                  }}
-                >
-                  {f.width != null ? f.label : `${f.label}${f.unit ? ` (${f.unit})` : ''}`}
-                </TableCell>
-              ))
-            )}
-            {DERIVED_COLUMNS.map((c, idx) => (
-              <TableCell
-                key={c.key}
-                align="right"
-                sx={{
-                  ...cellBorderSx(theme, {
-                    groupEdge: idx === DERIVED_COLUMNS.length - 1,
-                    strong: idx === DERIVED_COLUMNS.length - 1,
+    <VStack gap={1}>
+      <Card padding={0}>
+        <VStack gap={0} style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
+        <Table density="compact" hasHover dividers="grid">
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell
+                rowSpan={2}
+                style={{
+                  ...stickyColStyle({
+                    left: 0,
+                    width: STICKY_DAY_WIDTH,
+                    bg: headerBg,
+                    header: true,
                   }),
-                  minWidth: c.minWidth,
-                  bgcolor: derivedHeaderBg,
-                  fontWeight: 600,
-                  fontSize: 12,
-                  color: 'text.secondary',
+                  verticalAlign: 'middle',
+                  fontWeight: 700,
+                  textAlign: 'center',
                 }}
               >
-                {c.label}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => {
-            const workDate = toDateString(year, month, day)
-            const dow = new Date(year, month - 1, day).getDay()
-            const isWeekend = dow === 0 || dow === 6
-            const row = rowsByDate.get(workDate) ?? {}
-            const merged = { ...row, ...(drafts[workDate] ?? {}) }
-            const derived = calcDailyDerived({
-              vehicle1_sales: parseInt0(merged.vehicle1_sales),
-              vehicle2_sales: parseInt0(merged.vehicle2_sales),
-              vehicle1_fuel_yen: parseInt0(merged.vehicle1_fuel_yen),
-              vehicle2_fuel_yen: parseInt0(merged.vehicle2_fuel_yen),
-              vehicle1_expense_amount: parseInt0(merged.vehicle1_expense_amount),
-              vehicle2_expense_amount: parseInt0(merged.vehicle2_expense_amount),
-              labor_cost: parseInt0(merged.labor_cost),
-            })
-            const receivableSummary = receivableByDate.get(workDate)
-            const receivableTotal = receivableSummary?.total ?? 0
-            const receivableCount = receivableSummary?.count ?? 0
-            const bg = rowBackground(theme, dow)
-            const stickyBg = stickyRowBackground(theme, dow)
-
-            return (
-              <TableRow key={workDate} hover sx={{ bgcolor: bg }}>
-                <TableCell
-                  sx={{
-                    ...stickyColSx({
-                      left: 0,
-                      width: STICKY_DAY_WIDTH,
-                      bg: stickyBg,
-                      theme,
-                    }),
-                    fontVariantNumeric: 'tabular-nums',
-                    fontWeight: 600,
+                日
+              </TableHeaderCell>
+              <TableHeaderCell
+                rowSpan={2}
+                style={{
+                  ...stickyColStyle({
+                    left: STICKY_DOW_LEFT,
+                    width: STICKY_DOW_WIDTH,
+                    bg: headerBg,
+                    header: true,
+                    edge: true,
+                  }),
+                  verticalAlign: 'middle',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                }}
+              >
+                曜
+              </TableHeaderCell>
+              {COLUMN_GROUPS.map((g) => (
+                <TableHeaderCell
+                  key={g.id}
+                  colSpan={g.fields.length}
+                  style={{
+                    ...cellBorderStyle({ groupEdge: true }),
+                    backgroundColor: groupTint(g.tint) === 'transparent' ? headerBg : groupTint(g.tint),
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
                     textAlign: 'center',
+                    borderTop: `2px solid ${
+                      g.tint === 'primary'
+                        ? 'var(--color-border-blue)'
+                        : g.tint === 'info'
+                          ? 'var(--color-border-cyan)'
+                          : 'var(--color-border)'
+                    }`,
                   }}
                 >
-                  {day}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    ...stickyColSx({
-                      left: STICKY_DOW_LEFT,
-                      width: STICKY_DOW_WIDTH,
-                      bg: stickyBg,
-                      edge: true,
-                      theme,
-                    }),
-                    color: isWeekend
-                      ? dow === 0
-                        ? 'error.main'
-                        : 'primary.main'
-                      : 'text.secondary',
-                    fontWeight: isWeekend ? 700 : 500,
-                    textAlign: 'center',
-                  }}
-                >
-                  {DOW_LABELS[dow]}
-                </TableCell>
+                  {g.label}
+                </TableHeaderCell>
+              ))}
+              <TableHeaderCell
+                colSpan={DERIVED_COLUMNS.length}
+                style={{
+                  ...cellBorderStyle({ groupEdge: true }),
+                  backgroundColor: derivedHeaderBg,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  textAlign: 'center',
+                  borderTop: '2px solid var(--color-border-green)',
+                }}
+              >
+                集計
+              </TableHeaderCell>
+            </TableRow>
 
-                {COLUMN_GROUPS.map((g) =>
-                  g.fields.map((f, idx) => (
-                    <TableCell
-                      key={f.key}
-                      align={f.type === 'number' ? 'right' : 'left'}
-                      sx={{
-                        ...cellBorderSx(theme, {
-                          groupEdge: idx === g.fields.length - 1,
-                          strong: idx === g.fields.length - 1,
-                        }),
-                        ...fieldColSx(f),
-                        bgcolor: groupTint(theme, g.tint),
-                      }}
-                    >
-                      <CellInput
-                        value={getCellValue(workDate, f.key)}
-                        onChange={(raw) => handleChange(workDate, f, raw)}
-                        type={f.type}
-                        step={f.step}
-                      />
-                    </TableCell>
-                  ))
-                )}
-
-                <TableCell
-                  align="right"
-                  sx={{
-                    ...cellBorderSx(theme),
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'text.secondary',
-                    minWidth: 88,
-                    bgcolor: derivedHeaderBg,
-                  }}
-                >
-                  ¥{derived.total_sales.toLocaleString('ja-JP')}
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{
-                    ...cellBorderSx(theme),
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'text.secondary',
-                    minWidth: 120,
-                    bgcolor: derivedHeaderBg,
-                  }}
-                >
-                  {receivableCount > 0
-                    ? `${receivableCount}件 ¥${receivableTotal.toLocaleString('ja-JP')}`
-                    : '—'}
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{
-                    ...cellBorderSx(theme),
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'text.secondary',
-                    minWidth: 80,
-                    bgcolor: derivedHeaderBg,
-                  }}
-                >
-                  ¥{derived.fuel_total.toLocaleString('ja-JP')}
-                </TableCell>
-                <TableCell
-                  align="right"
-                  sx={{
-                    ...cellBorderSx(theme, { groupEdge: true, strong: true }),
-                    fontVariantNumeric: 'tabular-nums',
+            <TableRow isHeaderRow>
+              {COLUMN_GROUPS.map((g) =>
+                g.fields.map((f, idx) => (
+                  <TableHeaderCell
+                    key={f.key}
+                    title={f.unit ? `${f.label} (${f.unit})` : f.label}
+                    style={{
+                      ...cellBorderStyle({ groupEdge: idx === g.fields.length - 1 }),
+                      ...fieldColStyle(f),
+                      backgroundColor:
+                        groupTint(g.tint) === 'transparent' ? headerBg : groupTint(g.tint),
+                      fontWeight: 600,
+                      color: 'var(--color-text-secondary)',
+                      textAlign: f.type === 'number' ? 'right' : 'left',
+                    }}
+                  >
+                    {f.width != null ? f.label : `${f.label}${f.unit ? ` (${f.unit})` : ''}`}
+                  </TableHeaderCell>
+                ))
+              )}
+              {DERIVED_COLUMNS.map((c, idx) => (
+                <TableHeaderCell
+                  key={c.key}
+                  style={{
+                    ...cellBorderStyle({ groupEdge: idx === DERIVED_COLUMNS.length - 1 }),
+                    minWidth: c.minWidth,
+                    backgroundColor: derivedHeaderBg,
                     fontWeight: 600,
-                    color: derived.profit < 0 ? 'error.main' : 'success.main',
-                    minWidth: 88,
-                    bgcolor: derivedHeaderBg,
+                    color: 'var(--color-text-secondary)',
+                    textAlign: 'right',
                   }}
                 >
-                  ¥{derived.profit.toLocaleString('ja-JP')}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-      <Box sx={{ p: 1, color: 'text.secondary', fontSize: 12 }}>
-        <Typography variant="caption">
-          入力は 500ms 静止すると自動保存されます。列は「1号車 / 2号車 / 共通 /
-          集計」で区分しています。
-        </Typography>
-      </Box>
-    </TableContainer>
+                  {c.label}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: totalDays }, (_, i) => i + 1).map((day) => {
+              const workDate = toDateString(year, month, day)
+              const dow = new Date(year, month - 1, day).getDay()
+              const isWeekend = dow === 0 || dow === 6
+              const row = rowsByDate.get(workDate) ?? {}
+              const merged = { ...row, ...(drafts[workDate] ?? {}) }
+              const derived = calcDailyDerived({
+                vehicle1_sales: parseInt0(merged.vehicle1_sales),
+                vehicle2_sales: parseInt0(merged.vehicle2_sales),
+                vehicle1_fuel_yen: parseInt0(merged.vehicle1_fuel_yen),
+                vehicle2_fuel_yen: parseInt0(merged.vehicle2_fuel_yen),
+                vehicle1_expense_amount: parseInt0(merged.vehicle1_expense_amount),
+                vehicle2_expense_amount: parseInt0(merged.vehicle2_expense_amount),
+                labor_cost: parseInt0(merged.labor_cost),
+              })
+              const receivableSummary = receivableByDate.get(workDate)
+              const receivableTotal = receivableSummary?.total ?? 0
+              const receivableCount = receivableSummary?.count ?? 0
+              const bg = rowBackground(dow)
+
+              return (
+                <TableRow key={workDate} style={{ backgroundColor: bg }}>
+                  <TableCell
+                    style={{
+                      ...stickyColStyle({
+                        left: 0,
+                        width: STICKY_DAY_WIDTH,
+                        bg,
+                      }),
+                      fontVariantNumeric: 'tabular-nums',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {day}
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...stickyColStyle({
+                        left: STICKY_DOW_LEFT,
+                        width: STICKY_DOW_WIDTH,
+                        bg,
+                        edge: true,
+                      }),
+                      color: isWeekend
+                        ? dow === 0
+                          ? 'var(--color-text-red)'
+                          : 'var(--color-text-accent)'
+                        : 'var(--color-text-secondary)',
+                      fontWeight: isWeekend ? 700 : 500,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {DOW_LABELS[dow]}
+                  </TableCell>
+
+                  {COLUMN_GROUPS.map((g) =>
+                    g.fields.map((f, idx) => (
+                      <TableCell
+                        key={f.key}
+                        style={{
+                          ...cellBorderStyle({ groupEdge: idx === g.fields.length - 1 }),
+                          ...fieldColStyle(f),
+                          backgroundColor: groupTint(g.tint),
+                          textAlign: f.type === 'number' ? 'right' : 'left',
+                        }}
+                      >
+                        <CellInput
+                          value={getCellValue(workDate, f.key)}
+                          onChange={(raw) => handleChange(workDate, f, raw)}
+                          type={f.type}
+                          step={f.step}
+                        />
+                      </TableCell>
+                    ))
+                  )}
+
+                  <TableCell
+                    style={{
+                      ...cellBorderStyle(),
+                      fontVariantNumeric: 'tabular-nums',
+                      color: 'var(--color-text-secondary)',
+                      minWidth: 88,
+                      backgroundColor: derivedHeaderBg,
+                      textAlign: 'right',
+                    }}
+                  >
+                    ¥{derived.total_sales.toLocaleString('ja-JP')}
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...cellBorderStyle(),
+                      fontVariantNumeric: 'tabular-nums',
+                      color: 'var(--color-text-secondary)',
+                      minWidth: 120,
+                      backgroundColor: derivedHeaderBg,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {receivableCount > 0
+                      ? `${receivableCount}件 ¥${receivableTotal.toLocaleString('ja-JP')}`
+                      : '—'}
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...cellBorderStyle(),
+                      fontVariantNumeric: 'tabular-nums',
+                      color: 'var(--color-text-secondary)',
+                      minWidth: 80,
+                      backgroundColor: derivedHeaderBg,
+                      textAlign: 'right',
+                    }}
+                  >
+                    ¥{derived.fuel_total.toLocaleString('ja-JP')}
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      ...cellBorderStyle({ groupEdge: true }),
+                      fontVariantNumeric: 'tabular-nums',
+                      fontWeight: 600,
+                      color:
+                        derived.profit < 0
+                          ? 'var(--color-text-red)'
+                          : 'var(--color-text-green)',
+                      minWidth: 88,
+                      backgroundColor: derivedHeaderBg,
+                      textAlign: 'right',
+                    }}
+                  >
+                    ¥{derived.profit.toLocaleString('ja-JP')}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+        </VStack>
+      </Card>
+      <Text size="sm" color="secondary">
+        入力は 500ms 静止すると自動保存されます。列は「1号車 / 2号車 / 共通 /
+        集計」で区分しています。
+      </Text>
+    </VStack>
   )
 }
 

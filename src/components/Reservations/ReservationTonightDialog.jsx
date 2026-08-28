@@ -1,13 +1,9 @@
-import { Link as RouterLink } from 'react-router-dom'
 import dayjs from 'dayjs'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
-import Box from '@mui/material/Box'
+import { Button } from '@astryxdesign/core/Button'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Link } from '@astryxdesign/core/Link'
+import { Text } from '@astryxdesign/core/Text'
 
 function memoPreview(memo) {
   const text = String(memo ?? '').trim()
@@ -33,61 +29,54 @@ export function ReservationTonightDialog({ open, workDate, reservations, onClose
   const count = reservations?.length ?? 0
   const dateLabel = formatWorkDateLabel(workDate)
 
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
+
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      aria-labelledby="reservation-tonight-title"
-      fullWidth
-      maxWidth="sm"
-    >
-      <DialogTitle id="reservation-tonight-title">本日の予約 {count}件</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          {dateLabel} 19:00〜翌06:00
-        </Typography>
-        <Stack spacing={1.25}>
-          {(reservations ?? []).map((row) => {
-            const memo = memoPreview(row.memo)
-            return (
-              <Box
-                key={row.id}
-                sx={{
-                  p: 1.25,
-                  border: '1px solid #e3e7ec',
-                  borderRadius: 1,
-                  background: '#fff',
-                }}
-              >
-                <Typography sx={{ fontWeight: 700, color: '#b45309' }}>
-                  {dayjs(row.reserved_at).format('M/D HH:mm')} {row.customer_name}
-                </Typography>
-                {row.phone ? (
-                  <Typography variant="body2" sx={{ mt: 0.25 }}>
-                    <a href={`tel:${row.phone}`}>{row.phone}</a>
-                  </Typography>
-                ) : null}
-                {memo ? (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    {memo}
-                  </Typography>
-                ) : null}
-              </Box>
-            )
-          })}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>閉じる</Button>
-        <Button
-          component={RouterLink}
-          to={`/reservations?date=${workDate}`}
-          variant="contained"
-          onClick={onClose}
-        >
-          台帳で見る
-        </Button>
-      </DialogActions>
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+      <Layout
+        height="auto"
+        padding={4}
+        header={
+          <DialogHeader
+            title={`本日の予約 ${count}件`}
+            onOpenChange={handleOpenChange}
+          />
+        }
+        content={
+          <LayoutContent>
+            <VStack gap={4}>
+              <Text color="secondary">{dateLabel} 19:00〜翌06:00</Text>
+              {(reservations ?? []).map((row) => {
+                const memo = memoPreview(row.memo)
+                return (
+                  <VStack key={row.id} gap={1}>
+                    <Text weight="semibold">
+                      {dayjs(row.reserved_at).format('M/D HH:mm')} {row.customer_name}
+                    </Text>
+                    {row.phone ? <Link href={`tel:${row.phone}`}>{row.phone}</Link> : null}
+                    {memo ? <Text color="secondary">{memo}</Text> : null}
+                  </VStack>
+                )
+              })}
+            </VStack>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end" wrap="wrap">
+              <Button label="閉じる" variant="secondary" onClick={onClose} />
+              <Button
+                label="台帳で見る"
+                variant="primary"
+                href={`/reservations?date=${workDate}`}
+                onClick={onClose}
+              />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

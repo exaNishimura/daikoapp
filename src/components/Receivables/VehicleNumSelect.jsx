@@ -1,7 +1,4 @@
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
+import { Selector } from '@astryxdesign/core/Selector'
 import { RECEIVABLE_VEHICLE_OPTIONS } from '@/lib/billing/receivableForm'
 
 /**
@@ -12,24 +9,20 @@ export function VehicleNumSelect({
   onChange,
   label = '号車',
   size = 'small',
-  fullWidth = true,
   disabled = false,
 }) {
   return (
-    <FormControl size={size} fullWidth={fullWidth} disabled={disabled}>
-      <InputLabel id="vehicle-num-select-label">{label}</InputLabel>
-      <Select
-        labelId="vehicle-num-select-label"
-        label={label}
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {RECEIVABLE_VEHICLE_OPTIONS.map((opt) => (
-          <MenuItem key={opt.value || 'unset'} value={opt.value}>
-            {opt.label}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+    <Selector
+      label={label}
+      options={RECEIVABLE_VEHICLE_OPTIONS.map((opt) => ({
+        value: String(opt.value ?? ''),
+        label: opt.label,
+      }))}
+      value={value == null ? '' : String(value)}
+      onChange={(next) => onChange(next)}
+      size={size === 'small' ? 'sm' : 'md'}
+      isDisabled={disabled}
+      width="100%"
+    />
   )
 }

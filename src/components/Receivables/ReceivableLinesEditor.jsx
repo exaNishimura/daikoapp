@@ -1,10 +1,9 @@
-import Box from '@mui/material/Box'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
-import IconButton from '@mui/material/IconButton'
-import Button from '@mui/material/Button'
-import AddIcon from '@mui/icons-material/Add'
-import DeleteIcon from '@mui/icons-material/Delete'
+import { Button } from '@astryxdesign/core/Button'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { TextInput } from '@astryxdesign/core/TextInput'
+import { Plus, Trash2 } from 'lucide-react'
+import { AmountInput } from '@/components/Receivables/AmountInput'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { EMPTY_RECEIVABLE_LINE } from '@/lib/billing/shiftReceivables'
 
@@ -46,85 +45,53 @@ export function ReceivableLinesEditor({
   }
 
   return (
-    <Stack spacing={1.5}>
+    <VStack gap={2}>
       {lines.map((line, index) => (
-        <Box
-          key={line.id ?? `line-${index}`}
-          sx={{
-            display: 'grid',
-            gap: 1,
-            alignItems: 'start',
-            gridTemplateColumns: {
-              xs: '1fr auto',
-              sm: showCompany
-                ? 'minmax(0, 1.4fr) minmax(0, 0.9fr) minmax(0, 1fr) auto'
-                : '1fr 1fr auto',
-            },
-            p: { xs: 1.5, sm: 0 },
-            border: { xs: 1, sm: 0 },
-            borderColor: { xs: 'divider', sm: 'transparent' },
-            borderRadius: { xs: 1, sm: 0 },
-          }}
-        >
-          {showCompany && (
-            <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
-              <CompanySelect
-                companies={companies}
-                value={line.company_id}
-                onChange={(company_id) => updateLine(index, { company_id })}
-                disabled={disabled}
-                label="請求先"
-                creatable={creatable}
-                onCreate={onCreateCompany}
-              />
-            </Box>
-          )}
-          <TextField
+        <HStack key={line.id ?? `line-${index}`} gap={1} wrap="wrap" vAlign="start">
+          {showCompany ? (
+            <CompanySelect
+              companies={companies}
+              value={line.company_id}
+              onChange={(company_id) => updateLine(index, { company_id })}
+              disabled={disabled}
+              label="請求先"
+              creatable={creatable}
+              onCreate={onCreateCompany}
+            />
+          ) : null}
+          <AmountInput
             label="金額 (円)"
-            type="number"
-            size="small"
-            value={line.amount}
-            onChange={(e) => updateLine(index, { amount: e.target.value })}
-            inputProps={{ step: 1, min: 0 }}
+            value={line.amount === '' ? null : line.amount}
+            onChange={(amount) => updateLine(index, { amount: amount ?? '' })}
             disabled={disabled}
-            fullWidth
-            sx={{ gridColumn: { xs: '1 / 2', sm: 'auto' } }}
           />
-          <TextField
+          <TextInput
             label="備考"
-            size="small"
+            size="sm"
             value={line.note}
-            onChange={(e) => updateLine(index, { note: e.target.value })}
-            disabled={disabled}
+            onChange={(note) => updateLine(index, { note })}
+            isDisabled={disabled}
             placeholder="請求書払いなど"
-            fullWidth
-            sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
+            width="100%"
           />
           <IconButton
-            size="small"
+            size="sm"
+            variant="ghost"
+            label="行を削除"
+            icon={<Trash2 />}
             onClick={() => removeLine(index)}
-            disabled={disabled}
-            aria-label="行を削除"
-            sx={{
-              mt: { xs: 0, sm: 0.5 },
-              gridColumn: { xs: '2 / 3', sm: 'auto' },
-              gridRow: { xs: showCompany ? 2 : 1, sm: 'auto' },
-              alignSelf: { xs: 'start', sm: 'auto' },
-            }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Box>
+            isDisabled={disabled}
+          />
+        </HStack>
       ))}
       <Button
-        size="small"
-        startIcon={<AddIcon />}
+        size="sm"
+        variant="secondary"
+        icon={<Plus />}
+        label="売掛を追加"
         onClick={addLine}
-        disabled={disabled}
-        sx={{ alignSelf: 'flex-start' }}
-      >
-        売掛を追加
-      </Button>
-    </Stack>
+        isDisabled={disabled}
+      />
+    </VStack>
   )
 }

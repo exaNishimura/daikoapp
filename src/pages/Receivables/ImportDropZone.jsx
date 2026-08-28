@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { Card } from '@astryxdesign/core/Card'
+import { Center } from '@astryxdesign/core/Center'
+import { Text } from '@astryxdesign/core/Text'
+import { VStack } from '@astryxdesign/core/Layout'
+import { Upload } from 'lucide-react'
 
 /**
  * `.xlsx` ファイル受け取り用ドロップゾーン。
@@ -45,7 +47,9 @@ export function ImportDropZone({ onFile, disabled = false }) {
   }
 
   return (
-    <Box
+    <Card
+      padding={4}
+      variant={hover ? 'muted' : 'default'}
       onClick={onClick}
       onDrop={onDrop}
       onDragOver={(e) => {
@@ -53,30 +57,32 @@ export function ImportDropZone({ onFile, disabled = false }) {
         if (!disabled) setHover(true)
       }}
       onDragLeave={() => setHover(false)}
-      sx={{
-        border: '2px dashed',
-        borderColor: error ? 'error.main' : hover ? 'primary.main' : 'divider',
-        bgcolor: hover ? 'action.hover' : 'background.paper',
-        borderRadius: 2,
-        p: 4,
-        textAlign: 'center',
+      style={{
+        borderStyle: 'dashed',
+        borderWidth: 'var(--border-width-thick, 2px)',
+        borderColor: error
+          ? 'var(--color-error)'
+          : hover
+            ? 'var(--color-accent)'
+            : 'var(--color-border)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        transition: 'all 120ms ease',
       }}
     >
-      <UploadFileIcon sx={{ fontSize: 48, color: 'text.secondary' }} />
-      <Typography variant="body1" sx={{ mt: 1 }}>
-        ファイルをドロップ、または クリックして選択
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        `YYYYMM稼働管理表new.xlsx` 形式
-      </Typography>
-      {error && (
-        <Typography variant="caption" color="error.main" display="block" sx={{ mt: 1 }}>
-          {error}
-        </Typography>
-      )}
+      <Center>
+        <VStack gap={1} hAlign="center">
+          <Upload size={48} color="var(--color-text-secondary)" />
+          <Text>ファイルをドロップ、または クリックして選択</Text>
+          <Text size="sm" color="secondary">
+            `YYYYMM稼働管理表new.xlsx` 形式
+          </Text>
+          {error ? (
+            <Text size="sm" style={{ color: 'var(--color-text-red)' }}>
+              {error}
+            </Text>
+          ) : null}
+        </VStack>
+      </Center>
       <input
         ref={inputRef}
         type="file"
@@ -84,6 +90,6 @@ export function ImportDropZone({ onFile, disabled = false }) {
         hidden
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
-    </Box>
+    </Card>
   )
 }

@@ -1,13 +1,20 @@
-import { useEffect, useRef } from 'react'
-import Box from '@mui/material/Box'
-import FormLabel from '@mui/material/FormLabel'
-import FormHelperText from '@mui/material/FormHelperText'
-import { useTheme } from '@mui/material/styles'
+import { useEffect, useId, useRef } from 'react'
+import { Field } from '@astryxdesign/core/Field'
 import {
   importPlacesLibrary,
   getMieLocationRestriction,
   injectPlaceAutocompleteStyle,
 } from '@/lib/places'
+
+const HOST_STYLE = {
+  display: 'block',
+  width: '100%',
+  '--places-border': 'var(--color-border)',
+  '--places-border-hover': 'var(--color-text)',
+  '--places-border-focus': 'var(--color-accent)',
+  '--places-border-error': 'var(--color-error)',
+  '--places-radius': 'var(--radius-md)',
+}
 
 /**
  * Google Places の新 `PlaceAutocompleteElement`（Web Component）を React でラップしたフィールド。
@@ -36,13 +43,11 @@ export function PlacesAutocompleteField({
   error,
   helperText,
 }) {
-  const theme = useTheme()
+  const inputId = useId()
   const containerRef = useRef(null)
   const elementRef = useRef(null)
-  // onChange を ref 経由で参照し、生成 effect の依存から外す（要素の作り直しを防ぐ）
   const onChangeRef = useRef(onChange)
 
-  // 最新の onChange を ref に反映（render 中ではなく effect で更新）
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
@@ -68,19 +73,16 @@ export function PlacesAutocompleteField({
       el.requestedRegion = 'jp'
       if (placeholder) el.placeholder = placeholder
       if (name) el.name = name
-      // マウント時点の value を初期値として設定（以降は下の同期 effect で反映）
       if (value) el.value = value
 
       containerRef.current.appendChild(el)
       elementRef.current = el
 
-      // 手入力を親に反映（バリデーション用に値を持たせる）
       inputListener = () => {
         onChangeRef.current?.(el.value)
       }
       el.addEventListener('input', inputListener)
 
-      // 候補選択時は formattedAddress を確定値として反映
       selectListener = async (event) => {
         const prediction = event.placePrediction
         if (!prediction) return
@@ -112,7 +114,6 @@ export function PlacesAutocompleteField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 外部 value 変更（reset 等）を要素へ同期
   useEffect(() => {
     const el = elementRef.current
     if (el && el.value !== value) {
@@ -120,39 +121,25 @@ export function PlacesAutocompleteField({
     }
   }, [value])
 
-  const isLight = theme.palette.mode === 'light'
-
   return (
-    <Box>
-      {label && (
-        <FormLabel
-          error={!!error}
-          required={required}
-          sx={{ display: 'block', mb: 1, fontSize: '0.875rem' }}
-        >
-          {label}
-        </FormLabel>
-      )}
-      <Box
+    <Field
+      label={label || '住所'}
+      inputID={inputId}
+      isRequired={required}
+      isLabelHidden={!label}
+      description={!error ? helperText : undefined}
+      status={error ? { type: 'error', message: error } : undefined}
+      statusVariant="detached"
+      width="100%"
+    >
+      <span
         ref={containerRef}
+        id={inputId}
         className="places-autocomplete-host"
-        data-color-scheme={theme.palette.mode}
+        data-color-scheme="light"
         data-error={error ? 'true' : undefined}
-        sx={{
-          width: '100%',
-          // MUI OutlinedInput と同じ枠線・角丸（dispatchLightTheme / darkTheme 双方に追従）
-          '--places-border': isLight ? 'rgba(0, 0, 0, 0.23)' : 'rgba(255, 255, 255, 0.23)',
-          '--places-border-hover': isLight ? 'rgba(0, 0, 0, 0.87)' : 'rgba(255, 255, 255, 0.87)',
-          '--places-border-focus': theme.palette.primary.main,
-          '--places-border-error': theme.palette.error.main,
-          '--places-radius': `${theme.shape.borderRadius}px`,
-        }}
+        style={HOST_STYLE}
       />
-      {error ? (
-        <FormHelperText error>{error}</FormHelperText>
-      ) : helperText ? (
-        <FormHelperText>{helperText}</FormHelperText>
-      ) : null}
-    </Box>
+    </Field>
   )
 }

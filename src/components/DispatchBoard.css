@@ -1,11 +1,18 @@
 /*
  * 配車画面ライトテーマのデザイントークン。
  * .dispatch-root 配下の全 CSS（TimelineGrid / SlotComponent 等）がこの変数を参照する。
- * MUI コンポーネントは入れ子の dispatchLightTheme で別途テーマ適用される。
+ * .dispatch-root 配下の全 CSS（TimelineGrid / SlotComponent 等）がこの変数を参照する。
  */
 .dispatch-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+
   /* サーフェス階層 */
-  --dsp-bg: #f4f6f8;
+  --dsp-bg: transparent;
   --dsp-surface: #ffffff;
   --dsp-surface-2: #f8fafc;
   --dsp-surface-3: #eef1f5;
@@ -43,4 +50,72 @@
   /* 影 */
   --dsp-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
   --dsp-shadow-md: 0 4px 12px rgba(16, 24, 40, 0.1);
+}
+
+.dispatch-root.dispatch-loading {
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2, 8px);
+}
+
+.dispatch-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--dsp-border);
+  background: var(--dsp-surface);
+}
+
+.dispatch-legend {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--dsp-border);
+  background: var(--dsp-surface);
+}
+
+.dispatch-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.dispatch-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--dsp-border);
+  background: var(--dsp-surface);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: 0;
+}
+
+.dispatch-main {
+  flex-grow: 1;
+  min-width: 0;
+  background: var(--dsp-bg);
+}
+
+.dispatch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--spacing-1, 4px);
+}
+
+.dispatch-mobile-queue {
+  flex-shrink: 0;
+  border-top: 1px solid var(--dsp-border);
+  background: var(--dsp-surface);
+  overflow: hidden;
+}
+
+.dispatch-detail-panel {
+  flex-shrink: 0;
+  width: 384px;
+  border-left: 1px solid var(--dsp-border);
+  background: var(--dsp-surface);
+  overflow: auto;
+  z-index: 20;
 }

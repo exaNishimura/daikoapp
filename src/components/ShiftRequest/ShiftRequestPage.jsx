@@ -1,31 +1,60 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Container from '@mui/material/Container'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import Paper from '@mui/material/Paper'
-import TextField from '@mui/material/TextField'
-import Switch from '@mui/material/Switch'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import IconButton from '@mui/material/IconButton'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import SaveIcon from '@mui/icons-material/Save'
-import LogoutIcon from '@mui/icons-material/Logout'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { Field } from '@astryxdesign/core/Field'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Switch } from '@astryxdesign/core/Switch'
+import { Text } from '@astryxdesign/core/Text'
+import { TextArea } from '@astryxdesign/core/TextArea'
+import { Token } from '@astryxdesign/core/Token'
+import { ChevronLeft, ChevronRight, LogOut, Save } from 'lucide-react'
+import { PageFrame } from '@/components/PageFrame'
 import { ShiftPinGate } from '@/components/ShiftRequest/ShiftPinGate'
 import {
   getShiftAvailabilityRequest,
   saveShiftAvailabilityRequest,
 } from '@/services/employeeShiftService'
+import { getShifts } from '@/services/shiftService'
 import { clearEmployeeShiftSession } from '@/lib/employeeShift/employeeShiftSession'
+import {
+  formatShiftRequestDate,
+  indexDayStatusByDate,
+  isRegularClosedDay,
+  sanitizeShiftRequestPayload,
+} from '@/lib/shiftDayStatus'
 
 const DEFAULT_START = '20:00'
 const DEFAULT_END = '06:00'
 
-function monthKey(d) {
-  return d.format('YYYY-MM')
+const NATIVE_INPUT_STYLE = {
+  width: '100%',
+  boxSizing: 'border-box',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  paddingBlock: 'var(--spacing-2)',
+  paddingInline: 'var(--spacing-3)',
+  font: 'inherit',
+  background: 'var(--color-bg)',
+  color: 'var(--color-text)',
+}
+
+function TimeField({ label, value, onChange }) {
+  const inputId = useId()
+  return (
+    <Field label={label} inputID={inputId}>
+      <input
+        id={inputId}
+        type="time"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={NATIVE_INPUT_STYLE}
+      />
+    </Field>
+  )
 }
 
 function daysInMonth(month) {
@@ -45,6 +74,7 @@ function emptyPayload() {
 function ShiftRequestForm({ employee, onLogout }) {
   const [month, setMonth] = useState(() => dayjs().add(1, 'month').format('YYYY-MM'))
   const [payload, setPayload] = useState(emptyPayload)
+  const [dayStatusByDate, setDayStatusByDate] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -56,12 +86,28 @@ function ShiftRequestForm({ employee, onLogout }) {
     setLoading(true)
     setError(null)
     setSuccess(null)
-    const { data, error: apiErr } = await getShiftAvailabilityRequest(month)
-    if (apiErr) {
-      setError(apiErr.message)
-      setPayload(emptyPayload())
+    const startDate = `${month}-01`
+    const endDate = dayjs(`${month}-01`).endOf('month').format('YYYY-MM-DD')
+
+    const [requestResult, shiftsResult] = await Promise.all([
+      getShiftAvailabilityRequest(month),
+      getShifts(startDate, endDate),
+    ])
+
+    const statusMap = indexDayStatusByDate(shiftsResult.data)
+    setDayStatusByDate(statusMap)
+
+    if (shiftsResult.error) {
+      setError(shiftsResult.error.message || 'シフト表の取得に失敗しました')
+    }
+
+    if (requestResult.error) {
+      setError((prev) => prev || requestResult.error.message)
+      setPayload(sanitizeShiftRequestPayload(emptyPayload(), statusMap))
     } else {
-      setPayload(data?.payload ?? emptyPayload())
+      setPayload(
+        sanitizeShiftRequestPayload(requestResult.data?.payload ?? emptyPayload(), statusMap)
+      )
     }
     setLoading(false)
   }, [month])
@@ -71,6 +117,7 @@ function ShiftRequestForm({ employee, onLogout }) {
   }, [load])
 
   const setDay = (date, patch) => {
+    if (isRegularClosedDay(dayStatusByDate[date])) return
     setPayload((prev) => {
       const days = { ...(prev.days || {}) }
       const current = days[date] || { available: false, start: DEFAULT_START, end: DEFAULT_END }
@@ -83,10 +130,12 @@ function ShiftRequestForm({ employee, onLogout }) {
     setSaving(true)
     setError(null)
     setSuccess(null)
-    const { error: apiErr } = await saveShiftAvailabilityRequest(month, payload)
+    const sanitized = sanitizeShiftRequestPayload(payload, dayStatusByDate)
+    const { error: apiErr } = await saveShiftAvailabilityRequest(month, sanitized)
     if (apiErr) {
       setError(apiErr.message)
     } else {
+      setPayload(sanitized)
       setSuccess('希望を保存しました')
     }
     setSaving(false)
@@ -97,133 +146,140 @@ function ShiftRequestForm({ employee, onLogout }) {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" component="h1">
-          シフト希望提出
-        </Typography>
-        <Button startIcon={<LogoutIcon />} onClick={onLogout} size="small">
-          ログアウト
-        </Button>
-      </Box>
+    <VStack gap={4}>
+      <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+        <Heading level={1}>シフト希望提出</Heading>
+        <Button
+          label="ログアウト"
+          variant="secondary"
+          size="sm"
+          onClick={onLogout}
+          icon={<LogOut size={16} />}
+        />
+      </HStack>
 
-      <Typography variant="body1" sx={{ mb: 2 }}>
-        {employee.name} さん
-      </Typography>
+      <Text>{employee.name} さん</Text>
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-          <IconButton onClick={() => shiftMonth(-1)} aria-label="前の月">
-            <ChevronLeftIcon />
-          </IconButton>
-          <Typography variant="h6">{dayjs(`${month}-01`).format('YYYY年M月')}</Typography>
-          <IconButton onClick={() => shiftMonth(1)} aria-label="次の月">
-            <ChevronRightIcon />
-          </IconButton>
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-          出勤可能な日だけ「出勤可」をオンにし、時間帯を入力してください。オフの日は希望なし（出勤不可）として扱われます。
-        </Typography>
-      </Paper>
+      <Card padding={4}>
+        <VStack gap={2}>
+          <HStack hAlign="center" vAlign="center" gap={1}>
+            <IconButton
+              label="前の月"
+              tooltip="前の月"
+              variant="ghost"
+              icon={<ChevronLeft />}
+              onClick={() => shiftMonth(-1)}
+            />
+            <Heading level={3}>{dayjs(`${month}-01`).format('YYYY年M月')}</Heading>
+            <IconButton
+              label="次の月"
+              tooltip="次の月"
+              variant="ghost"
+              icon={<ChevronRight />}
+              onClick={() => shiftMonth(1)}
+            />
+          </HStack>
+          <Text color="secondary">
+            出勤可能な日だけ「出勤可」をオンにし、時間帯を入力してください。オフの日は希望なし（出勤不可）として扱われます。
+          </Text>
+        </VStack>
+      </Card>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
+      {error ? (
+        <Banner
+          status="error"
+          title={error}
+          isDismissable
+          onDismiss={() => setError(null)}
+          collapsible={false}
+        />
+      ) : null}
+      {success ? (
+        <Banner
+          status="success"
+          title={success}
+          isDismissable
+          onDismiss={() => setSuccess(null)}
+          collapsible={false}
+        />
+      ) : null}
 
       {loading ? (
-        <Typography>読み込み中...</Typography>
+        <Text>読み込み中...</Text>
       ) : (
-        <Paper sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {dates.map((date) => {
-              const day = payload.days?.[date] || {
-                available: false,
-                start: DEFAULT_START,
-                end: DEFAULT_END,
-              }
-              const weekday = dayjs(date).format('ddd')
-              return (
-                <Box
-                  key={date}
-                  sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1,
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  }}
-                >
-                  <Typography sx={{ minWidth: 120, fontWeight: 500 }}>
-                    {dayjs(date).format('M/D')}（{weekday}）
-                  </Typography>
-                  <FormControlLabel
-                    control={
+        <VStack gap={3}>
+          {dates.map((date) => {
+            const dayStatus = dayStatusByDate[date]
+            const isClosed = isRegularClosedDay(dayStatus)
+            const day = payload.days?.[date] || {
+              available: false,
+              start: DEFAULT_START,
+              end: DEFAULT_END,
+            }
+            return (
+              <Card key={date} padding={3}>
+                <VStack gap={2}>
+                  <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+                    <Text weight="semibold">{formatShiftRequestDate(date)}</Text>
+                    {isClosed ? <Token size="sm" color="gray" label="定休日" /> : null}
+                  </HStack>
+
+                  {isClosed ? (
+                    <Text color="secondary">定休日のため希望の提出はできません</Text>
+                  ) : (
+                    <HStack gap={2} wrap="wrap" vAlign="end">
                       <Switch
-                        checked={Boolean(day.available)}
-                        onChange={(e) => setDay(date, { available: e.target.checked })}
+                        label="出勤可"
+                        value={Boolean(day.available)}
+                        onChange={(checked) => setDay(date, { available: checked })}
+                        size="sm"
                       />
-                    }
-                    label="出勤可"
-                  />
-                  {day.available ? (
-                    <>
-                      <TextField
-                        label="開始"
-                        type="time"
-                        size="small"
-                        value={day.start || DEFAULT_START}
-                        onChange={(e) => setDay(date, { start: e.target.value })}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ width: 130 }}
-                      />
-                      <TextField
-                        label="終了"
-                        type="time"
-                        size="small"
-                        value={day.end || DEFAULT_END}
-                        onChange={(e) => setDay(date, { end: e.target.value })}
-                        InputLabelProps={{ shrink: true }}
-                        sx={{ width: 130 }}
-                      />
-                    </>
-                  ) : null}
-                </Box>
-              )
-            })}
-          </Box>
+                      {day.available ? (
+                        <>
+                          <TimeField
+                            label="開始"
+                            value={day.start || DEFAULT_START}
+                            onChange={(start) => setDay(date, { start })}
+                          />
+                          <TimeField
+                            label="終了"
+                            value={day.end || DEFAULT_END}
+                            onChange={(end) => setDay(date, { end })}
+                          />
+                        </>
+                      ) : null}
+                    </HStack>
+                  )}
+                </VStack>
+              </Card>
+            )
+          })}
 
-          <TextField
-            label="備考（任意）"
-            value={payload.notes || ''}
-            onChange={(e) => setPayload((prev) => ({ ...prev, notes: e.target.value }))}
-            fullWidth
-            multiline
-            minRows={2}
-            sx={{ mt: 3 }}
-          />
+          <Card padding={4}>
+            <VStack gap={3}>
+              <TextArea
+                label="備考（任意）"
+                value={payload.notes || ''}
+                onChange={(notes) => setPayload((prev) => ({ ...prev, notes }))}
+                rows={2}
+                width="100%"
+              />
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              variant="contained"
-              startIcon={<SaveIcon />}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? '保存中...' : '希望を保存'}
-            </Button>
-          </Box>
-        </Paper>
+              <HStack hAlign="end">
+                <Button
+                  label={saving ? '保存中...' : '希望を保存'}
+                  variant="primary"
+                  onClick={handleSave}
+                  isDisabled={saving}
+                  isLoading={saving}
+                  icon={<Save size={16} />}
+                />
+              </HStack>
+            </VStack>
+          </Card>
+        </VStack>
       )}
-    </Container>
+    </VStack>
   )
 }
 
@@ -234,10 +290,10 @@ export function ShiftRequestPage() {
   }
 
   return (
-    <Box sx={{ flex: 1, minHeight: 0, height: '100%', overflowY: 'auto' }}>
+    <PageFrame>
       <ShiftPinGate>
         {({ employee }) => <ShiftRequestForm employee={employee} onLogout={handleLogout} />}
       </ShiftPinGate>
-    </Box>
+    </PageFrame>
   )
 }

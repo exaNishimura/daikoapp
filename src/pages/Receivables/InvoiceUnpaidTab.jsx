@@ -1,21 +1,25 @@
 import { useMemo, useState } from 'react'
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import Chip from '@mui/material/Chip'
-import Checkbox from '@mui/material/Checkbox'
-import IconButton from '@mui/material/IconButton'
-import Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableRow from '@mui/material/TableRow'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import CircularProgress from '@mui/material/CircularProgress'
-import Divider from '@mui/material/Divider'
-import DownloadIcon from '@mui/icons-material/Download'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Card } from '@astryxdesign/core/Card'
+import { Center } from '@astryxdesign/core/Center'
+import { CheckboxInput } from '@astryxdesign/core/CheckboxInput'
+import { Divider } from '@astryxdesign/core/Divider'
+import { Grid } from '@astryxdesign/core/Grid'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { Spinner } from '@astryxdesign/core/Spinner'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
+import { Token } from '@astryxdesign/core/Token'
+import { CircleAlert, Download } from 'lucide-react'
 import {
   useUnpaidInvoices,
   useDownloadInvoice,
@@ -76,169 +80,176 @@ export function InvoiceUnpaidTab() {
     }
   }
 
-  if (query.isLoading) return <CircularProgress />
+  if (query.isLoading) {
+    return (
+      <Center padding={4}>
+        <Spinner />
+      </Center>
+    )
+  }
 
   return (
-    <Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {query.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          未入金請求書の取得に失敗: {query.error.message}
-        </Alert>
-      )}
+    <VStack gap={3}>
+      {error ? (
+        <Banner
+          status="error"
+          title={error}
+          isDismissable
+          onDismiss={() => setError(null)}
+          collapsible={false}
+        />
+      ) : null}
+      {query.error ? (
+        <Banner
+          status="error"
+          title={`未入金請求書の取得に失敗: ${query.error.message}`}
+          collapsible={false}
+        />
+      ) : null}
 
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          未入金サマリ
-        </Typography>
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 2,
-            mb: 2,
-          }}
-        >
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              総未収金額
-            </Typography>
-            <Typography variant="h6" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-              ¥{summary.total_unpaid.toLocaleString('ja-JP')}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              件数
-            </Typography>
-            <Typography variant="h6">{summary.invoice_count}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              平均滞留日数
-            </Typography>
-            <Typography variant="h6">{summary.average_days_overdue} 日</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              60 日超アラート
-            </Typography>
-            <Typography
-              variant="h6"
-              color={summary.over_60_count > 0 ? 'error.main' : 'text.primary'}
-              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-            >
-              {summary.over_60_count > 0 && <ErrorOutlineIcon fontSize="small" />}
-              {summary.over_60_count} 件
-            </Typography>
-          </Box>
-        </Box>
-
-        {summary.by_company.length > 0 && (
-          <>
-            <Divider sx={{ my: 1 }}>企業別未収金</Divider>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 1.5,
-              }}
-            >
-              {summary.by_company.map((c) => (
-                <Box
-                  key={c.company_id}
-                  sx={{
-                    p: 1.5,
-                    bgcolor: c.max_days_overdue > 60 ? 'error.50' : 'action.selected',
-                    borderRadius: 1,
-                    border: c.max_days_overdue > 60 ? '1px solid' : 'none',
-                    borderColor: 'error.main',
-                  }}
+      <Card padding={3}>
+        <VStack gap={3}>
+          <Heading level={3}>未入金サマリ</Heading>
+          <Grid columns={{ minWidth: 140 }} gap={2}>
+            <VStack gap={0}>
+              <Text size="sm" color="secondary">
+                総未収金額
+              </Text>
+              <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                ¥{summary.total_unpaid.toLocaleString('ja-JP')}
+              </Text>
+            </VStack>
+            <VStack gap={0}>
+              <Text size="sm" color="secondary">
+                件数
+              </Text>
+              <Text weight="semibold">{summary.invoice_count}</Text>
+            </VStack>
+            <VStack gap={0}>
+              <Text size="sm" color="secondary">
+                平均滞留日数
+              </Text>
+              <Text weight="semibold">{summary.average_days_overdue} 日</Text>
+            </VStack>
+            <VStack gap={0}>
+              <Text size="sm" color="secondary">
+                60 日超アラート
+              </Text>
+              <HStack gap={1} vAlign="center">
+                {summary.over_60_count > 0 ? (
+                  <CircleAlert size={16} color="var(--color-text-red)" />
+                ) : null}
+                <Text
+                  weight="semibold"
+                  style={
+                    summary.over_60_count > 0 ? { color: 'var(--color-text-red)' } : undefined
+                  }
                 >
-                  <Typography variant="caption" color="text.secondary">
-                    {c.invoice_display_name || c.company_name}
-                  </Typography>
-                  <Typography sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    ¥{c.total_unpaid.toLocaleString('ja-JP')}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {c.invoice_count} 件 · 最長 {c.max_days_overdue} 日
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </>
-        )}
-      </Paper>
+                  {summary.over_60_count} 件
+                </Text>
+              </HStack>
+            </VStack>
+          </Grid>
+
+          {summary.by_company.length > 0 ? (
+            <VStack gap={2}>
+              <Divider label="企業別未収金" />
+              <Grid columns={{ minWidth: 220 }} gap={2}>
+                {summary.by_company.map((c) => (
+                  <Card
+                    key={c.company_id}
+                    padding={2}
+                    variant={c.max_days_overdue > 60 ? 'red' : 'muted'}
+                  >
+                    <VStack gap={0}>
+                      <Text size="sm" color="secondary">
+                        {c.invoice_display_name || c.company_name}
+                      </Text>
+                      <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        ¥{c.total_unpaid.toLocaleString('ja-JP')}
+                      </Text>
+                      <Text size="sm" color="secondary">
+                        {c.invoice_count} 件 · 最長 {c.max_days_overdue} 日
+                      </Text>
+                    </VStack>
+                  </Card>
+                ))}
+              </Grid>
+            </VStack>
+          ) : null}
+        </VStack>
+      </Card>
 
       {sortedRows.length === 0 ? (
-        <Alert severity="success">未入金の請求書はありません。</Alert>
+        <Banner status="success" title="未入金の請求書はありません。" collapsible={false} />
       ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>請求月</TableCell>
-                <TableCell>取引先</TableCell>
-                <TableCell>発行日</TableCell>
-                <TableCell align="right">金額</TableCell>
-                <TableCell align="right">滞留日数</TableCell>
-                <TableCell align="center">入金済</TableCell>
-                <TableCell align="center">操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedRows.map((r) => {
-                const days = daysOverdue(r.issue_date, today) ?? 0
-                const overdue = days > 60
-                return (
-                  <TableRow key={r.id} hover sx={{ bgcolor: overdue ? 'error.50' : undefined }}>
-                    <TableCell>{fmtMonth(r.billing_month)}</TableCell>
-                    <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
-                    <TableCell>{fmtDate(r.issue_date)}</TableCell>
-                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                      ¥{Number(r.total_amount).toLocaleString('ja-JP')}
-                    </TableCell>
-                    <TableCell align="right">
-                      {overdue ? (
-                        <Chip
-                          label={`${days} 日`}
-                          size="small"
-                          color="error"
-                          icon={<ErrorOutlineIcon />}
-                        />
-                      ) : (
-                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{days} 日</span>
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Checkbox
-                        checked={false}
+        <Table density="compact" hasHover>
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell>請求月</TableHeaderCell>
+              <TableHeaderCell>取引先</TableHeaderCell>
+              <TableHeaderCell>発行日</TableHeaderCell>
+              <TableHeaderCell>金額</TableHeaderCell>
+              <TableHeaderCell>滞留日数</TableHeaderCell>
+              <TableHeaderCell>入金済</TableHeaderCell>
+              <TableHeaderCell>操作</TableHeaderCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRows.map((r) => {
+              const days = daysOverdue(r.issue_date, today) ?? 0
+              const overdue = days > 60
+              return (
+                <TableRow
+                  key={r.id}
+                  style={
+                    overdue ? { backgroundColor: 'var(--color-background-red)' } : undefined
+                  }
+                >
+                  <TableCell>{fmtMonth(r.billing_month)}</TableCell>
+                  <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
+                  <TableCell>{fmtDate(r.issue_date)}</TableCell>
+                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    ¥{Number(r.total_amount).toLocaleString('ja-JP')}
+                  </TableCell>
+                  <TableCell style={{ textAlign: 'right' }}>
+                    {overdue ? (
+                      <Token size="sm" color="red" label={`${days} 日`} />
+                    ) : (
+                      <Text style={{ fontVariantNumeric: 'tabular-nums' }}>{days} 日</Text>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Center>
+                      <CheckboxInput
+                        label={`${r.companies?.name ?? r.id} を入金済にする`}
+                        isLabelHidden
+                        value={false}
                         onChange={() => handleMarkPaid(r)}
-                        disabled={markPaid.isPending}
+                        isDisabled={markPaid.isPending}
+                        size="sm"
                       />
-                    </TableCell>
-                    <TableCell align="center">
+                    </Center>
+                  </TableCell>
+                  <TableCell>
+                    <Center>
                       <IconButton
-                        size="small"
+                        size="sm"
+                        variant="ghost"
+                        label="ダウンロード"
+                        tooltip="ダウンロード"
+                        icon={<Download />}
                         onClick={() => handleDownload(r)}
-                        disabled={!r.file_path || dlInvoice.isPending}
-                        aria-label="ダウンロード"
-                      >
-                        <DownloadIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                        isDisabled={!r.file_path || dlInvoice.isPending}
+                      />
+                    </Center>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
       )}
-    </Box>
+    </VStack>
   )
 }

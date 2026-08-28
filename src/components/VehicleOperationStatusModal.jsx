@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Trash2 } from 'lucide-react'
 import {
   getVehicleOperationStatus,
   setVehicleOperationStatus,
@@ -6,25 +7,18 @@ import {
 } from '@/services/vehicleOperationService'
 import { getVehicles, updateVehicle } from '@/services/vehicleService'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import FormControl from '@mui/material/FormControl'
-import FormLabel from '@mui/material/FormLabel'
-import RadioGroup from '@mui/material/RadioGroup'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Radio from '@mui/material/Radio'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import IconButton from '@mui/material/IconButton'
-import DeleteIcon from '@mui/icons-material/Delete'
-import Chip from '@mui/material/Chip'
-import Stack from '@mui/material/Stack'
-import Divider from '@mui/material/Divider'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { DateInput } from '@astryxdesign/core/DateInput'
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
+import { Heading } from '@astryxdesign/core/Heading'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
+import { Text } from '@astryxdesign/core/Text'
+import { TimeInput } from '@astryxdesign/core/TimeInput'
+import { Token } from '@astryxdesign/core/Token'
 
 export function VehicleOperationStatusModal({
   open,
@@ -36,7 +30,6 @@ export function VehicleOperationStatusModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [statuses, setStatuses] = useState([])
-  const [vehicle, setVehicle] = useState(null)
   const [waitingLocationAddress, setWaitingLocationAddress] = useState('')
   const [formData, setFormData] = useState({
     type: 'DEFAULT',
@@ -44,13 +37,16 @@ export function VehicleOperationStatusModal({
     time: '',
   })
 
-  // モーダルが開かれたときに稼働状況と車両情報を取得
   useEffect(() => {
     if (open && vehicleId) {
       loadStatuses()
       loadVehicle()
     }
   }, [open, vehicleId])
+
+  const handleOpenChange = (isOpen) => {
+    if (!isOpen) onClose()
+  }
 
   const loadStatuses = async () => {
     if (!vehicleId) return
@@ -59,7 +55,6 @@ export function VehicleOperationStatusModal({
     setError(null)
 
     try {
-      // 今日の日付を取得
       const today = new Date()
       const todayStr = today.toISOString().split('T')[0]
 
@@ -93,7 +88,6 @@ export function VehicleOperationStatusModal({
 
       const foundVehicle = vehicles?.find((v) => v.id === vehicleId)
       if (foundVehicle) {
-        setVehicle(foundVehicle)
         setWaitingLocationAddress(foundVehicle.waiting_location_address || '')
       }
     } catch (err) {
@@ -103,32 +97,31 @@ export function VehicleOperationStatusModal({
     }
   }
 
-  const handleTypeChange = (event) => {
+  const handleTypeChange = (value) => {
     setFormData({
       ...formData,
-      type: event.target.value,
-      time: event.target.value === 'STOP' || event.target.value === 'START' ? formData.time : '',
+      type: value,
+      time: value === 'STOP' || value === 'START' ? formData.time : '',
     })
   }
 
-  const handleDateChange = (event) => {
+  const handleDateChange = (value) => {
     setFormData({
       ...formData,
-      date: event.target.value,
+      date: value || '',
     })
   }
 
-  const handleTimeChange = (event) => {
+  const handleTimeChange = (value) => {
     setFormData({
       ...formData,
-      time: event.target.value,
+      time: value || '',
     })
   }
 
   const handleSave = async () => {
     if (!vehicleId) return
 
-    // バリデーション
     if (!formData.date) {
       setError('日付を入力してください')
       return
@@ -143,7 +136,7 @@ export function VehicleOperationStatusModal({
     setError(null)
 
     try {
-      const { data, error: saveError } = await setVehicleOperationStatus(vehicleId, {
+      const { error: saveError } = await setVehicleOperationStatus(vehicleId, {
         type: formData.type,
         date: formData.date,
         time: formData.time || null,
@@ -152,15 +145,12 @@ export function VehicleOperationStatusModal({
       if (saveError) {
         setError(`保存に失敗: ${saveError.message}`)
       } else {
-        // フォームをリセット
         setFormData({
           type: 'DEFAULT',
           date: '',
           time: '',
         })
-        // 稼働状況を再取得
         await loadStatuses()
-        // 親コンポーネントに通知
         if (onStatusUpdated) {
           onStatusUpdated()
         }
@@ -188,9 +178,7 @@ export function VehicleOperationStatusModal({
       if (deleteError) {
         setError(`削除に失敗: ${deleteError.message}`)
       } else {
-        // 稼働状況を再取得
         await loadStatuses()
-        // 親コンポーネントに通知
         if (onStatusUpdated) {
           onStatusUpdated()
         }
@@ -217,155 +205,145 @@ export function VehicleOperationStatusModal({
     }
   }
 
-  // 今日の日付を'YYYY-MM-DD'形式で取得
   const getTodayDateString = () => {
     const today = new Date()
     return today.toISOString().split('T')[0]
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>稼働状況設定 - {vehicleName || '車両'}</DialogTitle>
-      <DialogContent>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        <Box sx={{ mt: 2 }}>
-          <FormControl component="fieldset" fullWidth>
-            <FormLabel component="legend">稼働状況パターン</FormLabel>
-            <RadioGroup value={formData.type} onChange={handleTypeChange}>
-              <FormControlLabel value="DEFAULT" control={<Radio />} label="基本は稼働" />
-              <FormControlLabel value="DAY_OFF" control={<Radio />} label="1日稼働しない" />
-              <FormControlLabel value="STOP" control={<Radio />} label="途中で稼働停止" />
-              <FormControlLabel value="START" control={<Radio />} label="途中で稼働開始" />
-            </RadioGroup>
-          </FormControl>
-        </Box>
-
-        <Box sx={{ mt: 3 }}>
-          <TextField
-            label="日付"
-            type="date"
-            value={formData.date}
-            onChange={handleDateChange}
-            fullWidth
-            InputLabelProps={{
-              shrink: true,
-            }}
-            inputProps={{
-              min: getTodayDateString(),
-            }}
-            required
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+      <Layout
+        height="auto"
+        padding={4}
+        header={
+          <DialogHeader
+            title={`稼働状況設定 - ${vehicleName || '車両'}`}
+            onOpenChange={handleOpenChange}
           />
-        </Box>
+        }
+        content={
+          <LayoutContent>
+            <VStack gap={3}>
+              {error ? (
+                <Banner
+                  status="error"
+                  title={error}
+                  isDismissable
+                  onDismiss={() => setError(null)}
+                  collapsible={false}
+                />
+              ) : null}
 
-        {(formData.type === 'STOP' || formData.type === 'START') && (
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              label="時刻"
-              type="time"
-              value={formData.time}
-              onChange={handleTimeChange}
-              fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
-              inputProps={{
-                step: 900, // 15分刻み
-              }}
-              required
-            />
-          </Box>
-        )}
+              <RadioList
+                label="稼働状況パターン"
+                value={formData.type}
+                onChange={handleTypeChange}
+                width="100%"
+              >
+                <RadioListItem label="基本は稼働" value="DEFAULT" />
+                <RadioListItem label="1日稼働しない" value="DAY_OFF" />
+                <RadioListItem label="途中で稼働停止" value="STOP" />
+                <RadioListItem label="途中で稼働開始" value="START" />
+              </RadioList>
 
-        <Divider sx={{ my: 3 }} />
-        <Box sx={{ mt: 3 }}>
-          <PlacesAutocompleteField
-            label="待機場所住所"
-            value={waitingLocationAddress}
-            onChange={setWaitingLocationAddress}
-            placeholder="例: 三重県鈴鹿市平田新町2-20"
-            helperText="目的地から待機場所への所要時間を計算するために使用されます"
-          />
-        </Box>
+              <DateInput
+                label="日付"
+                value={formData.date || undefined}
+                onChange={handleDateChange}
+                min={getTodayDateString()}
+                isRequired
+                width="100%"
+              />
 
-        {statuses.length > 0 && (
-          <>
-            <Divider sx={{ my: 3 }} />
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              設定済みの稼働状況
-            </Typography>
-            <Stack spacing={1}>
-              {statuses.map((status) => (
-                <Box
-                  key={status.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    p: 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                  }}
-                >
-                  <Box>
-                    <Chip label={getTypeLabel(status.type)} size="small" sx={{ mr: 1 }} />
-                    <Typography variant="body2" component="span">
-                      {status.date}
-                      {status.time && ` ${status.time}`}
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(status.id)}
-                    disabled={loading}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              ))}
-            </Stack>
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          キャンセル
-        </Button>
-        <Button
-          onClick={async () => {
-            // 待機場所住所を保存
-            if (vehicleId) {
-              setLoading(true)
-              try {
-                const { error: updateError } = await updateVehicle(vehicleId, {
-                  waiting_location_address: waitingLocationAddress.trim() || null,
-                })
-                if (updateError) {
-                  setError(`待機場所住所の保存に失敗: ${updateError.message}`)
-                  setLoading(false)
-                  return
-                }
-                // 稼働状況も保存
-                await handleSave()
-              } catch (err) {
-                setError(`エラーが発生しました: ${err.message}`)
-                setLoading(false)
-              }
-            } else {
-              await handleSave()
-            }
-          }}
-          variant="contained"
-          disabled={loading}
-        >
-          保存
-        </Button>
-      </DialogActions>
+              {formData.type === 'STOP' || formData.type === 'START' ? (
+                <TimeInput
+                  label="時刻"
+                  value={formData.time || undefined}
+                  onChange={handleTimeChange}
+                  hourFormat="24h"
+                  increment={15}
+                  isRequired
+                  width="100%"
+                />
+              ) : null}
+
+              <PlacesAutocompleteField
+                label="待機場所住所"
+                value={waitingLocationAddress}
+                onChange={setWaitingLocationAddress}
+                placeholder="例: 三重県鈴鹿市平田新町2-20"
+                helperText="目的地から待機場所への所要時間を計算するために使用されます"
+              />
+
+              {statuses.length > 0 ? (
+                <VStack gap={1.5}>
+                  <Heading level={4}>設定済みの稼働状況</Heading>
+                  {statuses.map((status) => (
+                    <Card key={status.id} padding={2}>
+                      <HStack hAlign="between" vAlign="center" gap={1}>
+                        <HStack gap={1} vAlign="center" wrap="wrap">
+                          <Token size="sm" label={getTypeLabel(status.type)} />
+                          <Text>
+                            {status.date}
+                            {status.time ? ` ${status.time}` : ''}
+                          </Text>
+                        </HStack>
+                        <IconButton
+                          size="sm"
+                          variant="destructive"
+                          label="この稼働状況設定を削除"
+                          icon={<Trash2 />}
+                          onClick={() => handleDelete(status.id)}
+                          isDisabled={loading}
+                        />
+                      </HStack>
+                    </Card>
+                  ))}
+                </VStack>
+              ) : null}
+            </VStack>
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              <Button
+                label="キャンセル"
+                variant="secondary"
+                onClick={onClose}
+                isDisabled={loading}
+              />
+              <Button
+                label="保存"
+                variant="primary"
+                isDisabled={loading}
+                isLoading={loading}
+                onClick={async () => {
+                  if (vehicleId) {
+                    setLoading(true)
+                    try {
+                      const { error: updateError } = await updateVehicle(vehicleId, {
+                        waiting_location_address: waitingLocationAddress.trim() || null,
+                      })
+                      if (updateError) {
+                        setError(`待機場所住所の保存に失敗: ${updateError.message}`)
+                        setLoading(false)
+                        return
+                      }
+                      await handleSave()
+                    } catch (err) {
+                      setError(`エラーが発生しました: ${err.message}`)
+                      setLoading(false)
+                    }
+                  } else {
+                    await handleSave()
+                  }
+                }}
+              />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }

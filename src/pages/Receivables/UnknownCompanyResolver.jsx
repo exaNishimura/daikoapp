@@ -1,23 +1,25 @@
 import { useMemo } from 'react'
-import Paper from '@mui/material/Paper'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
-import Table from '@mui/material/Table'
-import TableHead from '@mui/material/TableHead'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableRow from '@mui/material/TableRow'
-import TableContainer from '@mui/material/TableContainer'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import FormControl from '@mui/material/FormControl'
+import { Banner } from '@astryxdesign/core/Banner'
+import { Card } from '@astryxdesign/core/Card'
+import { Heading } from '@astryxdesign/core/Heading'
+import { VStack } from '@astryxdesign/core/Layout'
+import { Selector } from '@astryxdesign/core/Selector'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from '@astryxdesign/core/Table'
+import { Text } from '@astryxdesign/core/Text'
 import { matchCompany, findCandidateCompanies } from '@/lib/billing/matchCompany'
 
 /**
  * 売掛シートの企業名 ↔ companies.id のマッピングを決定するパネル。
  *
  * - 自動マッチ (name / alias / display_name 完全一致) は読み取り専用で表示
- * - 未マッチは Select で 3 択
+ * - 未マッチは Selector で 3 択
  *     - 既存企業に統合 (候補リストから選択)
  *     - 新規企業として追加 (= 新規 id をモーダル外で割り当て、ここでは "new" マーカー)
  *     - スキップ
@@ -42,99 +44,107 @@ export function UnknownCompanyResolver({ companyNames, companies, decisions, onC
   const unmatchedNames = (companyNames ?? []).filter((n) => !matchedMap.get(n)?.matched)
 
   if (!companyNames || companyNames.length === 0) {
-    return <Alert severity="info">マッピング対象の企業がありません</Alert>
+    return <Banner status="info" title="マッピング対象の企業がありません" collapsible={false} />
   }
 
   const totalToResolve = unmatchedNames.length
   const resolvedCount = unmatchedNames.filter((n) => decisions[n] !== undefined).length
+  const allResolved = totalToResolve === 0 || resolvedCount === totalToResolve
 
   return (
-    <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 1 }}>
-        取引先マッピング
-      </Typography>
-      <Alert
-        severity={totalToResolve === 0 || resolvedCount === totalToResolve ? 'success' : 'warning'}
-        sx={{ mb: 2 }}
-      >
-        自動マッチ: {matchedCount} / {companyNames.length}
-        {totalToResolve > 0 && ` · 要解決: ${totalToResolve - resolvedCount} 件`}
-      </Alert>
+    <Card padding={3}>
+      <VStack gap={2}>
+        <Heading level={3}>取引先マッピング</Heading>
+        <Banner
+          status={allResolved ? 'success' : 'warning'}
+          title={`自動マッチ: ${matchedCount} / ${companyNames.length}${
+            totalToResolve > 0 ? ` · 要解決: ${totalToResolve - resolvedCount} 件` : ''
+          }`}
+          collapsible={false}
+        />
 
-      <TableContainer>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Excel 上の企業名</TableCell>
-              <TableCell>マッチ結果</TableCell>
-              <TableCell>対応</TableCell>
+        <Table density="compact" hasHover>
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell>Excel 上の企業名</TableHeaderCell>
+              <TableHeaderCell>マッチ結果</TableHeaderCell>
+              <TableHeaderCell>対応</TableHeaderCell>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {(companyNames ?? []).map((name) => {
               const m = matchedMap.get(name)
               const matched = m?.matched
               const current = decisions[name]
+              const candidates = findCandidateCompanies(name, companies ?? [])
+              const selectorValue =
+                current === 'skip'
+                  ? 'skip'
+                  : current === 'new'
+                    ? 'new'
+                    : current?.companyId
+                      ? `id:${current.companyId}`
+                      : undefined
+
               return (
-                <TableRow key={name} sx={{ bgcolor: matched ? undefined : 'warning.50' }}>
+                <TableRow
+                  key={name}
+                  style={
+                    matched
+                      ? undefined
+                      : { backgroundColor: 'var(--color-background-yellow)' }
+                  }
+                >
                   <TableCell>{name}</TableCell>
                   <TableCell>
                     {matched ? (
-                      <Typography variant="body2" color="success.main">
+                      <Text style={{ color: 'var(--color-text-green)' }}>
                         ✓ {m.company.invoice_display_name || m.company.name} ({m.kind})
-                      </Typography>
+                      </Text>
                     ) : (
-                      <Typography variant="caption" color="text.secondary">
-                        未マッチ (候補 {findCandidateCompanies(name, companies ?? []).length} 件)
-                      </Typography>
+                      <Text size="sm" color="secondary">
+                        未マッチ (候補 {candidates.length} 件)
+                      </Text>
                     )}
                   </TableCell>
                   <TableCell>
                     {matched ? (
-                      <Typography variant="caption" color="text.secondary">
+                      <Text size="sm" color="secondary">
                         自動マッチ
-                      </Typography>
+                      </Text>
                     ) : (
-                      <FormControl size="small" fullWidth>
-                        <Select
-                          value={
-                            current === 'skip'
-                              ? 'skip'
-                              : current === 'new'
-                                ? 'new'
-                                : current?.companyId
-                                  ? `id:${current.companyId}`
-                                  : ''
+                      <Selector
+                        label={`${name} の対応`}
+                        isLabelHidden
+                        placeholder="選択してください"
+                        size="sm"
+                        width="100%"
+                        value={selectorValue}
+                        onChange={(v) => {
+                          if (v === 'skip') onChange(name, 'skip')
+                          else if (v === 'new') onChange(name, 'new')
+                          else if (typeof v === 'string' && v.startsWith('id:')) {
+                            onChange(name, { companyId: Number(v.slice(3)) })
+                          } else {
+                            onChange(name, undefined)
                           }
-                          displayEmpty
-                          onChange={(e) => {
-                            const v = e.target.value
-                            if (v === 'skip') onChange(name, 'skip')
-                            else if (v === 'new') onChange(name, 'new')
-                            else if (typeof v === 'string' && v.startsWith('id:')) {
-                              onChange(name, { companyId: Number(v.slice(3)) })
-                            } else {
-                              onChange(name, undefined)
-                            }
-                          }}
-                        >
-                          <MenuItem value="" disabled>
-                            選択してください
-                          </MenuItem>
-                          <MenuItem value="skip">スキップ (取り込まない)</MenuItem>
-                          <MenuItem value="new" disabled>
-                            新規企業として追加 (取引先マスタから先に追加)
-                          </MenuItem>
-                          {findCandidateCompanies(name, companies ?? []).map((c) => (
-                            <MenuItem key={c.id} value={`id:${c.id}`}>
-                              {c.invoice_display_name || c.name} に統合
-                            </MenuItem>
-                          ))}
-                          {findCandidateCompanies(name, companies ?? []).length === 0 && (
-                            <MenuItem disabled>(候補なし - スキップを選択)</MenuItem>
-                          )}
-                        </Select>
-                      </FormControl>
+                        }}
+                        options={[
+                          { value: 'skip', label: 'スキップ (取り込まない)' },
+                          {
+                            value: 'new',
+                            label: '新規企業として追加 (取引先マスタから先に追加)',
+                            disabled: true,
+                          },
+                          ...candidates.map((c) => ({
+                            value: `id:${c.id}`,
+                            label: `${c.invoice_display_name || c.name} に統合`,
+                          })),
+                          ...(candidates.length === 0
+                            ? [{ value: 'none', label: '(候補なし - スキップを選択)', disabled: true }]
+                            : []),
+                        ]}
+                      />
                     )}
                   </TableCell>
                 </TableRow>
@@ -142,7 +152,7 @@ export function UnknownCompanyResolver({ companyNames, companies, decisions, onC
             })}
           </TableBody>
         </Table>
-      </TableContainer>
-    </Paper>
+      </VStack>
+    </Card>
   )
 }
