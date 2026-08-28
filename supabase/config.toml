@@ -1,2 +1,5 @@
 [functions.daily-close]
 verify_jwt = false
+
+[functions.employee-shift-api]
+verify_jwt = false

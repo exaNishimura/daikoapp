@@ -5,6 +5,8 @@ import { DispatchBoard } from '@/components/DispatchBoard'
 import { ShiftCalendar } from '@/components/ShiftCalendar'
 import { ReservationLedgerPage } from '@/components/Reservations/ReservationLedgerPage'
 import { ShiftEditPage } from '@/components/ShiftEditPage'
+import { ShiftRequestPage } from '@/components/ShiftRequest/ShiftRequestPage'
+import { ShiftRequestsAdminPage } from '@/components/ShiftRequest/ShiftRequestsAdminPage'
 import { EmployeeManagement } from '@/components/EmployeeManagement'
 import { LoginPage } from '@/components/LoginPage'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -57,6 +59,8 @@ const NAV_CATEGORIES = [
     label: 'シフト',
     items: [
       { to: '/shift', label: 'シフト表', requiresAuth: false, end: true },
+      { to: '/shift/request', label: '希望提出', requiresAuth: false },
+      { to: '/shift/requests', label: '希望一覧', requiresAuth: true },
       { to: '/shift/edit', label: 'シフト編集', requiresAuth: true },
     ],
   },
@@ -420,6 +424,15 @@ function AppRoutes() {
           }
         />
         <Route path="/shift" element={<ShiftCalendar />} />
+        <Route path="/shift/request" element={<ShiftRequestPage />} />
+        <Route
+          path="/shift/requests"
+          element={
+            <ProtectedRoute>
+              <ShiftRequestsAdminPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/reservations" element={<ReservationLedgerPage />} />
         <Route path="/liff/order" element={<LiffOrderForm />} />
         <Route path="/login" element={<LoginPage />} />

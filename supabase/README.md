@@ -143,3 +143,24 @@ EXECUTE 権限、`anon` / `PUBLIC` は REVOKE。
 
 `schema.sql` 等は本番 DB がこの形になるまでの履歴。新ベースラインに統合済み
 なので普段は読まなくてよいが、過去の意思決定を辿りたいときに残してある。
+
+## シフト希望 PIN（`20260828130000_employee_shift_pin.sql`）
+
+- `employees.shift_pin_hash` … 配車 PIN (`line_intake_settings.approval_pin_hash`) とは別
+- `shift_availability_requests` … 希望データ（Edge Function 経由のみ）
+- Edge Function: `employee-shift-api`（`verify_jwt = false`）
+
+デプロイ:
+
+```bash
+supabase db push   # または SQL Editor で migration 適用
+supabase functions deploy employee-shift-api
+```
+
+推奨 Secret: `EMPLOYEE_SHIFT_SESSION_SECRET`（従業員セッショントークン署名用）
+
+運用:
+
+1. 管理者が `/employees` で各従業員の「シフトPIN」を発行
+2. 従業員が `/shift/request` で PIN 入力 → 月次希望を保存
+3. 管理者が `/shift/requests` で一覧確認

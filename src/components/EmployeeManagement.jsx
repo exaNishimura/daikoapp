@@ -6,6 +6,10 @@ import {
   useUpdateEmployee,
   useDeleteEmployee,
 } from '@/hooks/useEmployees'
+import {
+  setEmployeeShiftPin,
+  clearEmployeeShiftPin,
+} from '@/services/employeeShiftService'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import Select from '@mui/material/Select'
@@ -59,6 +63,11 @@ export function EmployeeManagement() {
   const [originalName, setOriginalName] = useState('')
   const [legacyStaffName, setLegacyStaffName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [pinDialogOpen, setPinDialogOpen] = useState(false)
+  const [pinTarget, setPinTarget] = useState(null)
+  const [issuedPin, setIssuedPin] = useState(null)
+  const [pinSubmitting, setPinSubmitting] = useState(false)
+  const [customPin, setCustomPin] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     license_type: '一種',
@@ -187,6 +196,60 @@ export function EmployeeManagement() {
     }
   }
 
+  const handleOpenPinDialog = (employee) => {
+    setPinTarget(employee)
+    setIssuedPin(null)
+    setCustomPin('')
+    setPinDialogOpen(true)
+  }
+
+  const handleClosePinDialog = () => {
+    setPinDialogOpen(false)
+    setPinTarget(null)
+    setIssuedPin(null)
+    setCustomPin('')
+  }
+
+  const handleIssuePin = async (useCustom = false) => {
+    if (!pinTarget) return
+    setPinSubmitting(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const pin = useCustom ? customPin.trim() : undefined
+      if (useCustom && pin.length !== 6) {
+        throw new Error('PINは6桁の数字で入力してください')
+      }
+      const { data, error: apiErr } = await setEmployeeShiftPin(pinTarget.id, pin)
+      if (apiErr || !data?.ok) throw apiErr || new Error('PINの発行に失敗しました')
+      setIssuedPin(data.pin)
+      setSuccess(`${pinTarget.name} さんのシフト希望PINを発行しました`)
+      employeesQuery.refetch()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPinSubmitting(false)
+    }
+  }
+
+  const handleClearPin = async () => {
+    if (!pinTarget) return
+    if (!confirm(`${pinTarget.name} さんのシフト希望PINを解除しますか？`)) return
+    setPinSubmitting(true)
+    setError(null)
+    try {
+      const { data, error: apiErr } = await clearEmployeeShiftPin(pinTarget.id)
+      if (apiErr || !data?.ok) throw apiErr || new Error('PINの解除に失敗しました')
+      setSuccess(`${pinTarget.name} さんのシフト希望PINを解除しました`)
+      handleClosePinDialog()
+      employeesQuery.refetch()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPinSubmitting(false)
+    }
+  }
+
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', mx: 'auto' }}>
       {/* ヘッダー */}
@@ -252,6 +315,7 @@ export function EmployeeManagement() {
                 <TableCell>色</TableCell>
                 <TableCell align="right">時給</TableCell>
                 <TableCell>状態</TableCell>
+                <TableCell>シフトPIN</TableCell>
                 <TableCell align="right">並び順</TableCell>
                 <TableCell align="center">操作</TableCell>
               </TableRow>
@@ -297,6 +361,15 @@ export function EmployeeManagement() {
                       label={employee.is_active ? '有効' : '無効'}
                       size="small"
                       color={employee.is_active ? 'success' : 'default'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={employee.shift_pin_configured ? '設定済' : '未設定'}
+                      size="small"
+                      color={employee.shift_pin_configured ? 'success' : 'default'}
+                      onClick={() => handleOpenPinDialog(employee)}
+                      sx={{ cursor: 'pointer' }}
                     />
                   </TableCell>
                   <TableCell align="right">
@@ -446,6 +519,64 @@ export function EmployeeManagement() {
           >
             保存
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={pinDialogOpen} onClose={handleClosePinDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>シフト希望PIN — {pinTarget?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            配車画面のPINとは別です。従業員に本人のみ通知してください。
+          </Typography>
+          {issuedPin ? (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              発行したPIN: <strong>{issuedPin}</strong>
+              <br />
+              この画面を閉じると再表示できません。
+            </Alert>
+          ) : (
+            <>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ mb: 2 }}
+                onClick={() => handleIssuePin(false)}
+                disabled={pinSubmitting}
+              >
+                ランダムPINを発行
+              </Button>
+              <TextField
+                label="手動指定（6桁）"
+                value={customPin}
+                onChange={(e) => setCustomPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                fullWidth
+                inputProps={{ inputMode: 'numeric', maxLength: 6 }}
+                sx={{ mb: 1 }}
+              />
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => handleIssuePin(true)}
+                disabled={pinSubmitting || customPin.length !== 6}
+              >
+                指定PINを設定
+              </Button>
+            </>
+          )}
+          {pinTarget?.shift_pin_configured ? (
+            <Button
+              color="error"
+              fullWidth
+              sx={{ mt: 2 }}
+              onClick={handleClearPin}
+              disabled={pinSubmitting}
+            >
+              PINを解除
+            </Button>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePinDialog}>閉じる</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabase'
 
+/** anon / authenticated 共通で安全に取得できる列（PIN ハッシュは含めない） */
+const EMPLOYEE_PUBLIC_COLUMNS =
+  'id, name, license_type, color, hourly_wage, is_active, sort_order, created_at, updated_at, shift_pin_configured'
+
 /**
  * スタッフ名の変更を売上関連テーブルへ反映（シフトは employee_id で連携）
  */
@@ -52,7 +56,7 @@ export async function getEmployees() {
   try {
     const { data, error } = await supabase
       .from('employees')
-      .select('*')
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
 
@@ -76,7 +80,7 @@ export async function getActiveEmployees() {
   try {
     const { data, error } = await supabase
       .from('employees')
-      .select('*')
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
@@ -100,7 +104,7 @@ export async function createEmployee(employeeData) {
   }
 
   try {
-    const { data, error } = await supabase.from('employees').insert(employeeData).select().single()
+    const { data, error } = await supabase.from('employees').insert(employeeData).select(EMPLOYEE_PUBLIC_COLUMNS).single()
 
     if (error) throw error
     return { data, error: null }
@@ -136,7 +140,7 @@ export async function updateEmployee(id, employeeData, options = {}) {
       .from('employees')
       .update(employeeData)
       .eq('id', id)
-      .select()
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
       .single()
 
     if (error) throw error
@@ -184,7 +188,7 @@ export async function deleteEmployee(id) {
   }
 
   try {
-    const { data, error } = await supabase.from('employees').delete().eq('id', id).select().single()
+    const { data, error } = await supabase.from('employees').delete().eq('id', id).select(EMPLOYEE_PUBLIC_COLUMNS).single()
 
     if (error) throw error
     return { data, error: null }
