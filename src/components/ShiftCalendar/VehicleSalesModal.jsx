@@ -321,7 +321,7 @@ export function VehicleSalesModal({
         variant={isMobile ? 'fullscreen' : 'standard'}
       >
         <Layout
-          height="auto"
+          height="fill"
           padding={4}
           header={
             <DialogHeader
