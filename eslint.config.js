@@ -99,6 +99,7 @@ export default [
       'src/lib/billing/dailyCloseMessage.test.js',
       'src/lib/reservation/buildReservationLineMessage.js',
       'src/lib/reservation/reservationWindowUtils.js',
+      'src/lib/lineIntake/discount.js',
     ],
     rules: {
       'no-restricted-imports': 'off',

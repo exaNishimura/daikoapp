@@ -33,7 +33,7 @@ import {
   isLiffNowAvailable,
   nextLiffPickupAt,
 } from '@/utils/liffPickupTime'
-import { snapshotDiscount } from '../../../shared/lineIntake/discount.js'
+import { snapshotDiscount } from '@/lib/lineIntake/discount'
 import './LiffOrderForm.css'
 
 const LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID || ''
