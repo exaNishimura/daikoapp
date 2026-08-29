@@ -6,6 +6,7 @@ import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesi
 import { Spinner } from '@astryxdesign/core/Spinner'
 import { Table, TableBody, TableCell, TableRow } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useDailySaleByDate } from '@/hooks/billing/useDailySales'
 import { useReceivablesByWorkDate } from '@/hooks/billing/useReceivables'
 import { useCompanies } from '@/hooks/billing/useCompanies'
@@ -63,6 +64,7 @@ export function VehicleSalesSummaryModal({
   const saleQuery = useDailySaleByDate(open ? workDate : null)
   const receivablesQuery = useReceivablesByWorkDate(open ? workDate : null)
   const companiesQuery = useCompanies()
+  const isMobile = useMediaQuery('(max-width: 639px)')
 
   const companyLookup = useMemo(
     () => buildCompanyLookup(companiesQuery.data ?? []),
@@ -98,9 +100,14 @@ export function VehicleSalesSummaryModal({
   const dateLabel = formatWorkDateLabel(workDate, dow)
 
   return (
-    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+    <Dialog
+      isOpen={open}
+      onOpenChange={handleOpenChange}
+      purpose="info"
+      variant={isMobile ? 'fullscreen' : 'standard'}
+    >
       <Layout
-        height="auto"
+        height="fill"
         padding={4}
         header={<DialogHeader title="集計結果" onOpenChange={handleOpenChange} />}
         content={
