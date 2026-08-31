@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatTownNameWithKana, getDurationBand } from '@/lib/areaTowns'
 import { importMapsLibrary } from '@/lib/places'
 import './TravelTimeGoogleMap.css'
@@ -32,6 +32,7 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
   const infoRef = useRef(null)
   const townsRef = useRef(towns)
   const onSelectRef = useRef(onSelect)
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     townsRef.current = towns
@@ -55,6 +56,7 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
       })
       mapRef.current = map
       infoRef.current = new window.google.maps.InfoWindow()
+      setMapReady(true)
     })()
     return () => {
       cancelled = true
@@ -81,18 +83,22 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
     } else {
       originMarkerRef.current.setVisible(false)
     }
-  }, [origin, originLabel])
+  }, [origin, originLabel, mapReady])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !window.google?.maps) return
 
     const markers = markersRef.current
-    const nextIds = new Set(towns.filter((t) => t.lat != null && t.lng != null).map((t) => t.id))
+    const nextIds = new Set()
+    for (const town of towns) {
+      if (town.lat != null && town.lng != null) nextIds.add(town.id)
+    }
 
     for (const [id, marker] of markers) {
       if (!nextIds.has(id)) {
         marker.setMap(null)
+        marker.setVisible(false)
         markers.delete(id)
       }
     }
@@ -126,6 +132,8 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
         marker.setPosition(position)
       }
       marker.setIcon(circleIcon(BAND_FILL[band.key] || BAND_FILL.unknown))
+      marker.setVisible(true)
+      marker.setMap(map)
       const townLabel = formatTownNameWithKana(town.name, town.kana)
       marker.setTitle(
         town.minutes != null
@@ -137,7 +145,7 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
     if (hasPoint && towns.some((t) => t.lat != null)) {
       map.fitBounds(bounds, 48)
     }
-  }, [origin, towns])
+  }, [origin, towns, mapReady])
 
   useEffect(() => {
     const map = mapRef.current
@@ -145,7 +153,10 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
     if (!map || !info || !selectedId) return
     const town = townsRef.current.find((t) => t.id === selectedId)
     const marker = markersRef.current.get(selectedId)
-    if (!town || town.lat == null || town.lng == null) return
+    if (!town || town.lat == null || town.lng == null) {
+      info.close()
+      return
+    }
     map.panTo({ lat: town.lat, lng: town.lng })
     if (map.getZoom() < 13) map.setZoom(13)
     const duration = town.minutes != null ? `${town.minutes}分` : '未計算'
@@ -153,7 +164,7 @@ export function TravelTimeGoogleMap({ origin, originLabel, towns, selectedId, on
     const townLabel = formatTownNameWithKana(town.name, town.kana)
     info.setContent(`<strong>${townLabel}</strong><br>${town.city}<br>${duration}${distance}`)
     info.open({ map, anchor: marker })
-  }, [selectedId])
+  }, [selectedId, towns, mapReady])
 
   return (
     <section ref={hostRef} className="travel-time-google-map" aria-label="各地名の所要時間地図" />
