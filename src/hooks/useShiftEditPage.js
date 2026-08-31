@@ -18,6 +18,7 @@ import {
   DOW_MAP,
   getDaysInMonth,
   getShiftPlannedTimesForCopy,
+  resolveSaveScrollTarget,
   withPlannedShiftTimes,
 } from '@/lib/shiftEditUtils'
 import { getPlannedShiftTimes } from '@/lib/billing/shiftTargetAmount'
@@ -259,7 +260,7 @@ export function useShiftEditPage({ year, month }) {
   const handleSaveAll = async () => {
     if (Object.keys(editingShifts).length === 0) {
       setError('保存するシフトがありません。シフトを編集してから保存してください。')
-      return
+      return null
     }
 
     const invalidShifts = Object.keys(editingShifts).filter((shiftId) => {
@@ -271,7 +272,7 @@ export function useShiftEditPage({ year, month }) {
       setError(
         '編集中のシフトに必須項目が未入力です。車両、役割、スタッフ、開始時刻、終了時刻は必須です'
       )
-      return
+      return null
     }
 
     setError(null)
@@ -307,11 +308,17 @@ export function useShiftEditPage({ year, month }) {
         .filter(Boolean)
 
       await Promise.all(updatePromises)
+      const { dates: savedDates, targetDate } = resolveSaveScrollTarget(
+        editingShifts,
+        shiftIdToDateMap
+      )
       setEditingShiftIds({})
       setEditingShifts({})
       setSuccess(`${updatePromises.length}件のシフトを更新しました`)
+      return { dates: savedDates, targetDate }
     } catch (err) {
       setError(`一部のシフトの更新に失敗しました: ${err.message}`)
+      return null
     }
   }
 

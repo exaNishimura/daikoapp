@@ -82,3 +82,16 @@ export function getShiftPlannedTimesForCopy(shift) {
   const end = shift.planned_end ?? shift.end
   return { start, end, planned_start: start, planned_end: end }
 }
+
+/**
+ * 一括保存後にスクロールする日付。
+ * 最後に編集し始めたシフトの日を優先し、なければ保存した日の先頭。
+ */
+export function resolveSaveScrollTarget(editingShifts, shiftIdToDateMap) {
+  const savedDates = [...new Set(Object.values(shiftIdToDateMap).filter(Boolean))].sort()
+  const lastEditedId = Object.keys(editingShifts).at(-1)
+  return {
+    dates: savedDates,
+    targetDate: shiftIdToDateMap[lastEditedId] || savedDates[0] || null,
+  }
+}

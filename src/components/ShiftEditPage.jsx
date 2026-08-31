@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
@@ -8,7 +9,7 @@ import { CheckboxInput } from '@astryxdesign/core/CheckboxInput'
 import { Field } from '@astryxdesign/core/Field'
 import { Heading } from '@astryxdesign/core/Heading'
 import { IconButton } from '@astryxdesign/core/IconButton'
-import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { HStack, Layout, LayoutContent, LayoutHeader, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
 import { Text } from '@astryxdesign/core/Text'
@@ -24,7 +25,6 @@ import {
   getDefaultShiftEditYearMonth,
 } from '@/lib/shiftEditUtils'
 import { getStaffDisplayName } from '@/lib/staffFromEmployees'
-import { PageFrame } from '@/components/PageFrame'
 import { TimeAxis, CarBlock } from './ShiftEditPage/Timeline'
 import { CopyShiftDialog } from './ShiftEditPage/CopyShiftDialog'
 import { BulkCopyShiftDialog } from './ShiftEditPage/BulkCopyShiftDialog'
@@ -50,6 +50,17 @@ const STATUS_SELECT_OPTIONS = [
   { value: '', label: 'なし' },
   ...STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
 ]
+
+function shiftDayElementId(date) {
+  return `shift-day-${date}`
+}
+
+function scrollToShiftDay(date) {
+  const el = document.getElementById(shiftDayElementId(date))
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  el.focus({ preventScroll: true })
+}
 
 function TimeField({ label, value, onChange }) {
   const inputId = useId()
@@ -187,10 +198,22 @@ export function ShiftEditPage() {
   const editingCount = Object.keys(editingShifts).length
   const hasAnyRequests = requestRows.some((row) => row.has_request)
 
+  const onSaveAll = async () => {
+    const result = await handleSaveAll()
+    if (!result?.targetDate) return
+    flushSync(() => {
+      setExpandedDates((prev) => ({ ...prev, [result.targetDate]: true }))
+    })
+    scrollToShiftDay(result.targetDate)
+  }
+
   return (
-    <PageFrame>
-      <VStack gap={4}>
-        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+    <Layout
+      height="fill"
+      padding={4}
+      header={
+        <LayoutHeader hasDivider>
+          <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
           <HStack gap={2} vAlign="center" wrap="wrap">
             <IconButton
               label="シフト表に戻る"
@@ -232,7 +255,7 @@ export function ShiftEditPage() {
               <Button
                 label="一括保存"
                 variant="primary"
-                onClick={handleSaveAll}
+                onClick={onSaveAll}
                 isDisabled={loading}
               />
               {editingCount > 0 ? (
@@ -259,8 +282,11 @@ export function ShiftEditPage() {
               isDisabled={loading || selectedCopyDestCount === 0}
             />
           </HStack>
-        </HStack>
-
+        </LayoutHeader>
+      }
+    >
+      <LayoutContent>
+        <VStack gap={4}>
         {fetchError ? (
           <Banner
             status="error"
@@ -331,7 +357,13 @@ export function ShiftEditPage() {
               }
 
               return (
-                <Card key={date} padding={3}>
+                <div
+                  key={date}
+                  id={shiftDayElementId(date)}
+                  className="shift-edit-day"
+                  tabIndex={-1}
+                >
+                <Card padding={3}>
                   <VStack gap={isExpanded ? 3 : 0}>
                     <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
                       <HStack gap={1} vAlign="center" wrap="wrap">
@@ -558,6 +590,7 @@ export function ShiftEditPage() {
                     ) : null}
                   </VStack>
                 </Card>
+                </div>
               )
             })}
           </VStack>
@@ -587,6 +620,7 @@ export function ShiftEditPage() {
           loading={loading}
         />
       </VStack>
-    </PageFrame>
+      </LayoutContent>
+    </Layout>
   )
 }

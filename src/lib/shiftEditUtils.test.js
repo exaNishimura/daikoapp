@@ -11,6 +11,7 @@ import {
   minutesToPixels,
   getDaysInMonth,
   getDefaultShiftEditYearMonth,
+  resolveSaveScrollTarget,
 } from './shiftEditUtils'
 
 describe('constants', () => {
@@ -92,6 +93,33 @@ describe('getDefaultShiftEditYearMonth', () => {
     expect(getDefaultShiftEditYearMonth(new Date(2025, 0, 1))).toEqual({
       year: 2025,
       month: 1,
+    })
+  })
+})
+
+describe('resolveSaveScrollTarget', () => {
+  it('prefers the last edited shift date', () => {
+    const editingShifts = { a: {}, b: {} }
+    const map = { a: '2026-09-03', b: '2026-09-10' }
+    expect(resolveSaveScrollTarget(editingShifts, map)).toEqual({
+      dates: ['2026-09-03', '2026-09-10'],
+      targetDate: '2026-09-10',
+    })
+  })
+
+  it('falls back to the earliest saved date when last id has no date', () => {
+    const editingShifts = { missing: {} }
+    const map = { a: '2026-09-05', b: '2026-09-01' }
+    expect(resolveSaveScrollTarget(editingShifts, map)).toEqual({
+      dates: ['2026-09-01', '2026-09-05'],
+      targetDate: '2026-09-01',
+    })
+  })
+
+  it('returns null target when nothing was saved', () => {
+    expect(resolveSaveScrollTarget({}, {})).toEqual({
+      dates: [],
+      targetDate: null,
     })
   })
 })
