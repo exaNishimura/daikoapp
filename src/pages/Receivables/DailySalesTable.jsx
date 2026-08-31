@@ -21,8 +21,8 @@ const STICKY_DOW_WIDTH = 40
 const STICKY_DOW_LEFT = STICKY_DAY_WIDTH
 
 /** 距離・金額列は固定幅（テーブル伸長で広がらない）。経費内容は可変のまま。 */
-const DIST_COL = 60
-const AMOUNT_COL = 80
+const DIST_COL = 76
+const AMOUNT_COL = 96
 const EXPENSE_NOTE_MIN = 120
 
 const CELL_INPUT_STYLE = {
@@ -147,10 +147,10 @@ function fieldColStyle(field) {
 }
 
 const DERIVED_COLUMNS = [
-  { key: 'total_sales', label: '総売上', minWidth: 88 },
-  { key: 'receivable', label: '未収（売掛）', minWidth: 120 },
-  { key: 'fuel_total', label: '燃料計', minWidth: 80 },
-  { key: 'profit', label: '推定利益', minWidth: 88 },
+  { key: 'total_sales', label: '総売上', minWidth: 104 },
+  { key: 'receivable', label: '未収（売掛）', minWidth: 136 },
+  { key: 'fuel_total', label: '燃料計', minWidth: 96 },
+  { key: 'profit', label: '推定利益', minWidth: 104 },
 ]
 
 function cellBorderStyle({ groupEdge = false } = {}) {
@@ -489,7 +489,7 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                       ...cellBorderStyle(),
                       fontVariantNumeric: 'tabular-nums',
                       color: 'var(--color-text-secondary)',
-                      minWidth: 88,
+                      minWidth: 104,
                       backgroundColor: derivedHeaderBg,
                       textAlign: 'right',
                     }}
@@ -501,7 +501,7 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                       ...cellBorderStyle(),
                       fontVariantNumeric: 'tabular-nums',
                       color: 'var(--color-text-secondary)',
-                      minWidth: 120,
+                      minWidth: 136,
                       backgroundColor: derivedHeaderBg,
                       textAlign: 'right',
                     }}
@@ -515,7 +515,7 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                       ...cellBorderStyle(),
                       fontVariantNumeric: 'tabular-nums',
                       color: 'var(--color-text-secondary)',
-                      minWidth: 80,
+                      minWidth: 96,
                       backgroundColor: derivedHeaderBg,
                       textAlign: 'right',
                     }}
@@ -531,7 +531,7 @@ export function DailySalesTable({ year, month, rows, receivableByDate = new Map(
                         derived.profit < 0
                           ? 'var(--color-text-red)'
                           : 'var(--color-text-green)',
-                      minWidth: 88,
+                      minWidth: 104,
                       backgroundColor: derivedHeaderBg,
                       textAlign: 'right',
                     }}
