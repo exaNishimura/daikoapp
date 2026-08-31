@@ -214,412 +214,420 @@ export function ShiftEditPage() {
       header={
         <LayoutHeader hasDivider>
           <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-          <HStack gap={2} vAlign="center" wrap="wrap">
-            <IconButton
-              label="シフト表に戻る"
-              tooltip="シフト表に戻る"
-              variant="ghost"
-              icon={<ChevronLeft />}
-              onClick={() => navigate('/shift')}
-            />
-            <HStack gap={1} vAlign="center">
+            <HStack gap={2} vAlign="center" wrap="wrap">
               <IconButton
-                label="前月"
-                tooltip="前月"
+                label="シフト表に戻る"
+                tooltip="シフト表に戻る"
                 variant="ghost"
                 icon={<ChevronLeft />}
-                onClick={() => {
-                  const prevMonth = month === 1 ? 12 : month - 1
-                  const prevYear = month === 1 ? year - 1 : year
-                  navigate(`/shift/edit?year=${prevYear}&month=${prevMonth}`)
-                }}
-                isDisabled={loading}
+                onClick={() => navigate('/shift')}
               />
-              <Heading level={1}>{monthLabel}</Heading>
-              <IconButton
-                label="次月"
-                tooltip="次月"
-                variant="ghost"
-                icon={<ChevronRight />}
-                onClick={() => {
-                  const nextMonth = month === 12 ? 1 : month + 1
-                  const nextYear = month === 12 ? year + 1 : year
-                  navigate(`/shift/edit?year=${nextYear}&month=${nextMonth}`)
-                }}
-                isDisabled={loading}
-              />
+              <HStack gap={1} vAlign="center">
+                <IconButton
+                  label="前月"
+                  tooltip="前月"
+                  variant="ghost"
+                  icon={<ChevronLeft />}
+                  onClick={() => {
+                    const prevMonth = month === 1 ? 12 : month - 1
+                    const prevYear = month === 1 ? year - 1 : year
+                    navigate(`/shift/edit?year=${prevYear}&month=${prevMonth}`)
+                  }}
+                  isDisabled={loading}
+                />
+                <Heading level={1}>{monthLabel}</Heading>
+                <IconButton
+                  label="次月"
+                  tooltip="次月"
+                  variant="ghost"
+                  icon={<ChevronRight />}
+                  onClick={() => {
+                    const nextMonth = month === 12 ? 1 : month + 1
+                    const nextYear = month === 12 ? year + 1 : year
+                    navigate(`/shift/edit?year=${nextYear}&month=${nextMonth}`)
+                  }}
+                  isDisabled={loading}
+                />
+              </HStack>
             </HStack>
-          </HStack>
-          <HStack gap={2} vAlign="center" wrap="wrap">
-            <HStack gap={1} vAlign="center">
+            <HStack gap={2} vAlign="center" wrap="wrap">
+              <HStack gap={1} vAlign="center">
+                <Button
+                  label="一括保存"
+                  variant="primary"
+                  onClick={onSaveAll}
+                  isDisabled={loading}
+                />
+                {editingCount > 0 ? (
+                  <Token size="sm" color="blue" label={`${editingCount}件編集中`} />
+                ) : null}
+              </HStack>
               <Button
-                label="一括保存"
-                variant="primary"
-                onClick={onSaveAll}
+                label="再読み込み"
+                variant="secondary"
+                onClick={() => refetchShifts()}
                 isDisabled={loading}
               />
-              {editingCount > 0 ? (
-                <Token size="sm" color="blue" label={`${editingCount}件編集中`} />
-              ) : null}
+              <Button
+                label={
+                  selectedCopyDestCount > 0
+                    ? `一括コピー（${selectedCopyDestCount}日）`
+                    : '一括コピー'
+                }
+                variant="secondary"
+                onClick={() => {
+                  setBulkCopySourceDate('')
+                  setBulkCopyDialogOpen(true)
+                }}
+                isDisabled={loading || selectedCopyDestCount === 0}
+              />
             </HStack>
-            <Button
-              label="再読み込み"
-              variant="secondary"
-              onClick={() => refetchShifts()}
-              isDisabled={loading}
-            />
-            <Button
-              label={
-                selectedCopyDestCount > 0
-                  ? `一括コピー（${selectedCopyDestCount}日）`
-                  : '一括コピー'
-              }
-              variant="secondary"
-              onClick={() => {
-                setBulkCopySourceDate('')
-                setBulkCopyDialogOpen(true)
-              }}
-              isDisabled={loading || selectedCopyDestCount === 0}
-            />
           </HStack>
         </LayoutHeader>
       }
     >
       <LayoutContent>
         <VStack gap={4}>
-        {fetchError ? (
-          <Banner
-            status="error"
-            title={`シフトデータの取得に失敗: ${fetchError.message}`}
-            collapsible={false}
+          {fetchError ? (
+            <Banner
+              status="error"
+              title={`シフトデータの取得に失敗: ${fetchError.message}`}
+              collapsible={false}
+            />
+          ) : null}
+          {requestsError ? (
+            <Banner
+              status="warning"
+              title={`シフト希望の取得に失敗: ${requestsError.message}`}
+              collapsible={false}
+            />
+          ) : null}
+
+          <ShiftEditSummary
+            staffSummary={staffSummary}
+            monthLaborCost={monthLaborCost}
+            requestRows={requestRows}
           />
-        ) : null}
-        {requestsError ? (
-          <Banner
-            status="warning"
-            title={`シフト希望の取得に失敗: ${requestsError.message}`}
-            collapsible={false}
-          />
-        ) : null}
+          {error ? (
+            <Banner
+              status="error"
+              title={error}
+              isDismissable
+              onDismiss={() => setError(null)}
+              collapsible={false}
+            />
+          ) : null}
+          {success ? (
+            <Banner
+              status="success"
+              title={success}
+              isDismissable
+              onDismiss={() => setSuccess(null)}
+              collapsible={false}
+            />
+          ) : null}
 
-        <ShiftEditSummary
-          staffSummary={staffSummary}
-          monthLaborCost={monthLaborCost}
-          requestRows={requestRows}
-        />
-        {error ? (
-          <Banner
-            status="error"
-            title={error}
-            isDismissable
-            onDismiss={() => setError(null)}
-            collapsible={false}
-          />
-        ) : null}
-        {success ? (
-          <Banner
-            status="success"
-            title={success}
-            isDismissable
-            onDismiss={() => setSuccess(null)}
-            collapsible={false}
-          />
-        ) : null}
+          {loading && !shifts.length ? (
+            <Center padding={4}>
+              <VStack gap={2} hAlign="center">
+                <Spinner />
+                <Text>読み込み中...</Text>
+              </VStack>
+            </Center>
+          ) : null}
 
-        {loading && !shifts.length ? (
-          <Center padding={4}>
-            <VStack gap={2} hAlign="center">
-              <Spinner />
-              <Text>読み込み中...</Text>
-            </VStack>
-          </Center>
-        ) : null}
+          {days.length > 0 ? (
+            <VStack gap={3}>
+              {days.map(({ date, day, dow }) => {
+                const dateShifts = getShiftsForDate(date)
+                const status = statuses[date]
+                const isEditing = editingDates[date]
+                const newShift = newShifts[date] || {
+                  car: '',
+                  role: '',
+                  employee_id: '',
+                  start: '',
+                  end: '',
+                  note: '',
+                }
 
-        {days.length > 0 ? (
-          <VStack gap={3}>
-            {days.map(({ date, day, dow }) => {
-              const dateShifts = getShiftsForDate(date)
-              const status = statuses[date]
-              const isEditing = editingDates[date]
-              const newShift = newShifts[date] || {
-                car: '',
-                role: '',
-                employee_id: '',
-                start: '',
-                end: '',
-                note: '',
-              }
+                const isExpanded = expandedDates[date] !== false
+                const hasShifts = dateShifts.length > 0
+                const toggleExpand = () => {
+                  setExpandedDates((prev) => ({ ...prev, [date]: !(prev[date] !== false) }))
+                }
 
-              const isExpanded = expandedDates[date] !== false
-              const hasShifts = dateShifts.length > 0
-              const toggleExpand = () => {
-                setExpandedDates((prev) => ({ ...prev, [date]: !(prev[date] !== false) }))
-              }
-
-              return (
-                <div
-                  key={date}
-                  id={shiftDayElementId(date)}
-                  className="shift-edit-day"
-                  tabIndex={-1}
-                >
-                <Card padding={3}>
-                  <VStack gap={isExpanded ? 3 : 0}>
-                    <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-                      <HStack gap={1} vAlign="center" wrap="wrap">
-                        <CheckboxInput
-                          label={`${day}日を一括コピーのコピー先に含める`}
-                          isLabelHidden
-                          size="sm"
-                          value={!!copyDestDates[date]}
-                          onChange={() =>
-                            setCopyDestDates((prev) => ({
-                              ...prev,
-                              [date]: !prev[date],
-                            }))
-                          }
-                          isDisabled={loading}
-                        />
-                        <IconButton
-                          size="sm"
-                          variant="ghost"
-                          label={isExpanded ? '折りたたむ' : '展開'}
-                          tooltip={isExpanded ? '折りたたむ' : '展開'}
-                          icon={isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          onClick={toggleExpand}
-                        />
-                        <Heading level={3}>
-                          {day}日 ({dow})
-                        </Heading>
-                        {hasShifts && !status ? (
-                          <Token size="sm" color="blue" label={`${dateShifts.length}件`} />
-                        ) : null}
-                        {!status && hasAnyRequests ? (
-                          <DayAvailabilityTokens
-                            dayRequests={requestsByDate[date] ?? []}
-                            dateShifts={dateShifts}
-                            employees={employees}
-                          />
-                        ) : null}
-                      </HStack>
-                      <HStack gap={2} vAlign="center" wrap="wrap">
-                        <Selector
-                          label="ステータス"
-                          options={STATUS_SELECT_OPTIONS}
-                          value={status || ''}
-                          onChange={(value) => handleSetStatus(date, value || null)}
-                          isDisabled={loading}
-                          size="sm"
-                          width="100%"
-                        />
-                        {!status ? (
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            label={isEditing ? 'キャンセル' : 'シフト追加'}
-                            onClick={() =>
-                              isEditing ? handleCancelEdit(date) : handleStartEdit(date)
-                            }
-                            isDisabled={loading}
-                          />
-                        ) : null}
-                      </HStack>
-                    </HStack>
-
-                    {isExpanded ? (
-                      <VStack gap={3}>
-                        {status ? (
-                          <Token size="md" color={statusTokenColor(status)} label={status} />
-                        ) : (
-                          <>
-                            {hasAnyRequests ? (
-                              <RequestPicker
-                                date={date}
-                                status={status}
+                return (
+                  <div
+                    key={date}
+                    id={shiftDayElementId(date)}
+                    className="shift-edit-day"
+                    tabIndex={-1}
+                  >
+                    <Card padding={3}>
+                      <VStack gap={isExpanded ? 3 : 0}>
+                        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+                          <HStack gap={1} vAlign="center" wrap="wrap">
+                            <CheckboxInput
+                              label={`${day}日を一括コピーのコピー先に含める`}
+                              isLabelHidden
+                              size="sm"
+                              value={!!copyDestDates[date]}
+                              onChange={() =>
+                                setCopyDestDates((prev) => ({
+                                  ...prev,
+                                  [date]: !prev[date],
+                                }))
+                              }
+                              isDisabled={loading}
+                            />
+                            <IconButton
+                              size="sm"
+                              variant="ghost"
+                              label={isExpanded ? '折りたたむ' : '展開'}
+                              tooltip={isExpanded ? '折りたたむ' : '展開'}
+                              icon={
+                                isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />
+                              }
+                              onClick={toggleExpand}
+                            />
+                            <Heading level={3}>
+                              {day}日 ({dow})
+                            </Heading>
+                            {hasShifts && !status ? (
+                              <Token size="sm" color="blue" label={`${dateShifts.length}件`} />
+                            ) : null}
+                            {!status && hasAnyRequests ? (
+                              <DayAvailabilityTokens
                                 dayRequests={requestsByDate[date] ?? []}
                                 dateShifts={dateShifts}
                                 employees={employees}
-                                onToggle={handleToggleRequest}
-                                disabled={loading}
                               />
                             ) : null}
-
-                            {dateShifts.length > 0 ? (
-                              <VStack gap={2}>
-                                <Text weight="semibold">シフト表</Text>
-                                <div
-                                  className="timeline-container"
-                                  style={{ width: `${TIMELINE_WIDTH}px` }}
-                                >
-                                  <TimeAxis />
-                                  {[...new Set(dateShifts.map((s) => s.car))]
-                                    .sort()
-                                    .map((carNum) => (
-                                      <CarBlock
-                                        key={carNum}
-                                        carNum={carNum}
-                                        shifts={dateShifts}
-                                        staffColorByName={staffColorByName}
-                                        employees={employees}
-                                      />
-                                    ))}
-                                </div>
-                              </VStack>
+                          </HStack>
+                          <HStack gap={2} vAlign="center" wrap="wrap">
+                            <Selector
+                              label="ステータス"
+                              options={STATUS_SELECT_OPTIONS}
+                              value={status || ''}
+                              onChange={(value) => handleSetStatus(date, value || null)}
+                              isDisabled={loading}
+                              size="sm"
+                              width="100%"
+                            />
+                            {!status ? (
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                label={isEditing ? 'キャンセル' : 'シフト追加'}
+                                onClick={() =>
+                                  isEditing ? handleCancelEdit(date) : handleStartEdit(date)
+                                }
+                                isDisabled={loading}
+                              />
                             ) : null}
+                          </HStack>
+                        </HStack>
 
-                            {isEditing ? (
-                              <VStack gap={2}>
-                                <Text weight="semibold">新規シフト追加</Text>
-                                <ShiftFields
-                                  values={newShift}
-                                  onChange={(next) =>
-                                    setNewShifts((prev) => ({ ...prev, [date]: next }))
-                                  }
-                                  employeeSelectOptions={employeeSelectOptions}
-                                />
-                                <HStack gap={1} wrap="wrap">
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    label="他の日からコピー"
-                                    onClick={() => {
-                                      setCopyTargetDate(date)
-                                      setCopyDialogOpen(true)
-                                    }}
-                                    isDisabled={loading}
+                        {isExpanded ? (
+                          <VStack gap={3}>
+                            {status ? (
+                              <Token size="md" color={statusTokenColor(status)} label={status} />
+                            ) : (
+                              <>
+                                {hasAnyRequests ? (
+                                  <RequestPicker
+                                    date={date}
+                                    status={status}
+                                    dayRequests={requestsByDate[date] ?? []}
+                                    dateShifts={dateShifts}
+                                    employees={employees}
+                                    onToggle={handleToggleRequest}
+                                    disabled={loading}
                                   />
-                                  <Button
-                                    size="sm"
-                                    variant="primary"
-                                    label="追加"
-                                    onClick={() => handleAddShift(date)}
-                                    isDisabled={loading}
-                                  />
-                                </HStack>
-                              </VStack>
-                            ) : null}
+                                ) : null}
 
-                            {dateShifts.length > 0 ? (
-                              <VStack gap={2}>
-                                <Text weight="semibold">
-                                  設定済みシフト ({dateShifts.length}件)
-                                </Text>
-                                {dateShifts.map((shift) => {
-                                  const rowEditing = editingShiftIds[shift.id]
-                                  const editingShift = editingShifts[shift.id] || shift
-
-                                  return (
-                                    <Card key={shift.id} padding={3}>
-                                      {!rowEditing ? (
-                                        <HStack
-                                          hAlign="between"
-                                          vAlign="center"
-                                          wrap="wrap"
-                                          gap={2}
-                                        >
-                                          <HStack gap={1} wrap="wrap" vAlign="center">
-                                            <Token size="sm" color="blue" label={shift.car} />
-                                            <Text>
-                                              {shift.role} / {getStaffDisplayName(shift, employees)}{' '}
-                                              / {shift.start} - {shift.end}
-                                            </Text>
-                                            {shift.note ? (
-                                              <Token size="sm" color="gray" label={shift.note} />
-                                            ) : null}
-                                          </HStack>
-                                          <HStack gap={1}>
-                                            <IconButton
-                                              size="sm"
-                                              variant="ghost"
-                                              label="編集"
-                                              tooltip="編集"
-                                              icon={<Pencil size={16} />}
-                                              onClick={() => handleStartEditShift(shift)}
-                                              isDisabled={loading}
-                                            />
-                                            <IconButton
-                                              size="sm"
-                                              variant="destructive"
-                                              label="削除"
-                                              tooltip="削除"
-                                              icon={<Trash2 size={16} />}
-                                              onClick={() => handleDeleteShift(shift.id, date)}
-                                              isDisabled={loading}
-                                            />
-                                          </HStack>
-                                        </HStack>
-                                      ) : (
-                                        <VStack gap={2}>
-                                          <Text weight="semibold">シフト編集</Text>
-                                          <ShiftFields
-                                            values={editingShift}
-                                            onChange={(next) =>
-                                              setEditingShifts((prev) => ({
-                                                ...prev,
-                                                [shift.id]: next,
-                                              }))
-                                            }
-                                            employeeSelectOptions={employeeSelectOptions}
+                                {dateShifts.length > 0 ? (
+                                  <VStack gap={2}>
+                                    <Text weight="semibold">シフト表</Text>
+                                    <div
+                                      className="timeline-container"
+                                      style={{ width: `${TIMELINE_WIDTH}px` }}
+                                    >
+                                      <TimeAxis />
+                                      {[...new Set(dateShifts.map((s) => s.car))]
+                                        .sort()
+                                        .map((carNum) => (
+                                          <CarBlock
+                                            key={carNum}
+                                            carNum={carNum}
+                                            shifts={dateShifts}
+                                            staffColorByName={staffColorByName}
+                                            employees={employees}
                                           />
-                                          <HStack gap={2} wrap="wrap" vAlign="center">
-                                            <Button
-                                              size="sm"
-                                              variant="secondary"
-                                              label="キャンセル"
-                                              onClick={() => handleCancelEditShift(shift.id)}
-                                              isDisabled={loading}
-                                            />
-                                            <Text color="secondary">
-                                              編集内容は「一括保存」ボタンで保存されます
-                                            </Text>
-                                          </HStack>
-                                        </VStack>
-                                      )}
-                                    </Card>
-                                  )
-                                })}
-                              </VStack>
-                            ) : null}
+                                        ))}
+                                    </div>
+                                  </VStack>
+                                ) : null}
 
-                            {dateShifts.length === 0 && !isEditing ? (
-                              <Text color="secondary">シフトが設定されていません</Text>
-                            ) : null}
-                          </>
-                        )}
+                                {isEditing ? (
+                                  <VStack gap={2}>
+                                    <Text weight="semibold">新規シフト追加</Text>
+                                    <ShiftFields
+                                      values={newShift}
+                                      onChange={(next) =>
+                                        setNewShifts((prev) => ({ ...prev, [date]: next }))
+                                      }
+                                      employeeSelectOptions={employeeSelectOptions}
+                                    />
+                                    <HStack gap={1} wrap="wrap">
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        label="他の日からコピー"
+                                        onClick={() => {
+                                          setCopyTargetDate(date)
+                                          setCopyDialogOpen(true)
+                                        }}
+                                        isDisabled={loading}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="primary"
+                                        label="追加"
+                                        onClick={() => handleAddShift(date)}
+                                        isDisabled={loading}
+                                      />
+                                    </HStack>
+                                  </VStack>
+                                ) : null}
+
+                                {dateShifts.length > 0 ? (
+                                  <VStack gap={2}>
+                                    <Text weight="semibold">
+                                      設定済みシフト ({dateShifts.length}件)
+                                    </Text>
+                                    {dateShifts.map((shift) => {
+                                      const rowEditing = editingShiftIds[shift.id]
+                                      const editingShift = editingShifts[shift.id] || shift
+
+                                      return (
+                                        <Card key={shift.id} padding={3}>
+                                          {!rowEditing ? (
+                                            <HStack
+                                              hAlign="between"
+                                              vAlign="center"
+                                              wrap="wrap"
+                                              gap={2}
+                                            >
+                                              <HStack gap={1} wrap="wrap" vAlign="center">
+                                                <Token size="sm" color="blue" label={shift.car} />
+                                                <Text>
+                                                  {shift.role} /{' '}
+                                                  {getStaffDisplayName(shift, employees)} /{' '}
+                                                  {shift.start} - {shift.end}
+                                                </Text>
+                                                {shift.note ? (
+                                                  <Token
+                                                    size="sm"
+                                                    color="gray"
+                                                    label={shift.note}
+                                                  />
+                                                ) : null}
+                                              </HStack>
+                                              <HStack gap={1}>
+                                                <IconButton
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  label="編集"
+                                                  tooltip="編集"
+                                                  icon={<Pencil size={16} />}
+                                                  onClick={() => handleStartEditShift(shift)}
+                                                  isDisabled={loading}
+                                                />
+                                                <IconButton
+                                                  size="sm"
+                                                  variant="destructive"
+                                                  label="削除"
+                                                  tooltip="削除"
+                                                  icon={<Trash2 size={16} />}
+                                                  onClick={() => handleDeleteShift(shift.id, date)}
+                                                  isDisabled={loading}
+                                                />
+                                              </HStack>
+                                            </HStack>
+                                          ) : (
+                                            <VStack gap={2}>
+                                              <Text weight="semibold">シフト編集</Text>
+                                              <ShiftFields
+                                                values={editingShift}
+                                                onChange={(next) =>
+                                                  setEditingShifts((prev) => ({
+                                                    ...prev,
+                                                    [shift.id]: next,
+                                                  }))
+                                                }
+                                                employeeSelectOptions={employeeSelectOptions}
+                                              />
+                                              <HStack gap={2} wrap="wrap" vAlign="center">
+                                                <Button
+                                                  size="sm"
+                                                  variant="secondary"
+                                                  label="キャンセル"
+                                                  onClick={() => handleCancelEditShift(shift.id)}
+                                                  isDisabled={loading}
+                                                />
+                                                <Text color="secondary">
+                                                  編集内容は「一括保存」ボタンで保存されます
+                                                </Text>
+                                              </HStack>
+                                            </VStack>
+                                          )}
+                                        </Card>
+                                      )
+                                    })}
+                                  </VStack>
+                                ) : null}
+
+                                {dateShifts.length === 0 && !isEditing ? (
+                                  <Text color="secondary">シフトが設定されていません</Text>
+                                ) : null}
+                              </>
+                            )}
+                          </VStack>
+                        ) : null}
                       </VStack>
-                    ) : null}
-                  </VStack>
-                </Card>
-                </div>
-              )
-            })}
-          </VStack>
-        ) : null}
+                    </Card>
+                  </div>
+                )
+              })}
+            </VStack>
+          ) : null}
 
-        <CopyShiftDialog
-          open={copyDialogOpen}
-          onClose={() => setCopyDialogOpen(false)}
-          days={days}
-          copyTargetDate={copyTargetDate}
-          getShiftsForDate={getShiftsForDate}
-          onCopyFromDate={handleCopyFromDate}
-        />
+          <CopyShiftDialog
+            open={copyDialogOpen}
+            onClose={() => setCopyDialogOpen(false)}
+            days={days}
+            copyTargetDate={copyTargetDate}
+            getShiftsForDate={getShiftsForDate}
+            onCopyFromDate={handleCopyFromDate}
+          />
 
-        <BulkCopyShiftDialog
-          open={bulkCopyDialogOpen}
-          onClose={() => {
-            setBulkCopyDialogOpen(false)
-            setBulkCopySourceDate('')
-          }}
-          days={days}
-          bulkCopySourceDate={bulkCopySourceDate}
-          setBulkCopySourceDate={setBulkCopySourceDate}
-          selectedCopyDestCount={selectedCopyDestCount}
-          getShiftsForDate={getShiftsForDate}
-          onExecute={handleBulkCopyExecute}
-          loading={loading}
-        />
-      </VStack>
+          <BulkCopyShiftDialog
+            open={bulkCopyDialogOpen}
+            onClose={() => {
+              setBulkCopyDialogOpen(false)
+              setBulkCopySourceDate('')
+            }}
+            days={days}
+            bulkCopySourceDate={bulkCopySourceDate}
+            setBulkCopySourceDate={setBulkCopySourceDate}
+            selectedCopyDestCount={selectedCopyDestCount}
+            getShiftsForDate={getShiftsForDate}
+            onExecute={handleBulkCopyExecute}
+            loading={loading}
+          />
+        </VStack>
       </LayoutContent>
     </Layout>
   )
