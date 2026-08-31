@@ -331,8 +331,7 @@ export function LiffOrderForm() {
     if (!isOpen && !submitting) setConfirmOpen(false)
   }
 
-  const discountSnap =
-    hint?.discount ?? snapshotDiscount(occupancy.settings?.discount_config)
+  const discountSnap = hint?.discount ?? snapshotDiscount(occupancy.settings?.discount_config)
   const discountLine = discountSnap.applied
     ? `LINE割引あり（${discountSnap.label}）`
     : 'LINE割引なし'
@@ -376,13 +375,7 @@ export function LiffOrderForm() {
         </RadioList>
       ) : null}
 
-      <TextInput
-        label="連絡先電話番号"
-        value={phone}
-        onChange={setPhone}
-        isRequired
-        width="100%"
-      />
+      <TextInput label="連絡先電話番号" value={phone} onChange={setPhone} isRequired width="100%" />
 
       <VStack gap={3} className="liff-order-form__unit">
         {orderType === 'SCHEDULED' ? (
@@ -494,9 +487,7 @@ export function LiffOrderForm() {
         <Layout
           height="auto"
           padding={4}
-          header={
-            <DialogHeader title="予約内容の確認" onOpenChange={handleConfirmOpenChange} />
-          }
+          header={<DialogHeader title="予約内容の確認" onOpenChange={handleConfirmOpenChange} />}
           content={
             <LayoutContent>
               <Text>{confirmMessage}</Text>

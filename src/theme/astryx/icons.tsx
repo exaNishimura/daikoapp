@@ -8,8 +8,8 @@
  * These icons are bundled with the theme, not with @astryxdesign/core.
  */
 
-import React from 'react';
-import type {IconRegistry} from '@astryxdesign/core/Icon';
+import React from 'react'
+import type { IconRegistry } from '@astryxdesign/core/Icon'
 
 import {
   X,
@@ -40,12 +40,12 @@ import {
   Wrench,
   Square,
   Mic,
-} from 'lucide-react';
+} from 'lucide-react'
 
 const iconProps = {
   size: '1em',
   'aria-hidden': true as const,
-};
+}
 
 export const stoneIconRegistry: IconRegistry = {
   close: <X {...iconProps} />,
@@ -76,4 +76,4 @@ export const stoneIconRegistry: IconRegistry = {
   wrench: <Wrench {...iconProps} />,
   stop: <Square {...iconProps} />,
   microphone: <Mic {...iconProps} />,
-};
+}

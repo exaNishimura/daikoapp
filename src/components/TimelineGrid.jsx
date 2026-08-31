@@ -270,9 +270,7 @@ export function TimelineGrid({
                       variant="ghost"
                       label={isFocused ? '全号車表示に戻す' : '号車列を全幅表示'}
                       tooltip={isFocused ? '全号車表示に戻す' : 'この号車を全幅表示'}
-                      icon={
-                        isFocused ? <Minimize2 size={14} /> : <Maximize2 size={14} />
-                      }
+                      icon={isFocused ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                       onClick={(e) => {
                         e.stopPropagation()
                         toggleVehicleFocus(vehicle.id)

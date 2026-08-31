@@ -173,8 +173,7 @@ export function InvoiceIssueTab({ year, month }) {
               対象企業: <Text weight="semibold">{selectedCount}</Text> / {rows.length} 社
             </Text>
             <Text>
-              合計金額:{' '}
-              <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
+              合計金額: <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
             </Text>
           </HStack>
           <Button
@@ -207,9 +206,7 @@ export function InvoiceIssueTab({ year, month }) {
               <TableRow
                 key={r.company_id}
                 style={
-                  isOverflow
-                    ? { backgroundColor: 'var(--color-background-yellow)' }
-                    : undefined
+                  isOverflow ? { backgroundColor: 'var(--color-background-yellow)' } : undefined
                 }
               >
                 <TableCell>

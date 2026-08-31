@@ -131,9 +131,7 @@ export function CarBlock({ carNum, shifts, staffColorByName, employees }) {
   return (
     <section className="car-block">
       <header className="car-header">
-        <Text weight="bold">
-          {carNum}号車
-        </Text>
+        <Text weight="bold">{carNum}号車</Text>
       </header>
       <Lane
         role="代行"

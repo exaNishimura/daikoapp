@@ -99,7 +99,12 @@ export function ReassignVehicleDialog({
         footer={
           <LayoutFooter>
             <HStack gap={2} hAlign="end">
-              <Button label="キャンセル" variant="secondary" onClick={onClose} isDisabled={loading} />
+              <Button
+                label="キャンセル"
+                variant="secondary"
+                onClick={onClose}
+                isDisabled={loading}
+              />
               <Button
                 label="実行"
                 variant="primary"

@@ -81,7 +81,9 @@ describe('CompanySelect', () => {
 
   it('shows inactive companies with (無効) badge when includeInactive', async () => {
     const user = userEvent.setup()
-    renderWithTheme(<CompanySelect companies={companies} value={null} onChange={() => {}} includeInactive />)
+    renderWithTheme(
+      <CompanySelect companies={companies} value={null} onChange={() => {}} includeInactive />
+    )
     const input = screen.getByRole('combobox')
     await user.click(input)
 

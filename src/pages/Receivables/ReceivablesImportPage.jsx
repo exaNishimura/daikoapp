@@ -238,10 +238,7 @@ export function ReceivablesImportPage() {
               >
                 <List>
                   {parsed.errors.slice(0, 5).map((e, i) => (
-                    <ListItem
-                      key={i}
-                      label={`[${e.sheet} L${e.row} / ${e.field}] ${e.message}`}
-                    />
+                    <ListItem key={i} label={`[${e.sheet} L${e.row} / ${e.field}] ${e.message}`} />
                   ))}
                   {parsed.errors.length > 5 ? (
                     <ListItem label={`…他 ${parsed.errors.length - 5} 件`} />
@@ -273,11 +270,7 @@ export function ReceivablesImportPage() {
                     title={`${parsed.period.year} 年 ${parsed.period.month} 月の売掛が ${existingReceivables.length} 件既に登録されています${hasInvoicedExisting ? '（うち請求書発行済みあり）' : ''}`}
                     collapsible={false}
                   />
-                  <RadioList
-                    label="同月既存データの扱い"
-                    value={mode}
-                    onChange={setMode}
-                  >
+                  <RadioList label="同月既存データの扱い" value={mode} onChange={setMode}>
                     <RadioListItem
                       value={MODE.MERGE}
                       label="マージ（重複を除いて追加挿入。既存は残す）"

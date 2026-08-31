@@ -88,14 +88,7 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
   }
 
   if (!open) {
-    return (
-      <Button
-        icon={<Plus />}
-        label="売掛を追加"
-        variant="secondary"
-        onClick={handleOpen}
-      />
-    )
+    return <Button icon={<Plus />} label="売掛を追加" variant="secondary" onClick={handleOpen} />
   }
 
   return (
@@ -105,13 +98,7 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
           <Text size="sm" color="secondary">
             新規追加 — {year}年{month}月
           </Text>
-          <IconButton
-            size="sm"
-            variant="ghost"
-            label="閉じる"
-            icon={<X />}
-            onClick={handleClose}
-          />
+          <IconButton size="sm" variant="ghost" label="閉じる" icon={<X />} onClick={handleClose} />
         </HStack>
         <Grid columns={{ minWidth: 160, max: 4 }} gap={2}>
           <DateInput
@@ -172,7 +159,12 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
           </GridSpan>
           <GridSpan columns="full">
             <HStack gap={1} hAlign="end">
-              <Button label="閉じる" variant="secondary" onClick={handleClose} isDisabled={isSaving} />
+              <Button
+                label="閉じる"
+                variant="secondary"
+                onClick={handleClose}
+                isDisabled={isSaving}
+              />
               <Button
                 variant="primary"
                 icon={<Save />}

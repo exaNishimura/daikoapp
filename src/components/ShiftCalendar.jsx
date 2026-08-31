@@ -273,195 +273,197 @@ export function ShiftCalendar() {
   return (
     <PageFrame>
       <div className="shift-calendar-page">
-      <div className={`shift-header ${headerCollapsed ? 'shift-header--collapsed' : ''}`}>
-        <div className="shift-header-compact">
-          <div className="shift-header-title-row">
-            <h1>運転代行シフト表</h1>
-            {isAuthenticated ? (
-              <Button
-                variant="primary"
-                size="sm"
-                label="シフト編集"
-                icon={<Pencil size={16} />}
-                onClick={() => navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)}
-              />
-            ) : null}
-          </div>
-          <div
-            className="shift-header-month-nav"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr',
-              alignItems: 'center',
-              width: '100%',
-            }}
-          >
-            <div />
-            <HStack gap={1} vAlign="center">
-              <IconButton
-                label="前月"
-                tooltip="前月"
-                variant="ghost"
-                icon={<ChevronLeft />}
-                onClick={handlePrevMonth}
-                isDisabled={loading}
-              />
-              <Text weight="bold">
-                {selectedYear}年{selectedMonth}月
-              </Text>
-              <IconButton
-                label="次月"
-                tooltip="次月"
-                variant="ghost"
-                icon={<ChevronRight />}
-                onClick={handleNextMonth}
-                isDisabled={loading}
-              />
-            </HStack>
-            <HStack hAlign="end">
-              <IconButton
-                label="検索・フィルター"
-                tooltip="検索・フィルター"
-                variant={searchExpanded ? 'secondary' : 'ghost'}
-                size="sm"
-                icon={<Search size={18} />}
-                onClick={() => setSearchExpanded(!searchExpanded)}
-              />
-            </HStack>
-          </div>
-        </div>
-
-        <div className="shift-header-expandable">
-          {searchExpanded ? (
-            <div className="shift-controls">
-              <HStack gap={2} vAlign="center" wrap="wrap">
-                <Selector
-                  label="年"
+        <div className={`shift-header ${headerCollapsed ? 'shift-header--collapsed' : ''}`}>
+          <div className="shift-header-compact">
+            <div className="shift-header-title-row">
+              <h1>運転代行シフト表</h1>
+              {isAuthenticated ? (
+                <Button
+                  variant="primary"
                   size="sm"
-                  options={[2024, 2025, 2026, 2027, 2028].map((year) => ({
-                    value: String(year),
-                    label: `${year}年`,
-                  }))}
-                  value={String(selectedYear)}
-                  onChange={(value) => setSelectedYear(Number(value))}
+                  label="シフト編集"
+                  icon={<Pencil size={16} />}
+                  onClick={() =>
+                    navigate(`/shift/edit?year=${selectedYear}&month=${selectedMonth}`)
+                  }
                 />
-                <Selector
-                  label="月"
-                  size="sm"
-                  options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => ({
-                    value: String(month),
-                    label: `${month}月`,
-                  }))}
-                  value={String(selectedMonth)}
-                  onChange={(value) => setSelectedMonth(Number(value))}
+              ) : null}
+            </div>
+            <div
+              className="shift-header-month-nav"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center',
+                width: '100%',
+              }}
+            >
+              <div />
+              <HStack gap={1} vAlign="center">
+                <IconButton
+                  label="前月"
+                  tooltip="前月"
+                  variant="ghost"
+                  icon={<ChevronLeft />}
+                  onClick={handlePrevMonth}
+                  isDisabled={loading}
+                />
+                <Text weight="bold">
+                  {selectedYear}年{selectedMonth}月
+                </Text>
+                <IconButton
+                  label="次月"
+                  tooltip="次月"
+                  variant="ghost"
+                  icon={<ChevronRight />}
+                  onClick={handleNextMonth}
+                  isDisabled={loading}
                 />
               </HStack>
-              <div className="filter-group">
-                {filterEmployees.map((emp) => (
-                  <label key={emp.id}>
-                    <input
-                      type="checkbox"
-                      checked={
-                        visibleEmployeeIds.length === 0 || visibleEmployeeIds.includes(emp.id)
-                      }
-                      onChange={(e) => handleEmployeeFilterChange(emp.id, e.target.checked)}
-                    />
-                    {emp.name}
-                  </label>
-                ))}
-              </div>
-              <input
-                type="text"
-                className="search-box"
-                placeholder="検索（日付・スタッフ名など）"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
-            </div>
-          ) : null}
-          <div className="legend">
-            {getEmployeeSelectOptions(employees, shifts).map((emp) => (
-              <div key={emp.id} className="legend-item">
-                <div
-                  className="legend-color"
-                  style={{
-                    background: getStaffColor(colorByName, emp.name, employees),
-                  }}
+              <HStack hAlign="end">
+                <IconButton
+                  label="検索・フィルター"
+                  tooltip="検索・フィルター"
+                  variant={searchExpanded ? 'secondary' : 'ghost'}
+                  size="sm"
+                  icon={<Search size={18} />}
+                  onClick={() => setSearchExpanded(!searchExpanded)}
                 />
-                <span>{emp.name}</span>
+              </HStack>
+            </div>
+          </div>
+
+          <div className="shift-header-expandable">
+            {searchExpanded ? (
+              <div className="shift-controls">
+                <HStack gap={2} vAlign="center" wrap="wrap">
+                  <Selector
+                    label="年"
+                    size="sm"
+                    options={[2024, 2025, 2026, 2027, 2028].map((year) => ({
+                      value: String(year),
+                      label: `${year}年`,
+                    }))}
+                    value={String(selectedYear)}
+                    onChange={(value) => setSelectedYear(Number(value))}
+                  />
+                  <Selector
+                    label="月"
+                    size="sm"
+                    options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((month) => ({
+                      value: String(month),
+                      label: `${month}月`,
+                    }))}
+                    value={String(selectedMonth)}
+                    onChange={(value) => setSelectedMonth(Number(value))}
+                  />
+                </HStack>
+                <div className="filter-group">
+                  {filterEmployees.map((emp) => (
+                    <label key={emp.id}>
+                      <input
+                        type="checkbox"
+                        checked={
+                          visibleEmployeeIds.length === 0 || visibleEmployeeIds.includes(emp.id)
+                        }
+                        onChange={(e) => handleEmployeeFilterChange(emp.id, e.target.checked)}
+                      />
+                      {emp.name}
+                    </label>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  className="search-box"
+                  placeholder="検索（日付・スタッフ名など）"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                />
               </div>
-            ))}
+            ) : null}
+            <div className="legend">
+              {getEmployeeSelectOptions(employees, shifts).map((emp) => (
+                <div key={emp.id} className="legend-item">
+                  <div
+                    className="legend-color"
+                    style={{
+                      background: getStaffColor(colorByName, emp.name, employees),
+                    }}
+                  />
+                  <span>{emp.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="shift-container" ref={calendarContainerRef}>
-        {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>
-        ) : (
-          <div className="shift-calendar">
-            {filteredDates.map((date) => (
-              <DayBlock
-                key={date}
-                dayData={groupedData[date]}
-                visibleEmployeeIds={visibleEmployeeIds}
-                employees={employees}
-                colorByName={colorByName}
-                salesByDate={salesByDate}
-                isDayClosed={Boolean(closuresByDate[date])}
-                isAdmin={isAuthenticated}
-                dayReservations={reservationsByDate[date] ?? []}
-                resendPending={resendCloseMutation.isPending}
-                onResendCloseReport={handleResendCloseReport}
-                onOpenVehicleSales={(carNum) => setVehicleSalesTarget({ date, carNum })}
-                onOpenVehicleSummary={(carNum) =>
-                  setVehicleSummaryTarget({ date, dow: groupedData[date]?.dow, carNum })
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        <div className="shift-container" ref={calendarContainerRef}>
+          {loading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>読み込み中...</div>
+          ) : (
+            <div className="shift-calendar">
+              {filteredDates.map((date) => (
+                <DayBlock
+                  key={date}
+                  dayData={groupedData[date]}
+                  visibleEmployeeIds={visibleEmployeeIds}
+                  employees={employees}
+                  colorByName={colorByName}
+                  salesByDate={salesByDate}
+                  isDayClosed={Boolean(closuresByDate[date])}
+                  isAdmin={isAuthenticated}
+                  dayReservations={reservationsByDate[date] ?? []}
+                  resendPending={resendCloseMutation.isPending}
+                  onResendCloseReport={handleResendCloseReport}
+                  onOpenVehicleSales={(carNum) => setVehicleSalesTarget({ date, carNum })}
+                  onOpenVehicleSummary={(carNum) =>
+                    setVehicleSummaryTarget({ date, dow: groupedData[date]?.dow, carNum })
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-      <ReservationTonightDialog
-        open={tonightOpen}
-        workDate={tonightWorkDate}
-        reservations={tonightReservations}
-        onClose={() => {
-          markTonightDialogDismissed(tonightWorkDate)
-          setTonightOpen(false)
-        }}
-      />
+        <ReservationTonightDialog
+          open={tonightOpen}
+          workDate={tonightWorkDate}
+          reservations={tonightReservations}
+          onClose={() => {
+            markTonightDialogDismissed(tonightWorkDate)
+            setTonightOpen(false)
+          }}
+        />
 
-      <VehicleSalesModal
-        open={Boolean(vehicleSalesTarget)}
-        workDate={vehicleSalesTarget?.date ?? null}
-        carNum={vehicleSalesTarget?.carNum ?? null}
-        dayShifts={
-          vehicleSalesTarget?.date ? (groupedData[vehicleSalesTarget.date]?.shifts ?? []) : []
-        }
-        employees={employees}
-        isDayClosed={
-          vehicleSalesTarget?.date
-            ? Boolean(closuresByDate[vehicleSalesTarget.date]) ||
-              Boolean(salesByDate[toWorkDateKey(vehicleSalesTarget.date)]?.closed_at)
-            : false
-        }
-        isAdmin={isAuthenticated}
-        onClose={() => setVehicleSalesTarget(null)}
-      />
+        <VehicleSalesModal
+          open={Boolean(vehicleSalesTarget)}
+          workDate={vehicleSalesTarget?.date ?? null}
+          carNum={vehicleSalesTarget?.carNum ?? null}
+          dayShifts={
+            vehicleSalesTarget?.date ? (groupedData[vehicleSalesTarget.date]?.shifts ?? []) : []
+          }
+          employees={employees}
+          isDayClosed={
+            vehicleSalesTarget?.date
+              ? Boolean(closuresByDate[vehicleSalesTarget.date]) ||
+                Boolean(salesByDate[toWorkDateKey(vehicleSalesTarget.date)]?.closed_at)
+              : false
+          }
+          isAdmin={isAuthenticated}
+          onClose={() => setVehicleSalesTarget(null)}
+        />
 
-      <VehicleSalesSummaryModal
-        open={Boolean(vehicleSummaryTarget)}
-        workDate={vehicleSummaryTarget?.date ?? null}
-        dow={vehicleSummaryTarget?.dow ?? ''}
-        carNum={vehicleSummaryTarget?.carNum ?? null}
-        dayShifts={
-          vehicleSummaryTarget?.date ? (groupedData[vehicleSummaryTarget.date]?.shifts ?? []) : []
-        }
-        employees={employees}
-        onClose={() => setVehicleSummaryTarget(null)}
-      />
+        <VehicleSalesSummaryModal
+          open={Boolean(vehicleSummaryTarget)}
+          workDate={vehicleSummaryTarget?.date ?? null}
+          dow={vehicleSummaryTarget?.dow ?? ''}
+          carNum={vehicleSummaryTarget?.carNum ?? null}
+          dayShifts={
+            vehicleSummaryTarget?.date ? (groupedData[vehicleSummaryTarget.date]?.shifts ?? []) : []
+          }
+          employees={employees}
+          onClose={() => setVehicleSummaryTarget(null)}
+        />
       </div>
     </PageFrame>
   )

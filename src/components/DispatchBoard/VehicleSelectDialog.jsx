@@ -21,11 +21,7 @@ export function VehicleSelectDialog({ open, vehicles, onClose, onSelect }) {
           <LayoutContent>
             <List>
               {(vehicles ?? []).map((vehicle) => (
-                <ListItem
-                  key={vehicle.id}
-                  label={vehicle.name}
-                  onClick={() => onSelect(vehicle)}
-                />
+                <ListItem key={vehicle.id} label={vehicle.name} onClick={() => onSelect(vehicle)} />
               ))}
             </List>
           </LayoutContent>

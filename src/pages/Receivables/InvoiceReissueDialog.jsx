@@ -163,11 +163,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         setStrategy(recommendedStrategy(sorted.length))
         setOtherUnbilledCount((unbilled ?? []).length)
         setIssueDate(
-          toIssueDateValue(
-            detailQuery.data.issue_date ?? invoice.issue_date,
-            year,
-            month
-          )
+          toIssueDateValue(detailQuery.data.issue_date ?? invoice.issue_date, year, month)
         )
         setError(null)
         setInitializedFor(invoice.id)
@@ -183,7 +179,16 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
     return () => {
       cancelled = true
     }
-  }, [open, invoice?.id, invoice?.company_id, invoice?.issue_date, detailQuery.data, year, month, initializedFor])
+  }, [
+    open,
+    invoice?.id,
+    invoice?.company_id,
+    invoice?.issue_date,
+    detailQuery.data,
+    year,
+    month,
+    initializedFor,
+  ])
 
   // 閉じたら初期化フラグをリセット
   useEffect(() => {
@@ -419,8 +424,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                         件数: <Text weight="semibold">{lines.length}</Text>
                       </Text>
                       <Text>
-                        合計:{' '}
-                        <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
+                        合計: <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
                       </Text>
                       <DateInput
                         label="発行日"

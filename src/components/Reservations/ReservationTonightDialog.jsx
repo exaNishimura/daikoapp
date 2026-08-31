@@ -38,12 +38,7 @@ export function ReservationTonightDialog({ open, workDate, reservations, onClose
       <Layout
         height="auto"
         padding={4}
-        header={
-          <DialogHeader
-            title={`本日の予約 ${count}件`}
-            onOpenChange={handleOpenChange}
-          />
-        }
+        header={<DialogHeader title={`本日の予約 ${count}件`} onOpenChange={handleOpenChange} />}
         content={
           <LayoutContent>
             <VStack gap={4}>

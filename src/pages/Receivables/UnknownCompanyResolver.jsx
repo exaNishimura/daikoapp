@@ -90,9 +90,7 @@ export function UnknownCompanyResolver({ companyNames, companies, decisions, onC
                 <TableRow
                   key={name}
                   style={
-                    matched
-                      ? undefined
-                      : { backgroundColor: 'var(--color-background-yellow)' }
+                    matched ? undefined : { backgroundColor: 'var(--color-background-yellow)' }
                   }
                 >
                   <TableCell>{name}</TableCell>
@@ -141,7 +139,13 @@ export function UnknownCompanyResolver({ companyNames, companies, decisions, onC
                             label: `${c.invoice_display_name || c.name} に統合`,
                           })),
                           ...(candidates.length === 0
-                            ? [{ value: 'none', label: '(候補なし - スキップを選択)', disabled: true }]
+                            ? [
+                                {
+                                  value: 'none',
+                                  label: '(候補なし - スキップを選択)',
+                                  disabled: true,
+                                },
+                              ]
                             : []),
                         ]}
                       />

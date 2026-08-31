@@ -47,10 +47,7 @@ function MapEmbed({ order }) {
       <Text size="xsm" color="secondary">
         ルート表示
       </Text>
-      <VStack
-        height={300}
-        style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}
-      >
+      <VStack height={300} style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
         <iframe
           width="100%"
           height="100%"

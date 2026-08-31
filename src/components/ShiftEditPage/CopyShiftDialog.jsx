@@ -32,7 +32,9 @@ export function CopyShiftDialog({
             : `${day}日 (${dow})`,
         description:
           dateShifts.length > 0
-            ? dateShifts.map((shift) => `${shift.staff} / ${shift.start} - ${shift.end}`).join(' / ')
+            ? dateShifts
+                .map((shift) => `${shift.staff} / ${shift.start} - ${shift.end}`)
+                .join(' / ')
             : 'シフト未設定',
       }
     })

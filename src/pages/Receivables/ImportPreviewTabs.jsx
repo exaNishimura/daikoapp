@@ -139,9 +139,7 @@ function ReceivablesTable({ rows }) {
         {rows.map((r, i) => (
           <TableRow
             key={i}
-            style={
-              r.duplicate ? { backgroundColor: 'var(--color-background-muted)' } : undefined
-            }
+            style={r.duplicate ? { backgroundColor: 'var(--color-background-muted)' } : undefined}
           >
             <TableCell>{r.companyName}</TableCell>
             <TableCell>{fmtDate(r.workDate)}</TableCell>
@@ -150,7 +148,9 @@ function ReceivablesTable({ rows }) {
             <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
               ¥{Number(r.amount).toLocaleString('ja-JP')}
             </TableCell>
-            <TableCell>{r.duplicate ? <Token size="sm" label="重複" color="gray" /> : null}</TableCell>
+            <TableCell>
+              {r.duplicate ? <Token size="sm" label="重複" color="gray" /> : null}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

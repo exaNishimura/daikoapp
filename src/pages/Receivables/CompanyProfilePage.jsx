@@ -123,7 +123,9 @@ function ProfileForm({ initial, onSave, isSaving }) {
               onChange={handleChange('postal_code')}
               onBlur={handleBlurPostal}
               status={fieldStatus(errors.postal_code)}
-              description={errors.postal_code ? undefined : '123-4567 形式（ハイフン無しでも自動補完）'}
+              description={
+                errors.postal_code ? undefined : '123-4567 形式（ハイフン無しでも自動補完）'
+              }
               isRequired
               width="100%"
               isDisabled={isSaving}

@@ -368,11 +368,7 @@ export function ShiftEditPage() {
                     {isExpanded ? (
                       <VStack gap={3}>
                         {status ? (
-                          <Token
-                            size="md"
-                            color={statusTokenColor(status)}
-                            label={status}
-                          />
+                          <Token size="md" color={statusTokenColor(status)} label={status} />
                         ) : (
                           <>
                             {dateShifts.length > 0 ? (

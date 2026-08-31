@@ -61,7 +61,9 @@ export function CompanySelect({
   const searchSource = useMemo(
     () => ({
       search: (rawQuery) => {
-        const q = String(rawQuery || '').trim().toLowerCase()
+        const q = String(rawQuery || '')
+          .trim()
+          .toLowerCase()
         const filtered = !q
           ? options
           : options.filter((o) => {

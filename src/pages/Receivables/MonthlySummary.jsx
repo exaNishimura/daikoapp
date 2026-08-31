@@ -15,11 +15,7 @@ function Stat({ label, value, accent }) {
         weight="semibold"
         style={{
           fontVariantNumeric: 'tabular-nums',
-          color: accent
-            ? n < 0
-              ? 'var(--color-text-red)'
-              : 'var(--color-text-green)'
-            : undefined,
+          color: accent ? (n < 0 ? 'var(--color-text-red)' : 'var(--color-text-green)') : undefined,
         }}
       >
         ¥{n.toLocaleString('ja-JP')}

@@ -14,7 +14,7 @@ export function ToastProvider({ children }) {
         isAutoHide: severity !== 'error',
       })
     },
-    [toast],
+    [toast]
   )
 
   return <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>

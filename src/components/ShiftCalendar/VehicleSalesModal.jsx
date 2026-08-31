@@ -66,7 +66,13 @@ const NATIVE_INPUT_STYLE = {
 function TimeField({ label, value, onChange, disabled, isLabelHidden = false }) {
   const inputId = useId()
   return (
-    <Field label={label} inputID={inputId} width="100%" isDisabled={disabled} isLabelHidden={isLabelHidden}>
+    <Field
+      label={label}
+      inputID={inputId}
+      width="100%"
+      isDisabled={disabled}
+      isLabelHidden={isLabelHidden}
+    >
       <input
         id={inputId}
         type="time"
@@ -293,7 +299,12 @@ export function VehicleSalesModal({
   const startActions = (
     <>
       {adminCanEdit ? (
-        <Button label="号車変更" variant="secondary" onClick={handleOpenReassign} isDisabled={loading} />
+        <Button
+          label="号車変更"
+          variant="secondary"
+          onClick={handleOpenReassign}
+          isDisabled={loading}
+        />
       ) : null}
       {isDayClosed && adminCanEdit ? (
         <Button
@@ -411,7 +422,9 @@ export function VehicleSalesModal({
                             <TimeField
                               label="開始"
                               value={row.start}
-                              onChange={(value) => handleShiftTimeChange(row.shiftId, 'start', value)}
+                              onChange={(value) =>
+                                handleShiftTimeChange(row.shiftId, 'start', value)
+                              }
                               disabled={formDisabled}
                             />
                             <TimeField
@@ -554,9 +567,7 @@ export function VehicleSalesModal({
                   <HStack gap={2} wrap="wrap">
                     {startActions}
                   </HStack>
-                  <HStack gap={2}>
-                    {endActions}
-                  </HStack>
+                  <HStack gap={2}>{endActions}</HStack>
                 </HStack>
               )}
             </LayoutFooter>

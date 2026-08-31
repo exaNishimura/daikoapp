@@ -282,7 +282,9 @@ export function DispatchBoard() {
             status="error"
             title={error}
             collapsible={false}
-            endContent={<Button label="再読み込み" variant="secondary" size="sm" onClick={loadData} />}
+            endContent={
+              <Button label="再読み込み" variant="secondary" size="sm" onClick={loadData} />
+            }
           />
         ) : null}
 

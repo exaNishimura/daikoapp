@@ -57,7 +57,9 @@ export function InvoicePreviewDialog({ open, onClose, companyName, previews }) {
                     <Tab
                       key={idx}
                       value={String(idx)}
-                      label={p.sequence ? `${p.sequence.index} / ${p.sequence.total}` : `${idx + 1}`}
+                      label={
+                        p.sequence ? `${p.sequence.index} / ${p.sequence.total}` : `${idx + 1}`
+                      }
                       panelId={`invoice-preview-panel-${idx}`}
                     />
                   ))}

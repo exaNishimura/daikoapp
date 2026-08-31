@@ -30,9 +30,7 @@ export function ReservationDayBadge({ date, reservations }) {
       label={`${date} の予約`}
       content={
         <VStack gap={2} padding={2}>
-          <Text weight="semibold">
-            {date} の予約
-          </Text>
+          <Text weight="semibold">{date} の予約</Text>
           {sorted.map((r) => (
             <Text key={r.id}>
               {dayjs(r.reserved_at).format('HH:mm')} {r.customer_name}

@@ -141,9 +141,7 @@ export function InvoiceUnpaidTab() {
                 ) : null}
                 <Text
                   weight="semibold"
-                  style={
-                    summary.over_60_count > 0 ? { color: 'var(--color-text-red)' } : undefined
-                  }
+                  style={summary.over_60_count > 0 ? { color: 'var(--color-text-red)' } : undefined}
                 >
                   {summary.over_60_count} 件
                 </Text>
@@ -202,9 +200,7 @@ export function InvoiceUnpaidTab() {
               return (
                 <TableRow
                   key={r.id}
-                  style={
-                    overdue ? { backgroundColor: 'var(--color-background-red)' } : undefined
-                  }
+                  style={overdue ? { backgroundColor: 'var(--color-background-red)' } : undefined}
                 >
                   <TableCell>{fmtMonth(r.billing_month)}</TableCell>
                   <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>

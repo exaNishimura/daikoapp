@@ -262,11 +262,7 @@ export function ReservationLedgerPage() {
             </TableHeader>
             <TableBody>
               {rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  onClick={() => setDetail(row)}
-                  style={{ cursor: 'pointer' }}
-                >
+                <TableRow key={row.id} onClick={() => setDetail(row)} style={{ cursor: 'pointer' }}>
                   <TableCell>{formatReservedAt(row.reserved_at)}</TableCell>
                   <TableCell>{row.customer_name}</TableCell>
                   <TableCell>
@@ -333,11 +329,7 @@ export function ReservationLedgerPage() {
           }}
         />
 
-        <Dialog
-          isOpen={Boolean(deleteTarget)}
-          onOpenChange={handleDeleteOpenChange}
-          purpose="info"
-        >
+        <Dialog isOpen={Boolean(deleteTarget)} onOpenChange={handleDeleteOpenChange} purpose="info">
           <Layout
             height="auto"
             padding={4}

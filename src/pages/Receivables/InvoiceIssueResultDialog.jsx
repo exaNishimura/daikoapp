@@ -70,9 +70,7 @@ export function InvoiceIssueResultDialog({ open, result, onClose, year, month })
                     }
                     collapsible={false}
                   />
-                  {zipError ? (
-                    <Banner status="error" title={zipError} collapsible={false} />
-                  ) : null}
+                  {zipError ? <Banner status="error" title={zipError} collapsible={false} /> : null}
                   <List>
                     {successes.map((s, idx) => (
                       <ListItem

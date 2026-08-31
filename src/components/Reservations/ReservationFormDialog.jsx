@@ -41,13 +41,7 @@ function buildReservedAtIso(date, time) {
 function TimeField({ label, value, onChange, isRequired, status }) {
   const inputId = useId()
   return (
-    <Field
-      label={label}
-      inputID={inputId}
-      width="100%"
-      isRequired={isRequired}
-      status={status}
-    >
+    <Field label={label} inputID={inputId} width="100%" isRequired={isRequired} status={status}>
       <input
         id={inputId}
         type="time"
@@ -118,9 +112,7 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
       content={
         <LayoutContent>
           <VStack gap={4} className="reservation-form-dialog__fields">
-            {submitError ? (
-              <Banner status="error" title={submitError} collapsible={false} />
-            ) : null}
+            {submitError ? <Banner status="error" title={submitError} collapsible={false} /> : null}
             <DateInput
               label="予約日"
               value={reservedDate || undefined}
@@ -156,25 +148,14 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
               width="100%"
               status={fieldErrors.phone ? { type: 'error', message: '必須です' } : undefined}
             />
-            <TextArea
-              label="メモ（備忘）"
-              value={memo}
-              onChange={setMemo}
-              rows={2}
-              width="100%"
-            />
+            <TextArea label="メモ（備忘）" value={memo} onChange={setMemo} rows={2} width="100%" />
           </VStack>
         </LayoutContent>
       }
       footer={
         <LayoutFooter>
           <HStack className="reservation-form-dialog__footer" gap={2} hAlign="end" wrap="wrap">
-            <Button
-              label="キャンセル"
-              variant="secondary"
-              onClick={onClose}
-              isDisabled={saving}
-            />
+            <Button label="キャンセル" variant="secondary" onClick={onClose} isDisabled={saving} />
             <Button
               label="保存"
               variant="primary"

@@ -9,7 +9,7 @@ const EXTERNAL_HREF = /^(https?:|mailto:|tel:)/i
  */
 export const AstryxRouterLink = forwardRef(function AstryxRouterLink(
   { href, children, ...props },
-  ref,
+  ref
 ) {
   if (typeof href === 'string' && (EXTERNAL_HREF.test(href) || href.startsWith('//'))) {
     return (

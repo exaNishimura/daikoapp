@@ -155,12 +155,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading, hand
       footer={
         <LayoutFooter>
           <HStack gap={2} hAlign="end">
-            <Button
-              label="キャンセル"
-              variant="secondary"
-              onClick={onClose}
-              isDisabled={loading}
-            />
+            <Button label="キャンセル" variant="secondary" onClick={onClose} isDisabled={loading} />
             <Button
               label="保存"
               variant="primary"

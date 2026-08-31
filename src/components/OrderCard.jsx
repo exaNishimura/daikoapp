@@ -82,11 +82,7 @@ export function OrderCard({ order, isSelected, onClick }) {
   const statusColor = STATUS_TOKEN_COLOR[order.status] || 'gray'
   const routeSummary = formatRouteSummary(order)
 
-  const className = [
-    'order-card',
-    isSelected ? 'selected' : '',
-    isDragging ? 'dragging' : '',
-  ]
+  const className = ['order-card', isSelected ? 'selected' : '', isDragging ? 'dragging' : '']
     .filter(Boolean)
     .join(' ')
 

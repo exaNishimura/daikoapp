@@ -153,9 +153,7 @@ export function LineQueuePage() {
                     <Text>電話: {selected.line_bookings?.contact_phone}</Text>
                     <Text>LINE: {selected.line_bookings?.line_user_id}</Text>
                     <Text>状態: {unitStatusLabel(selected.status)}</Text>
-                    <Text>
-                      割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}
-                    </Text>
+                    <Text>割引: {selected.line_bookings?.discount_snapshot?.label || 'なし'}</Text>
                     {selected.projection_error ? (
                       <Banner
                         status="warning"
@@ -173,11 +171,7 @@ export function LineQueuePage() {
             footer={
               <LayoutFooter>
                 <HStack gap={2} hAlign="end" wrap="wrap">
-                  <Button
-                    label="閉じる"
-                    variant="secondary"
-                    onClick={() => setSelected(null)}
-                  />
+                  <Button label="閉じる" variant="secondary" onClick={() => setSelected(null)} />
                   <Button
                     label="削除"
                     variant="destructive"
