@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
@@ -84,6 +85,7 @@ function RequestDetailRow({ row }) {
 }
 
 export function ShiftRequestsAdminPage() {
+  const navigate = useNavigate()
   const [month, setMonth] = useState(() => dayjs().add(1, 'month').format('YYYY-MM'))
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -113,7 +115,17 @@ export function ShiftRequestsAdminPage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <Heading level={1}>シフト希望一覧（管理者）</Heading>
+        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+          <Heading level={1}>シフト希望一覧（管理者）</Heading>
+          <Button
+            label="この月のシフトを編集"
+            variant="primary"
+            onClick={() => {
+              const [y, m] = month.split('-')
+              navigate(`/shift/edit?year=${Number(y)}&month=${Number(m)}`)
+            }}
+          />
+        </HStack>
 
         <Card padding={4}>
           <HStack hAlign="center" vAlign="center" gap={1}>

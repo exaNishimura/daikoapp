@@ -7,6 +7,7 @@ import {
   useDeleteShiftsByDate,
 } from '@/hooks/useShifts'
 import { useEmployees } from '@/hooks/useEmployees'
+import { useShiftAvailabilityRequests } from '@/hooks/useShiftAvailabilityRequests'
 import {
   buildStaffColorByName,
   getEmployeeSelectOptions,
@@ -19,6 +20,13 @@ import {
   getShiftPlannedTimesForCopy,
   withPlannedShiftTimes,
 } from '@/lib/shiftEditUtils'
+import {
+  buildRequestsByDate,
+  buildStaffAdoptionSummary,
+  computeShiftsLaborCost,
+  findAdoptedShiftsForEmployee,
+  suggestCarAndRole,
+} from '@/lib/shiftRequestEdit'
 
 const EMPTY_NEW_SHIFT = {
   car: '',
@@ -29,11 +37,13 @@ const EMPTY_NEW_SHIFT = {
   note: '',
 }
 
+const EMPTY_LIST = Object.freeze([])
+
 /**
  * ShiftEditPage 用のステート + ハンドラーをまとめた hook
  *
- * - フェッチ系: useShiftsByMonth / useEmployees
- * - 編集系: 日次の新規追加、既存シフトの編集、一括保存、削除、ステータス変更
+ * - フェッチ系: useShiftsByMonth / useEmployees / シフト希望
+ * - 編集系: 日次の新規追加、希望チェックでの採用、既存シフトの編集、一括保存、削除、ステータス変更
  * - コピー系: 単日コピー、一括コピー
  *
  * UI 由来の state (router の year/month) は呼び出し側に残し、
@@ -76,22 +86,37 @@ export function useShiftEditPage({ year, month }) {
     setCopyDestDates({})
   }, [year, month])
 
+  const yearMonth = year && month ? `${year}-${String(month).padStart(2, '0')}` : null
+
   const shiftsQuery = useShiftsByMonth(year, month)
   const employeesQuery = useEmployees()
+  const requestsQuery = useShiftAvailabilityRequests(yearMonth)
   const createShiftMutation = useCreateShift()
   const updateShiftMutation = useUpdateShift()
   const deleteShiftMutation = useDeleteShift()
   const deleteShiftsByDateMutation = useDeleteShiftsByDate()
 
-  const shifts = shiftsQuery.data ?? []
-  const employees = employeesQuery.data ?? []
+  const shifts = shiftsQuery.data ?? EMPTY_LIST
+  const employees = employeesQuery.data ?? EMPTY_LIST
+  const requestRows = requestsQuery.data ?? EMPTY_LIST
   const fetchError = shiftsQuery.error
+  const requestsError = requestsQuery.error
   const isMutating =
     createShiftMutation.isPending ||
     updateShiftMutation.isPending ||
     deleteShiftMutation.isPending ||
     deleteShiftsByDateMutation.isPending
   const loading = shiftsQuery.isLoading || isMutating
+
+  const requestsByDate = useMemo(() => buildRequestsByDate(requestRows), [requestRows])
+  const staffSummary = useMemo(
+    () => buildStaffAdoptionSummary({ requestRows, shifts, employees }),
+    [requestRows, shifts, employees]
+  )
+  const monthLaborCost = useMemo(
+    () => computeShiftsLaborCost(shifts, employees),
+    [shifts, employees]
+  )
 
   const statuses = useMemo(() => {
     const map = {}
@@ -404,18 +429,62 @@ export function useShiftEditPage({ year, month }) {
     }
   }
 
+  const handleToggleRequest = async (date, request, checked) => {
+    const dateShifts = getShiftsForDate(date)
+    const existing = findAdoptedShiftsForEmployee(dateShifts, request.employeeId, employees)
+
+    setError(null)
+    setSuccess(null)
+
+    try {
+      if (!checked) {
+        if (existing.length === 0) return
+        await Promise.all(existing.map((shift) => deleteShiftMutation.mutateAsync(shift.id)))
+        setSuccess(`${request.name} の採用を解除しました`)
+        return
+      }
+
+      if (existing.length > 0) return
+
+      const { car, role } = suggestCarAndRole(dateShifts, request.licenseType, employees)
+      const dow = DOW_MAP[new Date(date).getDay()]
+      await createShiftMutation.mutateAsync(
+        withPlannedShiftTimes({
+          date,
+          dow,
+          car,
+          role,
+          ...toShiftStaffFields(request.employeeId, employees),
+          start: request.start,
+          end: request.end,
+          note: null,
+        })
+      )
+      setSuccess(`${request.name} を採用しました（${car}号車 / ${role}）`)
+    } catch (err) {
+      setError(`希望の反映に失敗: ${err.message}`)
+      throw err
+    }
+  }
+
   return {
     // データ
     shifts,
     employees,
     fetchError,
+    requestsError,
     loading,
     days,
     statuses,
     staffColorByName,
     employeeSelectOptions,
     getShiftsForDate,
-    refetchShifts: shiftsQuery.refetch,
+    refetchShifts: () => Promise.all([shiftsQuery.refetch(), requestsQuery.refetch()]),
+    requestsByDate,
+    requestRows,
+    staffSummary,
+    monthLaborCost,
+    handleToggleRequest,
 
     // フィードバック
     error,

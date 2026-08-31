@@ -46,6 +46,10 @@ export const queryKeys = {
     all: ['shifts'],
     byMonth: (year, month) => ['shifts', 'byMonth', year, month],
   },
+  shiftRequests: {
+    all: ['shiftRequests'],
+    byMonth: (yearMonth) => ['shiftRequests', 'byMonth', yearMonth],
+  },
   dispatchSlots: {
     all: ['dispatchSlots'],
     byDate: (date) => ['dispatchSlots', 'byDate', date],

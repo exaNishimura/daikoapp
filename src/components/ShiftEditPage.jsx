@@ -28,6 +28,8 @@ import { PageFrame } from '@/components/PageFrame'
 import { TimeAxis, CarBlock } from './ShiftEditPage/Timeline'
 import { CopyShiftDialog } from './ShiftEditPage/CopyShiftDialog'
 import { BulkCopyShiftDialog } from './ShiftEditPage/BulkCopyShiftDialog'
+import { DayAvailabilityTokens, RequestPicker } from './ShiftEditPage/RequestPicker'
+import { ShiftEditSummary } from './ShiftEditPage/ShiftEditSummary'
 import './ShiftEditPage.css'
 
 const NATIVE_INPUT_STYLE = {
@@ -140,6 +142,12 @@ export function ShiftEditPage() {
     employees,
     getShiftsForDate,
     refetchShifts,
+    requestsError,
+    requestsByDate,
+    requestRows,
+    staffSummary,
+    monthLaborCost,
+    handleToggleRequest,
     error,
     success,
     setError,
@@ -177,6 +185,7 @@ export function ShiftEditPage() {
 
   const monthLabel = year && month ? `${year}年${month}月` : ''
   const editingCount = Object.keys(editingShifts).length
+  const hasAnyRequests = requestRows.some((row) => row.has_request)
 
   return (
     <PageFrame>
@@ -259,6 +268,19 @@ export function ShiftEditPage() {
             collapsible={false}
           />
         ) : null}
+        {requestsError ? (
+          <Banner
+            status="warning"
+            title={`シフト希望の取得に失敗: ${requestsError.message}`}
+            collapsible={false}
+          />
+        ) : null}
+
+        <ShiftEditSummary
+          staffSummary={staffSummary}
+          monthLaborCost={monthLaborCost}
+          requestRows={requestRows}
+        />
         {error ? (
           <Banner
             status="error"
@@ -287,7 +309,7 @@ export function ShiftEditPage() {
           </Center>
         ) : null}
 
-        {!loading && days.length > 0 ? (
+        {days.length > 0 ? (
           <VStack gap={3}>
             {days.map(({ date, day, dow }) => {
               const dateShifts = getShiftsForDate(date)
@@ -340,6 +362,13 @@ export function ShiftEditPage() {
                         {hasShifts && !status ? (
                           <Token size="sm" color="blue" label={`${dateShifts.length}件`} />
                         ) : null}
+                        {!status && hasAnyRequests ? (
+                          <DayAvailabilityTokens
+                            dayRequests={requestsByDate[date] ?? []}
+                            dateShifts={dateShifts}
+                            employees={employees}
+                          />
+                        ) : null}
                       </HStack>
                       <HStack gap={2} vAlign="center" wrap="wrap">
                         <Selector
@@ -371,6 +400,18 @@ export function ShiftEditPage() {
                           <Token size="md" color={statusTokenColor(status)} label={status} />
                         ) : (
                           <>
+                            {hasAnyRequests ? (
+                              <RequestPicker
+                                date={date}
+                                status={status}
+                                dayRequests={requestsByDate[date] ?? []}
+                                dateShifts={dateShifts}
+                                employees={employees}
+                                onToggle={handleToggleRequest}
+                                disabled={loading}
+                              />
+                            ) : null}
+
                             {dateShifts.length > 0 ? (
                               <VStack gap={2}>
                                 <Text weight="semibold">シフト表</Text>
