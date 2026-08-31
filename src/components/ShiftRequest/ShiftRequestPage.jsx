@@ -42,6 +42,10 @@ const NATIVE_INPUT_STYLE = {
   color: 'var(--color-text)',
 }
 
+function isValidTime(value) {
+  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)
+}
+
 function TimeField({ label, value, onChange }) {
   const inputId = useId()
   return (
@@ -67,13 +71,25 @@ function daysInMonth(month) {
   return days
 }
 
-function emptyPayload() {
-  return { days: {}, notes: '' }
+function emptyPayload(defaultStart = DEFAULT_START, defaultEnd = DEFAULT_END) {
+  return {
+    days: {},
+    notes: '',
+    default_start: defaultStart,
+    default_end: defaultEnd,
+  }
+}
+
+function resolveBaseHours(payload, fallbackStart = DEFAULT_START, fallbackEnd = DEFAULT_END) {
+  return {
+    start: isValidTime(payload?.default_start) ? payload.default_start : fallbackStart,
+    end: isValidTime(payload?.default_end) ? payload.default_end : fallbackEnd,
+  }
 }
 
 function ShiftRequestForm({ employee, onLogout }) {
   const [month, setMonth] = useState(() => dayjs().add(1, 'month').format('YYYY-MM'))
-  const [payload, setPayload] = useState(emptyPayload)
+  const [payload, setPayload] = useState(() => emptyPayload())
   const [dayStatusByDate, setDayStatusByDate] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -81,6 +97,8 @@ function ShiftRequestForm({ employee, onLogout }) {
   const [success, setSuccess] = useState(null)
 
   const dates = useMemo(() => daysInMonth(month), [month])
+  const defaultStart = isValidTime(payload.default_start) ? payload.default_start : DEFAULT_START
+  const defaultEnd = isValidTime(payload.default_end) ? payload.default_end : DEFAULT_END
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -101,13 +119,30 @@ function ShiftRequestForm({ employee, onLogout }) {
       setError(shiftsResult.error.message || 'シフト表の取得に失敗しました')
     }
 
+    setPayload((prev) => {
+      const sessionHours = resolveBaseHours(prev)
+      if (requestResult.error) {
+        return sanitizeShiftRequestPayload(
+          emptyPayload(sessionHours.start, sessionHours.end),
+          statusMap
+        )
+      }
+      const loaded = requestResult.data?.payload ?? emptyPayload()
+      const hours = resolveBaseHours(loaded, sessionHours.start, sessionHours.end)
+      return sanitizeShiftRequestPayload(
+        {
+          ...emptyPayload(hours.start, hours.end),
+          ...loaded,
+          default_start: hours.start,
+          default_end: hours.end,
+          days: loaded.days ?? {},
+          notes: loaded.notes ?? '',
+        },
+        statusMap
+      )
+    })
     if (requestResult.error) {
       setError((prev) => prev || requestResult.error.message)
-      setPayload(sanitizeShiftRequestPayload(emptyPayload(), statusMap))
-    } else {
-      setPayload(
-        sanitizeShiftRequestPayload(requestResult.data?.payload ?? emptyPayload(), statusMap)
-      )
     }
     setLoading(false)
   }, [month])
@@ -116,12 +151,28 @@ function ShiftRequestForm({ employee, onLogout }) {
     load()
   }, [load])
 
+  const setBaseHours = (patch) => {
+    setPayload((prev) => ({
+      ...prev,
+      ...(patch.start != null ? { default_start: patch.start } : {}),
+      ...(patch.end != null ? { default_end: patch.end } : {}),
+    }))
+  }
+
   const setDay = (date, patch) => {
     if (isRegularClosedDay(dayStatusByDate[date])) return
     setPayload((prev) => {
+      const baseStart = isValidTime(prev.default_start) ? prev.default_start : DEFAULT_START
+      const baseEnd = isValidTime(prev.default_end) ? prev.default_end : DEFAULT_END
       const days = { ...(prev.days || {}) }
-      const current = days[date] || { available: false, start: DEFAULT_START, end: DEFAULT_END }
-      days[date] = { ...current, ...patch }
+      const current = days[date] || { available: false, start: baseStart, end: baseEnd }
+      const next = { ...current, ...patch }
+      // 出勤可 ON 時は基本時間をデフォルト適用（個別に変えたい場合はあとから調整）
+      if (patch.available === true) {
+        next.start = baseStart
+        next.end = baseEnd
+      }
+      days[date] = next
       return { ...prev, days }
     })
   }
@@ -130,7 +181,12 @@ function ShiftRequestForm({ employee, onLogout }) {
     setSaving(true)
     setError(null)
     setSuccess(null)
-    const sanitized = sanitizeShiftRequestPayload(payload, dayStatusByDate)
+    const withDefaults = {
+      ...payload,
+      default_start: defaultStart,
+      default_end: defaultEnd,
+    }
+    const sanitized = sanitizeShiftRequestPayload(withDefaults, dayStatusByDate)
     const { error: apiErr } = await saveShiftAvailabilityRequest(month, sanitized)
     if (apiErr) {
       setError(apiErr.message)
@@ -180,8 +236,20 @@ function ShiftRequestForm({ employee, onLogout }) {
             />
           </HStack>
           <Text color="secondary">
-            出勤可能な日だけ「出勤可」をオンにし、時間帯を入力してください。オフの日は希望なし（出勤不可）として扱われます。
+            出勤可能な日だけ「出勤可」をオンにし、時間帯を入力してください。オフの日は希望なし（出勤不可）として扱われます。「出勤可」にしたときの初期時間は下の基本時間になります。
           </Text>
+          <HStack gap={2} wrap="wrap" vAlign="end">
+            <TimeField
+              label="基本開始"
+              value={defaultStart}
+              onChange={(start) => setBaseHours({ start })}
+            />
+            <TimeField
+              label="基本終了"
+              value={defaultEnd}
+              onChange={(end) => setBaseHours({ end })}
+            />
+          </HStack>
         </VStack>
       </Card>
 
@@ -213,8 +281,8 @@ function ShiftRequestForm({ employee, onLogout }) {
             const isClosed = isRegularClosedDay(dayStatus)
             const day = payload.days?.[date] || {
               available: false,
-              start: DEFAULT_START,
-              end: DEFAULT_END,
+              start: defaultStart,
+              end: defaultEnd,
             }
             return (
               <Card key={date} padding={3}>
@@ -238,12 +306,12 @@ function ShiftRequestForm({ employee, onLogout }) {
                         <>
                           <TimeField
                             label="開始"
-                            value={day.start || DEFAULT_START}
+                            value={day.start || defaultStart}
                             onChange={(start) => setDay(date, { start })}
                           />
                           <TimeField
                             label="終了"
-                            value={day.end || DEFAULT_END}
+                            value={day.end || defaultEnd}
                             onChange={(end) => setDay(date, { end })}
                           />
                         </>
