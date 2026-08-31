@@ -28,7 +28,7 @@ export function getMieLocationRestriction() {
 /**
  * Google Maps JS API（importLibrary）がブラウザに用意されているか
  */
-function isGoogleMapsBootstrapReady() {
+export function isGoogleMapsBootstrapReady() {
   return Boolean(
     typeof window !== 'undefined' &&
     window.google &&
@@ -38,22 +38,23 @@ function isGoogleMapsBootstrapReady() {
 }
 
 /**
- * places ライブラリを読み込む。main.jsx でスクリプト注入済みだが、
- * モーダル open 直後などまだ bootstrap が終わっていない可能性に備えてポーリングで待つ。
+ * Maps JS の named library を読み込む。main.jsx でスクリプト注入済みだが、
+ * 画面 open 直後などまだ bootstrap が終わっていない可能性に備えてポーリングで待つ。
  *
+ * @param {string} library - `places` / `maps` / `geocoding` など
  * @param {Object} [options]
- * @param {number} [options.timeoutMs=10000] - 諦めるまでの最大待機ミリ秒
- * @param {number} [options.pollIntervalMs=100] - ポーリング間隔
- * @returns {Promise<google.maps.PlacesLibrary|null>}
+ * @param {number} [options.timeoutMs=10000]
+ * @param {number} [options.pollIntervalMs=100]
+ * @returns {Promise<object|null>}
  */
-export function importPlacesLibrary({ timeoutMs = 10000, pollIntervalMs = 100 } = {}) {
+export function importGoogleMapsLibrary(library, { timeoutMs = 10000, pollIntervalMs = 100 } = {}) {
   return new Promise((resolve) => {
     const started = Date.now()
 
     const tryImport = () => {
       if (isGoogleMapsBootstrapReady()) {
         window.google.maps
-          .importLibrary('places')
+          .importLibrary(library)
           .then((lib) => resolve(lib))
           .catch(() => resolve(null))
         return
@@ -67,6 +68,26 @@ export function importPlacesLibrary({ timeoutMs = 10000, pollIntervalMs = 100 } 
 
     tryImport()
   })
+}
+
+/**
+ * places ライブラリを読み込む。
+ *
+ * @param {Object} [options]
+ * @returns {Promise<google.maps.PlacesLibrary|null>}
+ */
+export function importPlacesLibrary(options) {
+  return importGoogleMapsLibrary('places', options)
+}
+
+/**
+ * maps ライブラリを読み込む（地図本体）。
+ *
+ * @param {Object} [options]
+ * @returns {Promise<google.maps.MapsLibrary|null>}
+ */
+export function importMapsLibrary(options) {
+  return importGoogleMapsLibrary('maps', options)
 }
 
 /**

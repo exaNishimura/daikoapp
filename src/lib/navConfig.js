@@ -5,9 +5,10 @@ export const NAV_CATEGORIES = [
   {
     id: 'dispatch',
     label: '配車',
-    description: '電話受注の登録・配車確定、予約・LINE受付',
+    description: '電話受注の登録・配車確定、予約・LINE受付、所要時間の確認',
     items: [
       { to: '/dispatch', label: '配車画面', requiresAuth: false, end: true },
+      { to: '/travel-times', label: '所要時間マップ', requiresAuth: false },
       { to: '/reservations', label: '予約台帳', requiresAuth: false },
       { to: '/line-queue', label: 'LINE仮受付', requiresAuth: true },
     ],

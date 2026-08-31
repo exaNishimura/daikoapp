@@ -33,11 +33,11 @@ export function formatRouteCalculationError(error) {
     }
     if (message.includes('This API project is not authorized')) {
       return [
-        'Directions APIが有効になっていません。',
+        'Directions API または Distance Matrix API が有効になっていません。',
         '',
         '解決方法:',
         '1. Google Cloud Console (https://console.cloud.google.com/apis/library) にアクセス',
-        '2. 「Directions API」を検索',
+        '2. 「Directions API」「Distance Matrix API」を検索',
         '3. 「有効にする」をクリック',
       ].join('\n')
     }
@@ -47,7 +47,7 @@ export function formatRouteCalculationError(error) {
       `エラー詳細: ${message}`,
       '',
       '確認事項:',
-      '1. Directions APIが有効になっているか',
+      '1. Directions API / Distance Matrix API が有効になっているか',
       '2. APIキーの制限設定が適切か（開発環境では「なし」を推奨）',
       '3. APIキーが正しく設定されているか',
       '',

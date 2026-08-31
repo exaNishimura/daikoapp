@@ -21,7 +21,7 @@ describe('formatRouteCalculationError', () => {
     )
     expect(
       formatRouteCalculationError('REQUEST_DENIED: This API project is not authorized')
-    ).toMatch(/Directions APIが有効になっていません/)
+    ).toMatch(/Distance Matrix API/)
     expect(formatRouteCalculationError('REQUEST_DENIED: something else')).toMatch(
       /APIキーの権限がありません/
     )

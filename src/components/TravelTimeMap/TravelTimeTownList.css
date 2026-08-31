@@ -1,0 +1,21 @@
+.travel-time-gojuon-index {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-bg);
+  padding-block: var(--spacing-2);
+}
+
+[id^='travel-time-gojuon-'] {
+  scroll-margin-top: var(--spacing-10);
+}
+
+.travel-time-town-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 52px;
+}
+
+.travel-time-favorite-star svg,
+.travel-time-favorite-star .astryx-icon {
+  color: var(--color-icon-yellow);
+}

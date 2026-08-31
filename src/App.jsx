@@ -9,6 +9,7 @@ import {
   FileText,
   LayoutDashboard,
   ListChecks,
+  MapPin,
   MessageSquare,
   Pencil,
   Settings2,
@@ -44,12 +45,14 @@ import { InvoicesPage } from '@/pages/Receivables/InvoicesPage'
 import { ReceivablesImportPage } from '@/pages/Receivables/ReceivablesImportPage'
 import { useCompanyProfile } from '@/hooks/billing/useCompanyProfile'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { TravelTimeMapPage } from '@/pages/TravelTimeMapPage'
 import { isNavItemActive, filterVisibleCategories } from '@/lib/navConfig'
 
 const SYSTEM_NAME = '運転代行管理システム'
 
 const NAV_ITEM_ICONS = {
   '/dispatch': Truck,
+  '/travel-times': MapPin,
   '/reservations': BookOpen,
   '/line-queue': MessageSquare,
   '/shift': CalendarDays,
@@ -140,6 +143,7 @@ function AppRoutes() {
           </DispatchPinGate>
         }
       />
+      <Route path="/travel-times" element={<TravelTimeMapPage />} />
       <Route path="/shift" element={<ShiftCalendar />} />
       <Route path="/shift/request" element={<ShiftRequestPage />} />
       <Route
