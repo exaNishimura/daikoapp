@@ -25,7 +25,7 @@ import { useInvoice, useReissueInvoice } from '@/hooks/billing/useInvoices'
 import { getCompanyProfile } from '@/services/billing/companyProfileService'
 import { getReceivables } from '@/services/billing/receivablesService'
 import { generateInvoicePdf } from '@/lib/pdf/generateInvoicePdf'
-import { resolveIssueDate } from '@/lib/excel/formatters'
+import { formatIsoDate, resolveIssueDate } from '@/lib/excel/formatters'
 import {
   parseVehicleNumForSave,
   validateReceivableForm,
@@ -90,6 +90,22 @@ function monthBound(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${day}`
 }
 
+/** invoices.issue_date / YYYY-MM-DD → DateInput 用 ISO 日付 */
+function toIssueDateValue(raw, year, month) {
+  if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10)
+  }
+  return formatIsoDate(resolveIssueDate(year, month))
+}
+
+/** YYYY-MM-DD → ローカル Date（PDF 用。UTC ずれ防止） */
+function parseLocalIsoDate(iso) {
+  if (!iso || typeof iso !== 'string') return null
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(y, m - 1, d)
+}
+
 /**
  * 発行済請求書の「修正して再発行」ダイアログ。
  * 明細を編集 → 取消 → PDF 再生成を 1 操作で行う。
@@ -112,6 +128,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
 
   const [resultOpen, setResultOpen] = useState(false)
   const [result, setResult] = useState(null)
+  const [issueDate, setIssueDate] = useState('')
 
   const companyId = invoice?.company_id
   const companyName =
@@ -145,6 +162,13 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         setDeletedIds([])
         setStrategy(recommendedStrategy(sorted.length))
         setOtherUnbilledCount((unbilled ?? []).length)
+        setIssueDate(
+          toIssueDateValue(
+            detailQuery.data.issue_date ?? invoice.issue_date,
+            year,
+            month
+          )
+        )
         setError(null)
         setInitializedFor(invoice.id)
       } catch (err) {
@@ -159,13 +183,14 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
     return () => {
       cancelled = true
     }
-  }, [open, invoice?.id, invoice?.company_id, detailQuery.data, year, month, initializedFor])
+  }, [open, invoice?.id, invoice?.company_id, invoice?.issue_date, detailQuery.data, year, month, initializedFor])
 
   // 閉じたら初期化フラグをリセット
   useEffect(() => {
     if (!open) {
       setInitializedFor(null)
       setOtherUnbilledCount(0)
+      setIssueDate('')
     }
   }, [open])
 
@@ -187,6 +212,8 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
   )
 
   const allValid = lines.length > 0 && lineValidations.every((v) => v.isValid)
+  const issueDateValid = Boolean(parseLocalIsoDate(issueDate))
+  const canSubmit = allValid && issueDateValid
   const totalAmount = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)
   const isOverflow = lines.length > INVOICE_MAX_LINES
 
@@ -221,6 +248,11 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
       setError('明細に未入力・不正な項目があります')
       return
     }
+    const issueDateObj = parseLocalIsoDate(issueDate)
+    if (!issueDateObj) {
+      setError('発行日を入力してください')
+      return
+    }
     setError(null)
     setPreviewBusy(true)
     try {
@@ -231,14 +263,13 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         .slice()
         .sort((a, b) => String(a.work_date).localeCompare(String(b.work_date)))
       const chunks = expandByStrategy(sorted, strategy)
-      const issueDate = resolveIssueDate(year, month)
       const previews = []
 
       for (const chunk of chunks) {
         const chunkTotal = chunk.lines.reduce((s, x) => s + (Number(x.amount) || 0), 0)
         const pdfBuf = await generateInvoicePdf(
           {
-            issueDate,
+            issueDate: issueDateObj,
             companyDisplayName:
               companyName +
               (chunk.sequence ? ` (${chunk.sequence.index}/${chunk.sequence.total})` : ''),
@@ -275,6 +306,10 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
       setError('明細に未入力・不正な項目があります')
       return
     }
+    if (!parseLocalIsoDate(issueDate)) {
+      setError('発行日を入力してください')
+      return
+    }
     if (
       !window.confirm(`「${companyName}」の請求書を取消し、編集内容で再発行します。よろしいですか?`)
     ) {
@@ -289,6 +324,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
         lines: buildIssueLines(),
         deletedIds,
         strategy: isOverflow ? strategy : STRATEGIES.NORMAL,
+        issueDate,
       })
       setResult(out)
       setResultOpen(true)
@@ -316,9 +352,15 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
 
   return (
     <>
-      <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+      <Dialog
+        isOpen={open}
+        onOpenChange={handleOpenChange}
+        purpose="form"
+        width={960}
+        maxHeight="90dvh"
+      >
         <Layout
-          height="auto"
+          height="fill"
           padding={4}
           header={<DialogHeader title="請求書を修正して再発行" onOpenChange={handleOpenChange} />}
           content={
@@ -363,7 +405,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                       />
                     ) : null}
 
-                    <HStack gap={3} wrap="wrap" vAlign="center">
+                    <HStack gap={3} wrap="wrap" vAlign="end">
                       <Text>
                         取引先: <Text weight="semibold">{companyName}</Text>
                       </Text>
@@ -380,6 +422,20 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                         合計:{' '}
                         <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
                       </Text>
+                      <DateInput
+                        label="発行日"
+                        value={issueDate || undefined}
+                        onChange={(next) => setIssueDate(next ?? '')}
+                        format="system_date"
+                        size="sm"
+                        weekStartsOn="mon"
+                        isRequired
+                        status={
+                          issueDate && !issueDateValid
+                            ? { type: 'error', message: '日付が不正です' }
+                            : undefined
+                        }
+                      />
                     </HStack>
 
                     {isOverflow ? (
@@ -408,114 +464,129 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                       </Banner>
                     ) : null}
 
-                    <Table density="compact" hasHover>
-                      <TableHeader>
-                        <TableRow isHeaderRow>
-                          <TableHeaderCell>日付</TableHeaderCell>
-                          <TableHeaderCell>号車</TableHeaderCell>
-                          <TableHeaderCell>出発</TableHeaderCell>
-                          <TableHeaderCell>到着</TableHeaderCell>
-                          <TableHeaderCell>金額</TableHeaderCell>
-                          <TableHeaderCell>備考</TableHeaderCell>
-                          <TableHeaderCell />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {lines.map((line, idx) => {
-                          const { errors } = lineValidations[idx]
-                          return (
-                            <TableRow key={line.key}>
-                              <TableCell>
-                                <DateInput
-                                  label="日付"
-                                  isLabelHidden
-                                  value={line.work_date || undefined}
-                                  onChange={(work_date) =>
-                                    updateLine(line.key, { work_date: work_date ?? '' })
-                                  }
-                                  min={monthBound(year, month, '01')}
-                                  max={monthBound(year, month, '31')}
-                                  size="sm"
-                                  status={
-                                    errors.work_date
-                                      ? { type: 'error', message: errors.work_date }
-                                      : undefined
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <VehicleNumSelect
-                                  value={line.vehicle_num}
-                                  onChange={(vehicle_num) => updateLine(line.key, { vehicle_num })}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextInput
-                                  label="出発地"
-                                  isLabelHidden
-                                  size="sm"
-                                  value={line.departure}
-                                  onChange={(departure) => updateLine(line.key, { departure })}
-                                  placeholder="出発地"
-                                  width="100%"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextInput
-                                  label="到着地"
-                                  isLabelHidden
-                                  size="sm"
-                                  value={line.destination}
-                                  onChange={(destination) => updateLine(line.key, { destination })}
-                                  placeholder="到着地"
-                                  width="100%"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <AmountInput
-                                  value={line.amount}
-                                  onChange={(amount) => updateLine(line.key, { amount })}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextInput
-                                  label="備考"
-                                  isLabelHidden
-                                  size="sm"
-                                  value={line.note}
-                                  onChange={(note) => updateLine(line.key, { note })}
-                                  placeholder="備考"
-                                  width="100%"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Center>
-                                  <IconButton
+                    <div
+                      style={{
+                        width: '100%',
+                        overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                      }}
+                    >
+                      <Table density="compact" hasHover>
+                        <TableHeader>
+                          <TableRow isHeaderRow>
+                            <TableHeaderCell style={{ minWidth: 148 }}>日付</TableHeaderCell>
+                            <TableHeaderCell style={{ minWidth: 100 }}>号車</TableHeaderCell>
+                            <TableHeaderCell style={{ minWidth: 120 }}>出発</TableHeaderCell>
+                            <TableHeaderCell style={{ minWidth: 120 }}>到着</TableHeaderCell>
+                            <TableHeaderCell style={{ minWidth: 112 }}>金額</TableHeaderCell>
+                            <TableHeaderCell style={{ minWidth: 140 }}>備考</TableHeaderCell>
+                            <TableHeaderCell style={{ width: 48, minWidth: 48 }} />
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lines.map((line, idx) => {
+                            const { errors } = lineValidations[idx]
+                            return (
+                              <TableRow key={line.key}>
+                                <TableCell style={{ minWidth: 148 }}>
+                                  <DateInput
+                                    label="日付"
+                                    isLabelHidden
+                                    value={line.work_date || undefined}
+                                    onChange={(work_date) =>
+                                      updateLine(line.key, { work_date: work_date ?? '' })
+                                    }
+                                    min={monthBound(year, month, '01')}
+                                    max={monthBound(year, month, '31')}
                                     size="sm"
-                                    variant="destructive"
-                                    label="行を削除"
-                                    tooltip="行を削除"
-                                    icon={<Trash2 />}
-                                    onClick={() => handleDeleteLine(line)}
+                                    width="100%"
+                                    status={
+                                      errors.work_date
+                                        ? { type: 'error', message: errors.work_date }
+                                        : undefined
+                                    }
                                   />
-                                </Center>
+                                </TableCell>
+                                <TableCell style={{ minWidth: 100 }}>
+                                  <VehicleNumSelect
+                                    value={line.vehicle_num}
+                                    onChange={(vehicle_num) =>
+                                      updateLine(line.key, { vehicle_num })
+                                    }
+                                    isLabelHidden
+                                  />
+                                </TableCell>
+                                <TableCell style={{ minWidth: 120 }}>
+                                  <TextInput
+                                    label="出発地"
+                                    isLabelHidden
+                                    size="sm"
+                                    value={line.departure}
+                                    onChange={(departure) => updateLine(line.key, { departure })}
+                                    placeholder="出発地"
+                                    width="100%"
+                                  />
+                                </TableCell>
+                                <TableCell style={{ minWidth: 120 }}>
+                                  <TextInput
+                                    label="到着地"
+                                    isLabelHidden
+                                    size="sm"
+                                    value={line.destination}
+                                    onChange={(destination) =>
+                                      updateLine(line.key, { destination })
+                                    }
+                                    placeholder="到着地"
+                                    width="100%"
+                                  />
+                                </TableCell>
+                                <TableCell style={{ minWidth: 112 }}>
+                                  <AmountInput
+                                    value={line.amount}
+                                    onChange={(amount) => updateLine(line.key, { amount })}
+                                    isLabelHidden
+                                  />
+                                </TableCell>
+                                <TableCell style={{ minWidth: 140 }}>
+                                  <TextInput
+                                    label="備考"
+                                    isLabelHidden
+                                    size="sm"
+                                    value={line.note}
+                                    onChange={(note) => updateLine(line.key, { note })}
+                                    placeholder="備考"
+                                    width="100%"
+                                  />
+                                </TableCell>
+                                <TableCell style={{ width: 48, minWidth: 48 }}>
+                                  <Center>
+                                    <IconButton
+                                      size="sm"
+                                      variant="destructive"
+                                      label="行を削除"
+                                      tooltip="行を削除"
+                                      icon={<Trash2 />}
+                                      onClick={() => handleDeleteLine(line)}
+                                    />
+                                  </Center>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                          {lines.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7}>
+                                <Banner
+                                  status="warning"
+                                  title="明細がありません。行を追加するか、ダイアログを閉じてください。"
+                                  collapsible={false}
+                                />
                               </TableCell>
                             </TableRow>
-                          )
-                        })}
-                        {lines.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={7}>
-                              <Banner
-                                status="warning"
-                                title="明細がありません。行を追加するか、ダイアログを閉じてください。"
-                                collapsible={false}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
-                      </TableBody>
-                    </Table>
+                          ) : null}
+                        </TableBody>
+                      </Table>
+                    </div>
 
                     <Button
                       size="sm"
@@ -531,20 +602,20 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
           }
           footer={
             <LayoutFooter>
-              <HStack gap={2} hAlign="between">
+              <HStack gap={2} hAlign="between" wrap="wrap">
                 <Button
                   label="キャンセル"
                   variant="secondary"
                   onClick={handleDialogClose}
                   isDisabled={reissue.isPending}
                 />
-                <HStack gap={2}>
+                <HStack gap={2} wrap="wrap">
                   <Button
                     variant="secondary"
                     icon={<Eye />}
                     label="プレビュー"
                     onClick={handlePreview}
-                    isDisabled={loading || previewBusy || reissue.isPending || !allValid}
+                    isDisabled={loading || previewBusy || reissue.isPending || !canSubmit}
                     isLoading={previewBusy}
                   />
                   <Button
@@ -552,7 +623,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                     icon={<RefreshCw />}
                     label={reissue.isPending ? '再発行中…' : '再発行'}
                     onClick={handleReissue}
-                    isDisabled={loading || reissue.isPending || !allValid}
+                    isDisabled={loading || reissue.isPending || !canSubmit}
                     isLoading={reissue.isPending}
                   />
                 </HStack>

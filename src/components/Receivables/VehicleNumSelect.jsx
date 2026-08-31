@@ -10,10 +10,12 @@ export function VehicleNumSelect({
   label = '号車',
   size = 'small',
   disabled = false,
+  isLabelHidden = false,
 }) {
   return (
     <Selector
       label={label}
+      isLabelHidden={isLabelHidden}
       options={RECEIVABLE_VEHICLE_OPTIONS.map((opt) => ({
         value: String(opt.value ?? ''),
         label: opt.label,

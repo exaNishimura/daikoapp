@@ -43,6 +43,7 @@ export function AmountInput({
   label = '金額',
   placeholder = '¥0',
   disabled = false,
+  isLabelHidden = false,
 }) {
   const inputId = useId()
   const [draft, setDraft] = useState(null)
@@ -64,7 +65,7 @@ export function AmountInput({
   }
 
   return (
-    <Field label={label} inputID={inputId} width="100%">
+    <Field label={label} inputID={inputId} width="100%" isLabelHidden={isLabelHidden}>
       <input
         id={inputId}
         value={display}
