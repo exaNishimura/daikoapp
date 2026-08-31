@@ -2,15 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   LICENSE_TYPE1,
   LICENSE_TYPE2,
+  alignEndToShorter,
+  alignStartToLater,
   buildRequestsByDate,
   buildStaffAdoptionSummary,
   computeShiftsLaborCost,
   countAvailableByLicense,
+  earlierEndTime,
   evaluateDayStaffing,
   findAdoptedShiftsForEmployee,
   formatTimeRange,
   formatYen,
   isEmployeeAdoptedOnDate,
+  laterStartTime,
+  partnersNeedingEndTrim,
+  partnersNeedingStartPush,
+  requestedEndForEmployee,
+  requestedStartForEmployee,
   suggestCarAndRole,
 } from './shiftRequestEdit'
 
@@ -91,6 +99,63 @@ describe('findAdoptedShiftsForEmployee', () => {
     ])
     expect(isEmployeeAdoptedOnDate(dateShifts, 'e3', employees)).toBe(false)
     expect(isEmployeeAdoptedOnDate(dateShifts, 'e2', employees)).toBe(true)
+  })
+})
+
+describe('earlierEndTime / laterStartTime / align', () => {
+  it('翌日跨ぎでは 02:00 の方が 06:00 より短い', () => {
+    expect(earlierEndTime('06:00', '02:00')).toBe('02:00')
+    expect(earlierEndTime('02:00', '06:00')).toBe('02:00')
+    expect(earlierEndTime('01:00', '23:00')).toBe('23:00')
+  })
+
+  it('開始は 23:00 の方が 20:00 より遅い', () => {
+    expect(laterStartTime('20:00', '23:00')).toBe('23:00')
+    expect(laterStartTime('23:00', '20:00')).toBe('23:00')
+    expect(laterStartTime('00:30', '23:00')).toBe('00:30')
+  })
+
+  it('ペア相手の終了が早いならそちらに揃える', () => {
+    const partners = [{ planned_end: '02:00', planned_start: '20:00', end: '02:00' }]
+    expect(alignEndToShorter('06:00', partners)).toBe('02:00')
+    expect(alignEndToShorter('01:00', partners)).toBe('01:00')
+  })
+
+  it('ペア相手の開始が遅いならそちらに揃える', () => {
+    const partners = [{ planned_start: '23:00', planned_end: '06:00', start: '23:00' }]
+    expect(alignStartToLater('20:00', partners)).toBe('23:00')
+    expect(alignStartToLater('00:00', partners)).toBe('00:00')
+  })
+
+  it('相手の方が遅いときだけ終了を切り詰める', () => {
+    const partners = [
+      { id: 's1', planned_end: '06:00', end: '06:00' },
+      { id: 's2', planned_end: '02:00', end: '02:00' },
+    ]
+    expect(partnersNeedingEndTrim(partners, '02:00').map((s) => s.id)).toEqual(['s1'])
+    expect(partnersNeedingEndTrim(partners, '06:00')).toEqual([])
+  })
+
+  it('相手の開始が早いときだけ遅らせる', () => {
+    const partners = [
+      { id: 's1', planned_start: '20:00', start: '20:00' },
+      { id: 's2', planned_start: '23:00', start: '23:00' },
+    ]
+    expect(partnersNeedingStartPush(partners, '23:00').map((s) => s.id)).toEqual(['s1'])
+    expect(partnersNeedingStartPush(partners, '20:00')).toEqual([])
+  })
+
+  it('希望の開始・終了時刻を取り出す', () => {
+    const rows = [
+      {
+        employee_id: 'e1',
+        payload: {
+          days: { '2026-10-02': { available: true, start: '23:00', end: '2:00' } },
+        },
+      },
+    ]
+    expect(requestedStartForEmployee(rows, 'e1', '2026-10-02')).toBe('23:00')
+    expect(requestedEndForEmployee(rows, 'e1', '2026-10-02')).toBe('02:00')
   })
 })
 

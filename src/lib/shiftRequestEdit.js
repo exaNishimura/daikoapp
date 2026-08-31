@@ -1,6 +1,6 @@
 import { calcShiftWorkHours, normalizeTimeForInput } from '@/lib/billing/shiftStaffHours'
 import { getPlannedShiftTimes } from '@/lib/billing/shiftTargetAmount'
-import { CAR_OPTIONS } from '@/lib/shiftEditUtils'
+import { CAR_OPTIONS, timeToMinutes } from '@/lib/shiftEditUtils'
 import { resolveShiftEmployee } from '@/lib/staffFromEmployees'
 
 export const LICENSE_TYPE1 = '一種'
@@ -85,6 +85,104 @@ export function findAdoptedShiftsForEmployee(dateShifts, employeeId, employees) 
 
 export function isEmployeeAdoptedOnDate(dateShifts, employeeId, employees) {
   return findAdoptedShiftsForEmployee(dateShifts, employeeId, employees).length > 0
+}
+
+export function getOccupantsForCar(dateShifts, car) {
+  return activeDateShifts(dateShifts).filter((shift) => String(shift.car) === String(car))
+}
+
+/**
+ * 営業時間（19:00〜翌6:00）基準で、より早い終了時刻を返す。
+ * 06:00 より 02:00 の方が短い。
+ */
+export function earlierEndTime(a, b) {
+  const na = normalizeTimeForInput(a)
+  const nb = normalizeTimeForInput(b)
+  if (!na) return nb
+  if (!nb) return na
+  return timeToMinutes(na) <= timeToMinutes(nb) ? na : nb
+}
+
+/**
+ * 営業時間基準で、より遅い開始時刻を返す。
+ * 20:00 より 23:00 の方が遅い。
+ */
+export function laterStartTime(a, b) {
+  const na = normalizeTimeForInput(a)
+  const nb = normalizeTimeForInput(b)
+  if (!na) return nb
+  if (!nb) return na
+  return timeToMinutes(na) >= timeToMinutes(nb) ? na : nb
+}
+
+/**
+ * 同一号車の既存シフトと突き合わせ、いちばん短い終了時刻にする。
+ */
+export function alignEndToShorter(candidateEnd, partnerShifts) {
+  let end = normalizeTimeForInput(candidateEnd) || ''
+  for (const shift of partnerShifts ?? []) {
+    const partnerEnd = normalizeTimeForInput(getPlannedShiftTimes(shift).end)
+    if (!end) {
+      end = partnerEnd
+      continue
+    }
+    if (!partnerEnd) continue
+    end = earlierEndTime(end, partnerEnd)
+  }
+  return end
+}
+
+/**
+ * 同一号車の既存シフトと突き合わせ、いちばん遅い開始時刻にする。
+ */
+export function alignStartToLater(candidateStart, partnerShifts) {
+  let start = normalizeTimeForInput(candidateStart) || ''
+  for (const shift of partnerShifts ?? []) {
+    const partnerStart = normalizeTimeForInput(getPlannedShiftTimes(shift).start)
+    if (!start) {
+      start = partnerStart
+      continue
+    }
+    if (!partnerStart) continue
+    start = laterStartTime(start, partnerStart)
+  }
+  return start
+}
+
+/** 終了が alignedEnd より遅いパートナー（切り詰め対象） */
+export function partnersNeedingEndTrim(partnerShifts, alignedEnd) {
+  const target = normalizeTimeForInput(alignedEnd)
+  if (!target) return []
+  return (partnerShifts ?? []).filter((shift) => {
+    const current = normalizeTimeForInput(getPlannedShiftTimes(shift).end)
+    return Boolean(current) && timeToMinutes(target) < timeToMinutes(current)
+  })
+}
+
+/** 開始が alignedStart より早いパートナー（遅らせる対象） */
+export function partnersNeedingStartPush(partnerShifts, alignedStart) {
+  const target = normalizeTimeForInput(alignedStart)
+  if (!target) return []
+  return (partnerShifts ?? []).filter((shift) => {
+    const current = normalizeTimeForInput(getPlannedShiftTimes(shift).start)
+    return Boolean(current) && timeToMinutes(target) > timeToMinutes(current)
+  })
+}
+
+function requestedDay(requestRows, employeeId, date) {
+  if (!employeeId || !date) return null
+  const row = (requestRows ?? []).find((r) => r.employee_id === employeeId)
+  const day = row?.payload?.days?.[date]
+  if (!day?.available) return null
+  return day
+}
+
+export function requestedStartForEmployee(requestRows, employeeId, date) {
+  return normalizeTimeForInput(requestedDay(requestRows, employeeId, date)?.start) || null
+}
+
+export function requestedEndForEmployee(requestRows, employeeId, date) {
+  return normalizeTimeForInput(requestedDay(requestRows, employeeId, date)?.end) || null
 }
 
 /**

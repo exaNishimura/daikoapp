@@ -40,7 +40,7 @@ export function ShiftEditSummary({ staffSummary, monthLaborCost, requestRows }) 
           </HStack>
         </HStack>
         <Text color="secondary">
-          各日のチェックで希望を採用するとシフトに追加されます。号車・役割は自動割当（あとから編集可）。想定人件費は予定時間×時給です。
+          各日のチェックで希望を採用するとシフトに追加されます。号車・役割は自動割当（あとから編集可）。同じ号車の開始は遅い希望、終了は短い希望に揃えます。想定人件費は予定時間×時給です。
         </Text>
 
         {staffSummary.length === 0 ? (

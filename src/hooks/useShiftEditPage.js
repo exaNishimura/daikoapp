@@ -20,11 +20,21 @@ import {
   getShiftPlannedTimesForCopy,
   withPlannedShiftTimes,
 } from '@/lib/shiftEditUtils'
+import { getPlannedShiftTimes } from '@/lib/billing/shiftTargetAmount'
 import {
+  alignEndToShorter,
+  alignStartToLater,
   buildRequestsByDate,
   buildStaffAdoptionSummary,
   computeShiftsLaborCost,
+  earlierEndTime,
   findAdoptedShiftsForEmployee,
+  getOccupantsForCar,
+  laterStartTime,
+  partnersNeedingEndTrim,
+  partnersNeedingStartPush,
+  requestedEndForEmployee,
+  requestedStartForEmployee,
   suggestCarAndRole,
 } from '@/lib/shiftRequestEdit'
 
@@ -439,7 +449,37 @@ export function useShiftEditPage({ year, month }) {
     try {
       if (!checked) {
         if (existing.length === 0) return
+        const cars = [...new Set(existing.map((shift) => String(shift.car)))]
         await Promise.all(existing.map((shift) => deleteShiftMutation.mutateAsync(shift.id)))
+
+        const remainingUpdates = []
+        for (const car of cars) {
+          const remaining = getOccupantsForCar(dateShifts, car).filter(
+            (shift) => !existing.some((row) => row.id === shift.id)
+          )
+          if (remaining.length !== 1) continue
+          const partner = remaining[0]
+          const emp = resolveShiftEmployee(partner, employees)
+          const requestedStart = requestedStartForEmployee(requestRows, emp?.id, date)
+          const requestedEnd = requestedEndForEmployee(requestRows, emp?.id, date)
+          if (!requestedStart && !requestedEnd) continue
+          const { start, end } = getPlannedShiftTimes(partner)
+          const nextStart = requestedStart || start
+          const nextEnd = requestedEnd || end
+          if (
+            (start || '').slice(0, 5) === (nextStart || '').slice(0, 5) &&
+            (end || '').slice(0, 5) === (nextEnd || '').slice(0, 5)
+          ) {
+            continue
+          }
+          remainingUpdates.push(
+            updateShiftMutation.mutateAsync({
+              id: partner.id,
+              shiftData: withPlannedShiftTimes({ start: nextStart, end: nextEnd }),
+            })
+          )
+        }
+        if (remainingUpdates.length > 0) await Promise.all(remainingUpdates)
         setSuccess(`${request.name} の採用を解除しました`)
         return
       }
@@ -447,6 +487,9 @@ export function useShiftEditPage({ year, month }) {
       if (existing.length > 0) return
 
       const { car, role } = suggestCarAndRole(dateShifts, request.licenseType, employees)
+      const partners = getOccupantsForCar(dateShifts, car)
+      const alignedStart = alignStartToLater(request.start, partners) || request.start
+      const alignedEnd = alignEndToShorter(request.end, partners) || request.end
       const dow = DOW_MAP[new Date(date).getDay()]
       await createShiftMutation.mutateAsync(
         withPlannedShiftTimes({
@@ -455,12 +498,38 @@ export function useShiftEditPage({ year, month }) {
           car,
           role,
           ...toShiftStaffFields(request.employeeId, employees),
-          start: request.start,
-          end: request.end,
+          start: alignedStart,
+          end: alignedEnd,
           note: null,
         })
       )
-      setSuccess(`${request.name} を採用しました（${car}号車 / ${role}）`)
+
+      const startPushed = partnersNeedingStartPush(partners, alignedStart)
+      const endTrimmed = partnersNeedingEndTrim(partners, alignedEnd)
+      const toAlignIds = new Set([...startPushed, ...endTrimmed].map((shift) => shift.id))
+      const toAlign = partners.filter((shift) => toAlignIds.has(shift.id))
+      if (toAlign.length > 0) {
+        await Promise.all(
+          toAlign.map((shift) => {
+            const { start, end } = getPlannedShiftTimes(shift)
+            return updateShiftMutation.mutateAsync({
+              id: shift.id,
+              shiftData: withPlannedShiftTimes({
+                start: laterStartTime(start, alignedStart) || start,
+                end: earlierEndTime(end, alignedEnd) || end,
+              }),
+            })
+          })
+        )
+      }
+
+      const notes = []
+      if (startPushed.length > 0) notes.push(`開始を${alignedStart}に揃えました`)
+      else if (alignedStart !== request.start) notes.push(`開始${alignedStart}`)
+      if (endTrimmed.length > 0) notes.push(`終了を${alignedEnd}に揃えました`)
+      else if (alignedEnd !== request.end) notes.push(`終了${alignedEnd}`)
+      const alignedNote = notes.length > 0 ? ` / ${notes.join('・')}` : ''
+      setSuccess(`${request.name} を採用しました（${car}号車 / ${role}${alignedNote}）`)
     } catch (err) {
       setError(`希望の反映に失敗: ${err.message}`)
       throw err
