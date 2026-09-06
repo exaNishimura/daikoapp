@@ -162,7 +162,11 @@ export function useTravelTimeMap() {
   }, [city, favoriteIds, listMode, query, resultsById])
 
   const cityFavoriteCount = useMemo(
-    () => AREA_TOWNS.reduce((count, town) => count + (town.city === city && favoriteIds.has(town.id) ? 1 : 0), 0),
+    () =>
+      AREA_TOWNS.reduce(
+        (count, town) => count + (town.city === city && favoriteIds.has(town.id) ? 1 : 0),
+        0
+      ),
     [city, favoriteIds]
   )
 

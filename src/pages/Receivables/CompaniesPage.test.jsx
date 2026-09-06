@@ -20,10 +20,7 @@ vi.mock('@/hooks/billing/useCompanies', () => ({
   useReorderCompanies: vi.fn(() => idleMutation),
 }))
 
-import {
-  useCompanies,
-  useDeleteCompany,
-} from '@/hooks/billing/useCompanies'
+import { useCompanies, useDeleteCompany } from '@/hooks/billing/useCompanies'
 
 function renderPage() {
   return render(

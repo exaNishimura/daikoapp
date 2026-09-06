@@ -26,7 +26,6 @@ function defaultWorkDate(year, month) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-
 /**
  * 売掛の新規追加行 (インライン)。
  * - 「行追加」ボタンを押すとフォームが展開

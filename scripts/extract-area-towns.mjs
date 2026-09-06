@@ -113,11 +113,15 @@ fs.writeFileSync(path.join(outDir, 'areaTowns.json'), JSON.stringify(extracted, 
 const mdLines = []
 mdLines.push('# 営業エリア町名一覧（鈴鹿・亀山・四日市・津）')
 mdLines.push('')
-mdLines.push('依頼を取る際の想定所要時間を把握するため、日本郵便の郵便番号データ（utf_ken_all.csv / 2026年8月31日更新）から、三重県の対象4市の町域名を抽出した。')
+mdLines.push(
+  '依頼を取る際の想定所要時間を把握するため、日本郵便の郵便番号データ（utf_ken_all.csv / 2026年8月31日更新）から、三重県の対象4市の町域名を抽出した。'
+)
 mdLines.push('')
 mdLines.push('## 抽出ルール')
 mdLines.push('')
-mdLines.push('- 出典: [日本郵便 郵便番号データ（UTF-8・1レコード1行）](https://www.post.japanpost.jp/service/search/zipcode/download/utf-zip.html)')
+mdLines.push(
+  '- 出典: [日本郵便 郵便番号データ（UTF-8・1レコード1行）](https://www.post.japanpost.jp/service/search/zipcode/download/utf-zip.html)'
+)
 mdLines.push('- 対象市区町村: 鈴鹿市 / 亀山市 / 四日市市 / 津市')
 mdLines.push('- 「以下に掲載がない場合」など町名ではないレコードは除外')
 mdLines.push('- 括弧書きの注記（ビルを除く、次の丁目、など）は除去')

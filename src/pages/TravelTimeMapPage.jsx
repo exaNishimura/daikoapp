@@ -56,7 +56,13 @@ export function TravelTimeMapPage() {
           <SegmentedControlItem key={name} value={name} label={name.replace('市', '')} />
         ))}
       </SegmentedControl>
-      <SegmentedControl value={listMode} onChange={setListMode} label="表示" size="sm" layout="fill">
+      <SegmentedControl
+        value={listMode}
+        onChange={setListMode}
+        label="表示"
+        size="sm"
+        layout="fill"
+      >
         <SegmentedControlItem value="favorites" label={`よく使う ${cityFavoriteCount}`} />
         <SegmentedControlItem value="all" label="すべて" />
       </SegmentedControl>
