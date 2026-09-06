@@ -20,6 +20,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { Eye, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { AmountInput } from '@/components/Receivables/AmountInput'
+import { dateInputMonthBounds } from '@/components/Receivables/monthUtils'
 import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { useInvoice, useReissueInvoice } from '@/hooks/billing/useInvoices'
 import { getCompanyProfile } from '@/services/billing/companyProfileService'
@@ -86,10 +87,6 @@ function expandByStrategy(lines, strategy) {
   return [{ lines: [...lines] }]
 }
 
-function monthBound(year, month, day) {
-  return `${year}-${String(month).padStart(2, '0')}-${day}`
-}
-
 /** invoices.issue_date / YYYY-MM-DD → DateInput 用 ISO 日付 */
 function toIssueDateValue(raw, year, month) {
   if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
@@ -130,6 +127,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
   const [result, setResult] = useState(null)
   const [issueDate, setIssueDate] = useState('')
 
+  const dateBounds = dateInputMonthBounds(year, month)
   const companyId = invoice?.company_id
   const companyName =
     invoice?.companies?.invoice_display_name || invoice?.companies?.name || `企業 #${companyId}`
@@ -500,8 +498,8 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                                     onChange={(work_date) =>
                                       updateLine(line.key, { work_date: work_date ?? '' })
                                     }
-                                    min={monthBound(year, month, '01')}
-                                    max={monthBound(year, month, '31')}
+                                    min={dateBounds.min}
+                                    max={dateBounds.max}
                                     size="sm"
                                     width="100%"
                                     status={

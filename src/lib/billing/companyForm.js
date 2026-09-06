@@ -85,3 +85,28 @@ export function validateCompanyForm(form, existingCompanies = [], editingId = nu
     errors,
   }
 }
+
+/**
+ * 取引先の物理削除可否。問題があればエラー文言、問題なければ null。
+ * - 有効な取引先は削除不可（先に無効化）
+ * - 売掛 / 請求書が残っていると FK (ON DELETE RESTRICT) で落ちる
+ *
+ * @param {Object|null} company
+ * @param {{ receivableCount?: number, invoiceCount?: number }} [usage]
+ * @returns {string|null}
+ */
+export function companyDeleteError(company, usage = {}) {
+  if (!company) return '取引先が見つかりません'
+  if (company.is_active !== false) {
+    return '有効な取引先は削除できません。先に無効化してください'
+  }
+
+  const receivableCount = Number(usage.receivableCount) || 0
+  const invoiceCount = Number(usage.invoiceCount) || 0
+  if (receivableCount <= 0 && invoiceCount <= 0) return null
+
+  const parts = []
+  if (receivableCount > 0) parts.push(`売掛 ${receivableCount} 件`)
+  if (invoiceCount > 0) parts.push(`請求書 ${invoiceCount} 件`)
+  return `${parts.join('・')}が残っているため削除できません。履歴が不要なら先に売掛・請求書を削除してください`
+}

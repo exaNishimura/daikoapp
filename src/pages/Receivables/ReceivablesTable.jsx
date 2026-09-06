@@ -18,6 +18,7 @@ import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
 import { StatusBadge } from '@/components/Receivables/StatusBadge'
 import { receivableStatus } from '@/components/Receivables/statusUtils'
+import { dateInputMonthBounds } from '@/components/Receivables/monthUtils'
 import {
   formatVehicleNumLabel,
   parseVehicleNumForSave,
@@ -52,12 +53,9 @@ function buildUpdatePayload(form) {
   }
 }
 
-function monthBound(options, day) {
-  return `${options.year}-${String(options.month).padStart(2, '0')}-${day}`
-}
-
 function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
   const [form, setForm] = useState(() => rowToForm(row))
+  const dateBounds = dateInputMonthBounds(options.year, options.month)
   const { errors, isValid } = useMemo(
     () =>
       validateReceivableForm(form, {
@@ -81,8 +79,8 @@ function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
           isLabelHidden
           value={form.work_date || undefined}
           onChange={(work_date) => setForm({ ...form, work_date: work_date ?? '' })}
-          min={monthBound(options, '01')}
-          max={monthBound(options, '31')}
+          min={dateBounds.min}
+          max={dateBounds.max}
           size="sm"
           status={errors.work_date ? { type: 'error', message: errors.work_date } : undefined}
         />

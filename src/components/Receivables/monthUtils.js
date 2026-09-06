@@ -63,3 +63,13 @@ export function monthRange(s) {
     lastDay: `${year}-${mm}-${String(lastDate).padStart(2, '0')}`,
   }
 }
+
+/**
+ * DateInput の min/max 用。実在しない日付 (9/31 等) を渡すと Astryx が throw する。
+ * @returns {{ min?: string, max?: string }}
+ */
+export function dateInputMonthBounds(year, month) {
+  const range = monthRange(toMonthString({ year, month }))
+  if (!range) return {}
+  return { min: range.firstDay, max: range.lastDay }
+}

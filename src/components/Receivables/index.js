@@ -3,5 +3,11 @@ export { AmountInput } from './AmountInput'
 export { MonthPicker } from './MonthPicker'
 export { StatusBadge } from './StatusBadge'
 
-export { toMonthString, fromMonthString, monthRange, dayjsToMonthString } from './monthUtils'
+export {
+  toMonthString,
+  fromMonthString,
+  monthRange,
+  dateInputMonthBounds,
+  dayjsToMonthString,
+} from './monthUtils'
 export { receivableStatus, invoiceStatus } from './statusUtils'

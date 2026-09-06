@@ -3,8 +3,15 @@ import { render, screen } from '@testing-library/react'
 import { Theme } from '@astryxdesign/core/theme'
 import { stoneTheme } from '@/theme/astryx/stoneTheme'
 import dayjs from 'dayjs'
+import { DateInput } from '@astryxdesign/core/DateInput'
 import { MonthPicker } from './MonthPicker'
-import { toMonthString, fromMonthString, monthRange, dayjsToMonthString } from './monthUtils'
+import {
+  toMonthString,
+  fromMonthString,
+  monthRange,
+  dateInputMonthBounds,
+  dayjsToMonthString,
+} from './monthUtils'
 
 function renderWithTheme(ui) {
   return render(
@@ -86,6 +93,41 @@ describe('monthRange', () => {
   it('returns null for invalid month', () => {
     expect(monthRange(null)).toBeNull()
     expect(monthRange('bogus')).toBeNull()
+  })
+})
+
+describe('dateInputMonthBounds', () => {
+  it('uses the real last day so DateInput does not receive 9/31', () => {
+    expect(dateInputMonthBounds(2026, 9)).toEqual({
+      min: '2026-09-01',
+      max: '2026-09-30',
+    })
+  })
+
+  it('keeps 31-day months as-is', () => {
+    expect(dateInputMonthBounds(2026, 5)).toEqual({
+      min: '2026-05-01',
+      max: '2026-05-31',
+    })
+  })
+
+  it('avoids DateInput throwing on 9/31', () => {
+    expect(() =>
+      renderWithTheme(
+        <DateInput label="日付" value="2026-09-06" min="2026-09-01" max="2026-09-31" />
+      )
+    ).toThrow(/day must be/)
+
+    expect(() =>
+      renderWithTheme(
+        <DateInput
+          label="日付"
+          value="2026-09-06"
+          min={dateInputMonthBounds(2026, 9).min}
+          max={dateInputMonthBounds(2026, 9).max}
+        />
+      )
+    ).not.toThrow()
   })
 })
 

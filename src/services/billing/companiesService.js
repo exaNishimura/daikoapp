@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { companyDeleteError } from '@/lib/billing/companyForm'
 
 /**
  * 取引先マスタ (companies) の CRUD サービス。
@@ -95,10 +96,68 @@ export async function updateCompany(id, payload) {
 }
 
 /**
- * 論理削除 (is_active = false)。FK 制約で物理削除はできないため。
+ * 論理削除 (is_active = false)。売掛履歴を残したいときの無効化。
  */
 export async function deactivateCompany(id) {
   return updateCompany(id, { is_active: false })
+}
+
+/**
+ * 無効化した取引先の参照件数（売掛 / 請求書）。
+ */
+export async function getCompanyUsage(id) {
+  if (!supabase) return NOT_INITIALIZED()
+  try {
+    const [receivables, invoices] = await Promise.all([
+      supabase
+        .from('accounts_receivable')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', id),
+      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('company_id', id),
+    ])
+    if (receivables.error) throw receivables.error
+    if (invoices.error) throw invoices.error
+    return {
+      data: {
+        receivableCount: receivables.count ?? 0,
+        invoiceCount: invoices.count ?? 0,
+      },
+      error: null,
+    }
+  } catch (error) {
+    console.error('Error counting company usage:', error)
+    return { data: null, error }
+  }
+}
+
+/**
+ * 物理削除。無効かつ売掛・請求書が 0 件のときだけ許可。
+ */
+export async function deleteCompany(id) {
+  if (!supabase) return NOT_INITIALIZED()
+  try {
+    const [companyRes, usageRes] = await Promise.all([getCompany(id), getCompanyUsage(id)])
+    if (companyRes.error) throw companyRes.error
+    if (usageRes.error) throw usageRes.error
+
+    const blocked = companyDeleteError(companyRes.data, usageRes.data)
+    if (blocked) return { data: null, error: new Error(blocked) }
+
+    const { data, error } = await supabase.from('companies').delete().eq('id', id).select().single()
+    if (error) {
+      if (error.code === '23503') {
+        return {
+          data: null,
+          error: new Error('売掛または請求書が残っているため削除できません'),
+        }
+      }
+      throw error
+    }
+    return { data, error: null }
+  } catch (error) {
+    console.error('Error deleting company:', error)
+    return { data: null, error }
+  }
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   createCompany,
   updateCompany,
   deactivateCompany,
+  deleteCompany,
   reorderCompanies,
 } from '@/services/billing/companiesService'
 import { queryKeys } from '@/lib/queryClient'
@@ -62,6 +63,19 @@ export function useDeactivateCompany() {
     mutationFn: (id) => unwrap(deactivateCompany(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.companies.all })
+    },
+  })
+}
+
+export function useDeleteCompany() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => unwrap(deleteCompany(id)),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.companies.all })
+      qc.invalidateQueries({ queryKey: queryKeys.companies.detail(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.receivables.all })
+      qc.invalidateQueries({ queryKey: queryKeys.invoices.all })
     },
   })
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeAlias, normalizeAliases, validateCompanyForm } from './companyForm'
+import {
+  companyDeleteError,
+  normalizeAlias,
+  normalizeAliases,
+  validateCompanyForm,
+} from './companyForm'
 
 describe('normalizeAlias', () => {
   it('trims leading/trailing whitespace', () => {
@@ -114,5 +119,47 @@ describe('validateCompanyForm', () => {
       null
     )
     expect(result.errors.display_order).toBeUndefined()
+  })
+})
+
+describe('companyDeleteError', () => {
+  it('blocks missing company', () => {
+    expect(companyDeleteError(null)).toBe('取引先が見つかりません')
+  })
+
+  it('blocks active companies', () => {
+    expect(companyDeleteError({ id: 1, is_active: true })).toContain('先に無効化')
+  })
+
+  it('allows inactive companies with no related rows', () => {
+    expect(
+      companyDeleteError({ id: 1, is_active: false }, { receivableCount: 0, invoiceCount: 0 })
+    ).toBeNull()
+  })
+
+  it('blocks when receivables remain', () => {
+    const msg = companyDeleteError(
+      { id: 1, is_active: false },
+      { receivableCount: 3, invoiceCount: 0 }
+    )
+    expect(msg).toContain('売掛 3 件')
+    expect(msg).toContain('削除できません')
+  })
+
+  it('blocks when invoices remain', () => {
+    const msg = companyDeleteError(
+      { id: 1, is_active: false },
+      { receivableCount: 0, invoiceCount: 2 }
+    )
+    expect(msg).toContain('請求書 2 件')
+  })
+
+  it('joins both leftover kinds', () => {
+    const msg = companyDeleteError(
+      { id: 1, is_active: false },
+      { receivableCount: 1, invoiceCount: 2 }
+    )
+    expect(msg).toContain('売掛 1 件')
+    expect(msg).toContain('請求書 2 件')
   })
 })

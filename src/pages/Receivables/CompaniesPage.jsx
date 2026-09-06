@@ -40,11 +40,12 @@ import {
   useCreateCompany,
   useUpdateCompany,
   useDeactivateCompany,
+  useDeleteCompany,
   useReorderCompanies,
 } from '@/hooks/billing/useCompanies'
 import { CompanyEditDialog } from './CompanyEditDialog'
 
-function SortableRow({ company, onEdit, onToggleActive, disabled }) {
+function SortableRow({ company, onEdit, onToggleActive, onDelete, disabled }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: company.id,
   })
@@ -129,6 +130,17 @@ function SortableRow({ company, onEdit, onToggleActive, disabled }) {
               isDisabled={disabled}
             />
           )}
+          {!company.is_active ? (
+            <IconButton
+              size="sm"
+              variant="destructive"
+              label="削除"
+              tooltip="完全に削除"
+              icon={<Trash2 />}
+              onClick={() => onDelete(company)}
+              isDisabled={disabled}
+            />
+          ) : null}
         </HStack>
       </TableCell>
     </TableRow>
@@ -146,6 +158,7 @@ export function CompaniesPage() {
   const createMutation = useCreateCompany()
   const updateMutation = useUpdateCompany()
   const deactivateMutation = useDeactivateCompany()
+  const deleteMutation = useDeleteCompany()
   const reorderMutation = useReorderCompanies()
 
   const companies = useMemo(
@@ -161,6 +174,7 @@ export function CompaniesPage() {
     createMutation.isPending ||
     updateMutation.isPending ||
     deactivateMutation.isPending ||
+    deleteMutation.isPending ||
     reorderMutation.isPending
   const loading = isFetching || isMutating
 
@@ -226,6 +240,27 @@ export function CompaniesPage() {
       }
     } catch (err) {
       setError(`状態変更に失敗: ${err.message}`)
+    }
+  }
+
+  const handleDelete = async (company) => {
+    if (company.is_active) {
+      setError('有効な取引先は削除できません。先に無効化してください')
+      return
+    }
+    if (
+      !confirm(
+        `「${company.name}」を完全に削除しますか？\nこの操作は取り消せません。売掛・請求書が残っている場合は削除できません。`
+      )
+    ) {
+      return
+    }
+    setError(null)
+    try {
+      await deleteMutation.mutateAsync(company.id)
+      setSuccess(`「${company.name}」を削除しました`)
+    } catch (err) {
+      setError(`削除に失敗: ${err.message}`)
     }
   }
 
@@ -318,6 +353,7 @@ export function CompaniesPage() {
                       company={c}
                       onEdit={handleEdit}
                       onToggleActive={handleToggleActive}
+                      onDelete={handleDelete}
                       disabled={loading}
                     />
                   ))}

@@ -11,6 +11,7 @@ import { Plus, Save, X } from 'lucide-react'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
+import { dateInputMonthBounds } from '@/components/Receivables/monthUtils'
 import {
   EMPTY_RECEIVABLE_FORM,
   parseVehicleNumForSave,
@@ -25,9 +26,6 @@ function defaultWorkDate(year, month) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-function monthBound(year, month, day) {
-  return `${year}-${String(month).padStart(2, '0')}-${day}`
-}
 
 /**
  * 売掛の新規追加行 (インライン)。
@@ -41,6 +39,7 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
     work_date: defaultWorkDate(year, month),
   }))
 
+  const dateBounds = dateInputMonthBounds(year, month)
   const { errors, isValid } = useMemo(
     () => validateReceivableForm(form, { year, month }),
     [form, year, month]
@@ -105,8 +104,8 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
             label="日付"
             value={form.work_date || undefined}
             onChange={(work_date) => setForm({ ...form, work_date: work_date ?? '' })}
-            min={monthBound(year, month, '01')}
-            max={monthBound(year, month, '31')}
+            min={dateBounds.min}
+            max={dateBounds.max}
             size="sm"
             status={errors.work_date ? { type: 'error', message: errors.work_date } : undefined}
             width="100%"
