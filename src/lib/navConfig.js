@@ -1,3 +1,10 @@
+import {
+  CalendarDays,
+  Settings2,
+  Truck,
+  Wallet,
+} from 'lucide-react'
+
 /**
  * ヘッダーメニュー・ダッシュボード共通のナビ構成
  */
@@ -6,6 +13,7 @@ export const NAV_CATEGORIES = [
     id: 'dispatch',
     label: '配車',
     description: '電話受注の登録・配車確定、予約・LINE受付、所要時間の確認',
+    icon: Truck,
     items: [
       { to: '/dispatch', label: '配車画面', requiresAuth: false, end: true },
       { to: '/travel-times', label: '所要時間マップ', requiresAuth: false },
@@ -17,6 +25,7 @@ export const NAV_CATEGORIES = [
     id: 'shift',
     label: 'シフト',
     description: 'シフト表の確認・希望提出・編集',
+    icon: CalendarDays,
     items: [
       { to: '/shift', label: 'シフト表', requiresAuth: false, end: true },
       { to: '/shift/request', label: '希望提出', requiresAuth: false },
@@ -28,6 +37,7 @@ export const NAV_CATEGORIES = [
     id: 'billing',
     label: '経理',
     description: '売上集計・売掛・請求書',
+    icon: Wallet,
     items: [
       { to: '/admin/sales', label: '売上管理', requiresAuth: true },
       { to: '/admin/receivables', label: '売掛', requiresAuth: true },
@@ -38,6 +48,7 @@ export const NAV_CATEGORIES = [
     id: 'settings',
     label: '設定',
     description: 'マスタデータ・自社情報・LINE設定',
+    icon: Settings2,
     items: [
       { to: '/employees', label: '従業員マスタ', requiresAuth: true },
       { to: '/admin/companies', label: '取引先マスタ', requiresAuth: true },

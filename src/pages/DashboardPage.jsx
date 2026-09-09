@@ -24,29 +24,42 @@ export function DashboardPage() {
         </VStack>
 
         <Grid columns={{ minWidth: 320, max: 2 }} gap={2}>
-          {categories.map((category) => (
-            <Card key={category.id} padding={4} height="100%">
-              <VStack gap={3}>
-                <VStack gap={1}>
-                  <Heading level={3}>{category.label}</Heading>
-                  {category.description ? (
-                    <Text color="secondary">{category.description}</Text>
-                  ) : null}
+          {categories.map((category) => {
+            const Icon = category.icon
+            return (
+              <Card key={category.id} padding={4} height="100%">
+                <VStack gap={3}>
+                  <VStack gap={1}>
+                    <HStack gap={2} vAlign="center">
+                      {Icon ? (
+                        <Icon
+                          size={22}
+                          aria-hidden
+                          strokeWidth={2}
+                          color="var(--color-text-secondary)"
+                        />
+                      ) : null}
+                      <Heading level={3}>{category.label}</Heading>
+                    </HStack>
+                    {category.description ? (
+                      <Text color="secondary">{category.description}</Text>
+                    ) : null}
+                  </VStack>
+                  <HStack gap={1} wrap="wrap">
+                    {category.items.map((item) => (
+                      <Button
+                        key={item.to}
+                        href={item.to}
+                        label={item.label}
+                        variant="secondary"
+                        size="sm"
+                      />
+                    ))}
+                  </HStack>
                 </VStack>
-                <HStack gap={1} wrap="wrap">
-                  {category.items.map((item) => (
-                    <Button
-                      key={item.to}
-                      href={item.to}
-                      label={item.label}
-                      variant="secondary"
-                      size="sm"
-                    />
-                  ))}
-                </HStack>
-              </VStack>
-            </Card>
-          ))}
+              </Card>
+            )
+          })}
         </Grid>
 
         {!isAuthenticated ? (

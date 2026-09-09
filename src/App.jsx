@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarDays,
   CalendarPlus,
+  Car,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react'
 import { AppShell } from '@astryxdesign/core/AppShell'
 import { Button } from '@astryxdesign/core/Button'
+import { NavIcon } from '@astryxdesign/core/NavIcon'
 import { TopNav, TopNavHeading, TopNavMenu } from '@astryxdesign/core/TopNav'
 import { AccountMenu } from '@/components/AccountMenu'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
@@ -102,6 +104,7 @@ function AppTopNav() {
       label="メインナビゲーション"
       heading={
         <TopNavHeading
+          logo={<NavIcon icon={<Car size={20} aria-hidden />} />}
           heading={SYSTEM_NAME}
           headingHref="/"
           subheading={companyName || undefined}
