@@ -73,3 +73,20 @@ export function dateInputMonthBounds(year, month) {
   if (!range) return {}
   return { min: range.firstDay, max: range.lastDay }
 }
+
+/**
+ * 'YYYY-MM' を delta ヶ月ずらす。value が不正なら今月を起点にする。
+ */
+export function shiftMonth(s, delta) {
+  const parsed = fromMonthString(s)
+  const now = new Date()
+  const year = parsed?.year ?? now.getFullYear()
+  const month = parsed?.month ?? now.getMonth() + 1
+  return toMonthString(new Date(year, month - 1 + Number(delta || 0), 1))
+}
+
+export function toAstryxSize(size) {
+  if (size === 'sm' || size === 'small') return 'sm'
+  if (size === 'lg' || size === 'large') return 'lg'
+  return 'md'
+}

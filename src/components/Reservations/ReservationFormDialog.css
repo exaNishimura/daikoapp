@@ -17,7 +17,6 @@ dialog:has(.reservation-form-dialog) {
   box-sizing: border-box;
 }
 
-.reservation-form-dialog input[type='time'],
 .reservation-form-dialog textarea {
   max-width: 100%;
 }

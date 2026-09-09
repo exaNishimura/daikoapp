@@ -18,6 +18,7 @@ import {
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { Send, Eye } from 'lucide-react'
+import { SummaryStat } from '@/components/SummaryStat'
 import { useUnbilledByCompany } from '@/hooks/billing/useReceivables'
 import { useIssueInvoices, usePreviewInvoice } from '@/hooks/billing/useInvoices'
 import {
@@ -167,14 +168,13 @@ export function InvoiceIssueTab({ year, month }) {
       ) : null}
 
       <Card padding={3}>
-        <HStack gap={3} wrap="wrap" vAlign="center" hAlign="between">
+        <HStack gap={3} wrap="wrap" vAlign="start" hAlign="between">
           <HStack gap={3} wrap="wrap">
-            <Text>
-              対象企業: <Text weight="semibold">{selectedCount}</Text> / {rows.length} 社
-            </Text>
-            <Text>
-              合計金額: <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
-            </Text>
+            <SummaryStat label="対象企業" value={`${selectedCount} / ${rows.length} 社`} />
+            <SummaryStat
+              label="合計金額"
+              value={`¥${totalAmount.toLocaleString('ja-JP')}`}
+            />
           </HStack>
           <Button
             variant="primary"

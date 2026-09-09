@@ -8,6 +8,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { Plus, Save, Trash2, X } from 'lucide-react'
 import { AmountInput } from '@/components/Receivables/AmountInput'
+import { SummaryStat } from '@/components/SummaryStat'
 
 const DEFAULT_LABELS = ['共済掛金', '損害保険', '駐車場', '携帯', '税理士']
 
@@ -62,11 +63,9 @@ export function MonthlyFixedExpensesPanel({ billingMonth, rows, onUpsert, onDele
 
   return (
     <VStack gap={3}>
-      <HStack hAlign="between" vAlign="center">
+      <HStack hAlign="between" vAlign="start">
         <Heading level={3}>月額固定経費</Heading>
-        <Text size="sm" color="secondary">
-          合計 ¥{total.toLocaleString('ja-JP')}
-        </Text>
+        <SummaryStat label="合計" value={`¥${total.toLocaleString('ja-JP')}`} />
       </HStack>
 
       <VStack gap={2}>

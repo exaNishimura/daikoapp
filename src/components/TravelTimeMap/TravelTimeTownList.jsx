@@ -25,6 +25,8 @@ function gojuonSectionId(key) {
   return `travel-time-gojuon-${key}`
 }
 
+const GOJUON_INDEX_LINES = [GOJUON_ROWS.slice(0, 5), GOJUON_ROWS.slice(5)]
+
 function scrollToGojuon(key) {
   const el = document.getElementById(gojuonSectionId(key))
   if (!el) return
@@ -98,30 +100,27 @@ export function TravelTimeTownList({
 
   return (
     <VStack gap={3}>
-      <HStack
-        as="nav"
-        gap={1}
-        wrap="wrap"
-        vAlign="center"
-        className="travel-time-gojuon-index"
-        aria-label="50音索引"
-      >
-        {GOJUON_ROWS.map((row) => {
-          const hasTowns = presentKeys.has(row.key)
-          if (row.key === 'other' && !hasTowns) return null
-          return (
-            <Button
-              key={row.key}
-              size="sm"
-              variant="ghost"
-              label={row.label}
-              aria-label={`${row.label}行へ移動`}
-              isDisabled={!hasTowns}
-              onClick={() => scrollToGojuon(row.key)}
-            />
-          )
-        })}
-      </HStack>
+      <VStack as="nav" gap={1} className="travel-time-gojuon-index" aria-label="50音索引">
+        {GOJUON_INDEX_LINES.map((line) => (
+          <HStack key={line[0].key} gap={1} hAlign="center" vAlign="center">
+            {line.map((row) => {
+              const hasTowns = presentKeys.has(row.key)
+              if (row.key === 'other' && !hasTowns) return null
+              return (
+                <Button
+                  key={row.key}
+                  size="sm"
+                  variant="ghost"
+                  label={row.label}
+                  aria-label={`${row.label}行へ移動`}
+                  isDisabled={!hasTowns}
+                  onClick={() => scrollToGojuon(row.key)}
+                />
+              )
+            })}
+          </HStack>
+        ))}
+      </VStack>
       {groups.map((group) => (
         <VStack key={group.key} as="section" id={gojuonSectionId(group.key)} gap={0}>
           <List hasDividers density="compact" header={`${group.label}行`}>

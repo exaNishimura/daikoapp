@@ -1,31 +1,52 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import {
+  canUseDevAuthBypass,
+  clearDevAuthBypass,
+  createDevBypassSession,
+  markDevAuthBypass,
+  shouldActivateDevAuthBypass,
+} from '@/lib/devAuth'
 import { supabase } from '@/lib/supabase'
 
 const AuthContext = createContext(null)
 
+function initialDevBypassSession() {
+  return shouldActivateDevAuthBypass() ? createDevBypassSession() : null
+}
+
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState(initialDevBypassSession)
+  const [loading, setLoading] = useState(() => !shouldActivateDevAuthBypass())
 
   useEffect(() => {
     if (!supabase) {
-      setLoading(false)
+      if (!shouldActivateDevAuthBypass()) {
+        setLoading(false)
+      }
       return
     }
 
     let mounted = true
 
     supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setSession(data.session ?? null)
-        setLoading(false)
+      if (!mounted) return
+      if (data.session) {
+        setSession(data.session)
+      } else if (shouldActivateDevAuthBypass()) {
+        setSession(createDevBypassSession())
+      } else {
+        setSession(null)
       }
+      setLoading(false)
     })
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (mounted) {
-        setSession(newSession ?? null)
+      if (!mounted) return
+      if (newSession) {
+        setSession(newSession)
+        return
       }
+      setSession(shouldActivateDevAuthBypass() ? createDevBypassSession() : null)
     })
 
     return () => {
@@ -57,9 +78,23 @@ export function AuthProvider({ children }) {
     return { success: true }
   }
 
+  const loginWithDevBypass = () => {
+    if (!canUseDevAuthBypass()) {
+      return {
+        success: false,
+        error: '開発用ログインは localhost の開発サーバーでのみ使えます',
+      }
+    }
+    markDevAuthBypass()
+    setSession(createDevBypassSession())
+    return { success: true }
+  }
+
   const logout = async () => {
-    if (!supabase) return
-    await supabase.auth.signOut()
+    clearDevAuthBypass()
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
     setSession(null)
   }
 
@@ -67,8 +102,10 @@ export function AuthProvider({ children }) {
     session,
     user: session?.user ?? null,
     isAuthenticated: !!session,
+    isDevBypass: session?.access_token === 'dev-bypass',
     loading,
     sendMagicLink,
+    loginWithDevBypass,
     logout,
   }
 

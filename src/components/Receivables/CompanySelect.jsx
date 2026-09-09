@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Typeahead, TypeaheadItem } from '@astryxdesign/core/Typeahead'
+import { toAstryxSize } from './monthUtils'
 
 const CREATE_OPTION_ID = '__create__'
 
@@ -172,7 +173,7 @@ export function CompanySelect({
       hasClear
       isDisabled={disabled || creating}
       isLoading={creating}
-      size={size === 'small' ? 'sm' : 'md'}
+      size={toAstryxSize(size)}
       width="100%"
       debounceMs={0}
       maxMenuItems={50}

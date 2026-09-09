@@ -12,10 +12,12 @@ import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
 import { ArrowLeft, Download, Upload } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { SummaryStat } from '@/components/SummaryStat'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
 import { fromMonthString, toMonthString } from '@/components/Receivables/monthUtils'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { useCompanies } from '@/hooks/billing/useCompanies'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import {
   useCreateReceivable,
   useDeleteReceivable,
@@ -58,6 +60,9 @@ const PAID_OPTIONS = [
 
 export function ReceivablesListPage() {
   const navigate = useNavigate()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const controlSize = isMobile ? 'lg' : 'sm'
+  const fieldWidth = isMobile ? '100%' : undefined
 
   const [monthValue, setMonthValue] = useState(currentYearMonth)
   const [companyId, setCompanyId] = useState(null)
@@ -172,13 +177,14 @@ export function ReceivablesListPage() {
           <HStack gap={1} wrap="wrap">
             <Button
               variant="ghost"
-              size="sm"
+              size={controlSize}
               icon={<Upload />}
               label="Excel インポート"
               onClick={() => navigate('/admin/receivables/import')}
             />
             <Button
               variant="secondary"
+              size={controlSize}
               icon={<Download />}
               label="CSV エクスポート"
               onClick={handleExportCsv}
@@ -189,50 +195,48 @@ export function ReceivablesListPage() {
 
         <Card padding={3}>
           <HStack gap={2} wrap="wrap" vAlign="start">
-            <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
+            <MonthPicker
+              value={monthValue}
+              onChange={setMonthValue}
+              label="対象月"
+              size={isMobile ? 'large' : 'small'}
+              width={isMobile ? '100%' : undefined}
+            />
             <CompanySelect
               companies={allCompanies}
               value={companyId}
               onChange={setCompanyId}
               includeInactive
               label="取引先 (全て)"
+              size={isMobile ? 'lg' : 'small'}
             />
             <Selector
               label="請求状態"
               options={INVOICED_OPTIONS}
               value={invoicedFilter}
               onChange={setInvoicedFilter}
-              size="sm"
+              size={controlSize}
+              width={fieldWidth}
             />
             <Selector
               label="入金状態"
               options={PAID_OPTIONS}
               value={paidFilter}
               onChange={setPaidFilter}
-              size="sm"
+              size={controlSize}
+              width={fieldWidth}
             />
           </HStack>
         </Card>
 
         <Card padding={3}>
           <HStack gap={3} wrap="wrap" vAlign="start">
-            <VStack gap={0}>
-              <Text size="sm" color="secondary">
-                件数
-              </Text>
-              <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {summary.count}
-              </Text>
-            </VStack>
+            <SummaryStat label="件数" value={summary.count} />
             <Divider orientation="vertical" />
-            <VStack gap={0}>
-              <Text size="sm" color="secondary">
-                合計金額
-              </Text>
-              <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                ¥{summary.totalAmount.toLocaleString('ja-JP')}
-              </Text>
-            </VStack>
+            <SummaryStat
+              label="合計金額"
+              value={`¥${summary.totalAmount.toLocaleString('ja-JP')}`}
+            />
             {summary.byCompany.length > 0 ? (
               <VStack gap={1}>
                 <Text size="sm" color="secondary">
@@ -289,6 +293,7 @@ export function ReceivablesListPage() {
           month={month}
           onCreate={handleCreate}
           isSaving={createMutation.isPending}
+          controlSize={controlSize}
         />
 
         <ReceivablesTable

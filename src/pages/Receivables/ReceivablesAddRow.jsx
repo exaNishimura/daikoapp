@@ -11,7 +11,7 @@ import { Plus, Save, X } from 'lucide-react'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
-import { dateInputMonthBounds } from '@/components/Receivables/monthUtils'
+import { dateInputMonthBounds, toAstryxSize } from '@/components/Receivables/monthUtils'
 import {
   EMPTY_RECEIVABLE_FORM,
   parseVehicleNumForSave,
@@ -31,7 +31,7 @@ function defaultWorkDate(year, month) {
  * - 「行追加」ボタンを押すとフォームが展開
  * - 保存後はリセットして連続入力できるようにする
  */
-export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }) {
+export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving, controlSize = 'sm' }) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(() => ({
     ...EMPTY_RECEIVABLE_FORM,
@@ -39,6 +39,9 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
   }))
 
   const dateBounds = dateInputMonthBounds(year, month)
+  const astryxSize = toAstryxSize(controlSize)
+  const isCompact = astryxSize === 'sm'
+  const companySize = isCompact ? 'small' : astryxSize
   const { errors, isValid } = useMemo(
     () => validateReceivableForm(form, { year, month }),
     [form, year, month]
@@ -86,7 +89,16 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
   }
 
   if (!open) {
-    return <Button icon={<Plus />} label="売掛を追加" variant="secondary" onClick={handleOpen} />
+    return (
+      <Button
+        icon={<Plus />}
+        label="売掛を追加"
+        variant="secondary"
+        size={astryxSize}
+        width={isCompact ? undefined : '100%'}
+        onClick={handleOpen}
+      />
+    )
   }
 
   return (
@@ -96,25 +108,32 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
           <Text size="sm" color="secondary">
             新規追加 — {year}年{month}月
           </Text>
-          <IconButton size="sm" variant="ghost" label="閉じる" icon={<X />} onClick={handleClose} />
+          <IconButton
+            size={astryxSize}
+            variant="ghost"
+            label="閉じる"
+            icon={<X />}
+            onClick={handleClose}
+          />
         </HStack>
-        <Grid columns={{ minWidth: 160, max: 4 }} gap={2}>
+        <Grid columns={isCompact ? { minWidth: 160, max: 4 } : 1} gap={2}>
           <DateInput
             label="日付"
             value={form.work_date || undefined}
             onChange={(work_date) => setForm({ ...form, work_date: work_date ?? '' })}
             min={dateBounds.min}
             max={dateBounds.max}
-            size="sm"
+            size={astryxSize}
             status={errors.work_date ? { type: 'error', message: errors.work_date } : undefined}
             width="100%"
           />
-          <GridSpan columns={2}>
+          <GridSpan columns={isCompact ? 2 : 'full'}>
             <VStack gap={0}>
               <CompanySelect
                 companies={companies}
                 value={form.company_id}
                 onChange={(id) => setForm({ ...form, company_id: id })}
+                size={companySize}
               />
               {errors.company_id ? (
                 <Text size="sm" style={{ color: 'var(--color-text-red)' }}>
@@ -126,46 +145,52 @@ export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving }
           <VehicleNumSelect
             value={form.vehicle_num}
             onChange={(vehicle_num) => setForm({ ...form, vehicle_num })}
+            size={companySize}
           />
           <AmountInput
             value={form.amount}
             onChange={(v) => setForm({ ...form, amount: v })}
             label="金額"
+            size={astryxSize}
           />
           <TextInput
             label="出発"
-            size="sm"
+            size={astryxSize}
             value={form.departure}
             onChange={(departure) => setForm({ ...form, departure })}
             width="100%"
           />
           <TextInput
             label="到着"
-            size="sm"
+            size={astryxSize}
             value={form.destination}
             onChange={(destination) => setForm({ ...form, destination })}
             width="100%"
           />
-          <GridSpan columns={2}>
+          <GridSpan columns={isCompact ? 2 : 'full'}>
             <TextInput
               label="備考"
-              size="sm"
+              size={astryxSize}
               value={form.note}
               onChange={(note) => setForm({ ...form, note })}
               width="100%"
             />
           </GridSpan>
           <GridSpan columns="full">
-            <HStack gap={1} hAlign="end">
+            <HStack gap={1} hAlign={isCompact ? 'end' : undefined} wrap="wrap">
               <Button
                 label="閉じる"
                 variant="secondary"
+                size={astryxSize}
+                width={isCompact ? undefined : '100%'}
                 onClick={handleClose}
                 isDisabled={isSaving}
               />
               <Button
                 variant="primary"
                 icon={<Save />}
+                size={astryxSize}
+                width={isCompact ? undefined : '100%'}
                 label={isSaving ? '保存中...' : '保存して続けて入力'}
                 onClick={handleSave}
                 isDisabled={!isValid || isSaving}

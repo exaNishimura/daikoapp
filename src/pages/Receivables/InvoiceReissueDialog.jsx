@@ -20,6 +20,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { Eye, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { AmountInput } from '@/components/Receivables/AmountInput'
+import { SummaryStat } from '@/components/SummaryStat'
 import { dateInputMonthBounds } from '@/components/Receivables/monthUtils'
 import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { useInvoice, useReissueInvoice } from '@/hooks/billing/useInvoices'
@@ -418,12 +419,11 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                           {year} 年 {month} 月
                         </Text>
                       </Text>
-                      <Text>
-                        件数: <Text weight="semibold">{lines.length}</Text>
-                      </Text>
-                      <Text>
-                        合計: <Text weight="semibold">¥{totalAmount.toLocaleString('ja-JP')}</Text>
-                      </Text>
+                      <SummaryStat label="件数" value={lines.length} />
+                      <SummaryStat
+                        label="合計"
+                        value={`¥${totalAmount.toLocaleString('ja-JP')}`}
+                      />
                       <DateInput
                         label="発行日"
                         value={issueDate || undefined}

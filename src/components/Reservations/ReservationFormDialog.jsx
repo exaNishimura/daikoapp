@@ -1,77 +1,53 @@
-import { useId, useState } from 'react'
-import dayjs from 'dayjs'
+import { useRef, useState } from 'react'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { DateInput } from '@astryxdesign/core/DateInput'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
-import { Field } from '@astryxdesign/core/Field'
 import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { Selector } from '@astryxdesign/core/Selector'
+import { Text } from '@astryxdesign/core/Text'
 import { TextArea } from '@astryxdesign/core/TextArea'
 import { TextInput } from '@astryxdesign/core/TextInput'
+import { useCompanies } from '@/hooks/billing/useCompanies'
+import {
+  RESERVATION_HOURS,
+  RESERVATION_MINUTES,
+  buildReservationIso,
+  defaultReservationDateTime,
+  formatReservationHourLabel,
+  formatReservationInstantLabel,
+  formatReservationMinuteLabel,
+  splitReservationDateTime,
+} from '@/lib/reservation/reservationTime'
 import { missingReservationFields } from '@/services/reservationService'
+import { CustomerNameSelect } from './CustomerNameSelect'
 import './ReservationFormDialog.css'
 
-const NATIVE_INPUT_STYLE = {
-  boxSizing: 'border-box',
-  width: '100%',
-  minWidth: 0,
-  padding: 'var(--spacing-2) var(--spacing-3)',
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--color-border)',
-  font: 'inherit',
-  background: 'var(--color-bg)',
-  color: 'var(--color-text)',
-  fontVariantNumeric: 'tabular-nums',
-}
-
-function splitDateTime(iso) {
-  const d = iso ? dayjs(iso) : dayjs()
-  return {
-    date: d.isValid() ? d.format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
-    time: d.isValid() ? d.format('HH:mm') : dayjs().format('HH:mm'),
-  }
-}
-
-function buildReservedAtIso(date, time) {
-  if (!date || !time) return ''
-  const d = dayjs(`${date}T${time}`)
-  return d.isValid() ? d.toISOString() : ''
-}
-
-function TimeField({ label, value, onChange, isRequired, status }) {
-  const inputId = useId()
-  return (
-    <Field label={label} inputID={inputId} width="100%" isRequired={isRequired} status={status}>
-      <input
-        id={inputId}
-        type="time"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={NATIVE_INPUT_STYLE}
-      />
-    </Field>
-  )
-}
-
 function ReservationFormFields({ initial, onClose, onSubmit }) {
-  const initialDateTime = splitDateTime(initial?.reserved_at)
+  const initialDateTime = initial?.reserved_at
+    ? splitReservationDateTime(initial.reserved_at)
+    : defaultReservationDateTime()
   const [reservedDate, setReservedDate] = useState(() => initialDateTime.date)
-  const [reservedTime, setReservedTime] = useState(() => initialDateTime.time)
+  const [reservedHour, setReservedHour] = useState(() => initialDateTime.hour)
+  const [reservedMinute, setReservedMinute] = useState(() => initialDateTime.minute)
+  const companiesQuery = useCompanies({ activeOnly: true })
   const [customerName, setCustomerName] = useState(() => initial?.customer_name ?? '')
+  const customerQueryRef = useRef(initial?.customer_name ?? '')
   const [phone, setPhone] = useState(() => initial?.phone ?? '')
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [fieldErrors, setFieldErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const reservedAtIso = buildReservationIso(reservedDate, reservedHour, reservedMinute)
   const reservedAtError = fieldErrors.reserved_at
     ? { type: 'error', message: '必須です' }
     : undefined
 
   const handleSave = async () => {
     const payload = {
-      reserved_at: buildReservedAtIso(reservedDate, reservedTime),
-      customer_name: customerName,
+      reserved_at: reservedAtIso,
+      customer_name: customerName.trim() || String(customerQueryRef.current || '').trim(),
       phone,
       memo,
     }
@@ -114,7 +90,7 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
           <VStack gap={4} className="reservation-form-dialog__fields">
             {submitError ? <Banner status="error" title={submitError} collapsible={false} /> : null}
             <DateInput
-              label="予約日"
+              label="予約日（その夜）"
               value={reservedDate || undefined}
               onChange={(value) => setReservedDate(value ?? '')}
               isRequired
@@ -123,19 +99,54 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
               width="100%"
               status={reservedAtError}
             />
-            <TimeField
-              label="予約時刻"
-              value={reservedTime}
-              onChange={setReservedTime}
-              isRequired
-              status={reservedAtError}
-            />
-            <TextInput
-              label="顧客名"
+            <HStack gap={3}>
+              <Selector
+                label="時"
+                isRequired
+                width="100%"
+                value={reservedHour === '' || reservedHour == null ? undefined : String(reservedHour)}
+                onChange={(next) => setReservedHour(next === '' ? '' : Number(next))}
+                options={RESERVATION_HOURS.map((hour) => ({
+                  value: String(hour),
+                  label: formatReservationHourLabel(hour),
+                }))}
+                status={reservedAtError}
+              />
+              <Selector
+                label="分"
+                isRequired
+                width="100%"
+                value={
+                  reservedMinute === '' || reservedMinute == null
+                    ? undefined
+                    : String(reservedMinute)
+                }
+                onChange={(next) => setReservedMinute(next === '' ? '' : Number(next))}
+                options={RESERVATION_MINUTES.map((minute) => ({
+                  value: String(minute),
+                  label: formatReservationMinuteLabel(minute),
+                }))}
+                status={reservedAtError}
+              />
+            </HStack>
+            <Text type="supporting" color="secondary">
+              営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。
+            </Text>
+            {reservedAtIso ? (
+              <Text>{formatReservationInstantLabel(reservedAtIso)}</Text>
+            ) : null}
+            <CustomerNameSelect
+              companies={companiesQuery.data ?? []}
               value={customerName}
-              onChange={setCustomerName}
+              onChange={(next) => {
+                customerQueryRef.current = next
+                setCustomerName(next)
+              }}
+              onChangeQuery={(q) => {
+                customerQueryRef.current = q
+              }}
               isRequired
-              width="100%"
+              isLoading={companiesQuery.isLoading}
               status={
                 fieldErrors.customer_name ? { type: 'error', message: '必須です' } : undefined
               }

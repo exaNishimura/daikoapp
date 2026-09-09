@@ -1,4 +1,5 @@
 import { Selector } from '@astryxdesign/core/Selector'
+import { toAstryxSize } from './monthUtils'
 import { RECEIVABLE_VEHICLE_OPTIONS } from '@/lib/billing/receivableForm'
 
 /**
@@ -22,7 +23,7 @@ export function VehicleNumSelect({
       }))}
       value={value == null ? '' : String(value)}
       onChange={(next) => onChange(next)}
-      size={size === 'small' ? 'sm' : 'md'}
+      size={toAstryxSize(size)}
       isDisabled={disabled}
       width="100%"
     />

@@ -9,5 +9,7 @@ export {
   monthRange,
   dateInputMonthBounds,
   dayjsToMonthString,
+  shiftMonth,
+  toAstryxSize,
 } from './monthUtils'
 export { receivableStatus, invoiceStatus } from './statusUtils'

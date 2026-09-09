@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
 import { DateInput } from '@astryxdesign/core/DateInput'
 import { IconButton } from '@astryxdesign/core/IconButton'
-import { HStack } from '@astryxdesign/core/Layout'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
 import {
   Table,
   TableBody,
@@ -18,7 +20,8 @@ import { VehicleNumSelect } from '@/components/Receivables/VehicleNumSelect'
 import { AmountInput } from '@/components/Receivables/AmountInput'
 import { StatusBadge } from '@/components/Receivables/StatusBadge'
 import { receivableStatus } from '@/components/Receivables/statusUtils'
-import { dateInputMonthBounds } from '@/components/Receivables/monthUtils'
+import { dateInputMonthBounds, toAstryxSize } from '@/components/Receivables/monthUtils'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import {
   formatVehicleNumLabel,
   parseVehicleNumForSave,
@@ -53,7 +56,82 @@ function buildUpdatePayload(form) {
   }
 }
 
-function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
+function companyNameOf(row) {
+  return (
+    row.companies?.invoice_display_name ||
+    row.companies?.name ||
+    (row.company_id == null ? '（請求先未選択）' : '(取引先未設定)')
+  )
+}
+
+function ReceivableEditFields({ form, setForm, companies, options, errors, size }) {
+  const dateBounds = dateInputMonthBounds(options.year, options.month)
+  const controlSize = toAstryxSize(size)
+  const companySize = controlSize === 'sm' ? 'small' : controlSize
+
+  return (
+    <VStack gap={2}>
+      <DateInput
+        label="日付"
+        isLabelHidden={controlSize === 'sm'}
+        value={form.work_date || undefined}
+        onChange={(work_date) => setForm({ ...form, work_date: work_date ?? '' })}
+        min={dateBounds.min}
+        max={dateBounds.max}
+        size={controlSize}
+        status={errors.work_date ? { type: 'error', message: errors.work_date } : undefined}
+        width="100%"
+      />
+      <CompanySelect
+        companies={companies}
+        value={form.company_id}
+        onChange={(id) => setForm({ ...form, company_id: id })}
+        includeInactive
+        size={companySize}
+      />
+      <VehicleNumSelect
+        value={form.vehicle_num}
+        onChange={(vehicle_num) => setForm({ ...form, vehicle_num })}
+        size={companySize}
+      />
+      <TextInput
+        label="出発地"
+        isLabelHidden={controlSize === 'sm'}
+        size={controlSize}
+        value={form.departure}
+        onChange={(departure) => setForm({ ...form, departure })}
+        placeholder="出発地"
+        width="100%"
+      />
+      <TextInput
+        label="到着地"
+        isLabelHidden={controlSize === 'sm'}
+        size={controlSize}
+        value={form.destination}
+        onChange={(destination) => setForm({ ...form, destination })}
+        placeholder="到着地"
+        width="100%"
+      />
+      <AmountInput
+        value={form.amount}
+        onChange={(v) => setForm({ ...form, amount: v })}
+        isLabelHidden={controlSize === 'sm'}
+        size={controlSize}
+      />
+      <TextInput
+        label="備考"
+        isLabelHidden={controlSize === 'sm'}
+        size={controlSize}
+        value={form.note}
+        onChange={(note) => setForm({ ...form, note })}
+        placeholder="備考"
+        width="100%"
+      />
+    </VStack>
+  )
+}
+
+function DesktopEditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
   const [form, setForm] = useState(() => rowToForm(row))
   const dateBounds = dateInputMonthBounds(options.year, options.month)
   const { errors, isValid } = useMemo(
@@ -165,10 +243,7 @@ function EditableRow({ row, companies, options, onSave, onCancel, isSaving }) {
 function DisplayRow({ row, onEdit, onDelete, disabled }) {
   const status = receivableStatus(row)
   const locked = row.invoice_id != null
-  const companyName =
-    row.companies?.invoice_display_name ||
-    row.companies?.name ||
-    (row.company_id == null ? '（請求先未選択）' : '(取引先未設定)')
+  const companyName = companyNameOf(row)
 
   return (
     <TableRow style={{ opacity: row.companies?.is_active === false ? 0.6 : 1 }}>
@@ -222,6 +297,116 @@ function DisplayRow({ row, onEdit, onDelete, disabled }) {
   )
 }
 
+function MobileEditCard({ row, companies, options, onSave, onCancel, isSaving }) {
+  const [form, setForm] = useState(() => rowToForm(row))
+  const { errors, isValid } = useMemo(
+    () =>
+      validateReceivableForm(form, {
+        ...options,
+        allowUnsetCompany: form.company_id == null,
+      }),
+    [form, options]
+  )
+
+  const handleSave = () => {
+    if (!isValid) return
+    onSave(buildUpdatePayload(form))
+  }
+
+  return (
+    <Card padding={3}>
+      <VStack gap={2}>
+        <ReceivableEditFields
+          form={form}
+          setForm={setForm}
+          companies={companies}
+          options={options}
+          errors={errors}
+          size="lg"
+        />
+        <HStack gap={1}>
+          <Button
+            label="キャンセル"
+            variant="secondary"
+            size="lg"
+            width="100%"
+            onClick={onCancel}
+            isDisabled={isSaving}
+          />
+          <Button
+            label={isSaving ? '保存中...' : '保存'}
+            variant="primary"
+            size="lg"
+            width="100%"
+            icon={<Save />}
+            onClick={handleSave}
+            isDisabled={!isValid || isSaving}
+            isLoading={isSaving}
+          />
+        </HStack>
+      </VStack>
+    </Card>
+  )
+}
+
+function MobileDisplayCard({ row, onEdit, onDelete, disabled }) {
+  const status = receivableStatus(row)
+  const locked = row.invoice_id != null
+  const companyName = companyNameOf(row)
+  const route =
+    row.departure || row.destination
+      ? `${row.departure || '—'} → ${row.destination || '—'}`
+      : null
+
+  return (
+    <Card padding={3} style={{ opacity: row.companies?.is_active === false ? 0.6 : 1 }}>
+      <VStack gap={2}>
+        <HStack hAlign="between" vAlign="start" gap={2} wrap="wrap">
+          <VStack gap={0}>
+            <Text weight="semibold">{companyName}</Text>
+            <Text color="secondary">
+              {row.work_date} / {formatVehicleNumLabel(row.vehicle_num)}
+            </Text>
+          </VStack>
+          <StatusBadge status={status} size="md" />
+        </HStack>
+        {route ? <Text>{route}</Text> : null}
+        <Text type="large" hasTabularNumbers>
+          ¥{Number(row.amount ?? 0).toLocaleString('ja-JP')}
+        </Text>
+        {row.note ? <Text color="secondary">{row.note}</Text> : null}
+        {locked ? (
+          <HStack gap={1} vAlign="center">
+            <Lock size={16} aria-hidden />
+            <Text color="secondary">請求書発行済み（編集不可）</Text>
+          </HStack>
+        ) : (
+          <HStack gap={1}>
+            <Button
+              label="編集"
+              variant="secondary"
+              size="lg"
+              width="100%"
+              icon={<Pencil />}
+              onClick={() => onEdit(row)}
+              isDisabled={disabled}
+            />
+            <Button
+              label="削除"
+              variant="destructive"
+              size="lg"
+              width="100%"
+              icon={<Trash2 />}
+              onClick={() => onDelete(row)}
+              isDisabled={disabled}
+            />
+          </HStack>
+        )}
+      </VStack>
+    </Card>
+  )
+}
+
 /**
  * 売掛一覧テーブル。表示行と編集行を切り替える。
  *
@@ -234,6 +419,7 @@ function DisplayRow({ row, onEdit, onDelete, disabled }) {
  * @param {boolean} [props.isSaving]
  */
 export function ReceivablesTable({ rows, companies, options, onUpdate, onDelete, isSaving }) {
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const [editingId, setEditingId] = useState(null)
 
   const handleStartEdit = (row) => {
@@ -252,6 +438,42 @@ export function ReceivablesTable({ rows, companies, options, onUpdate, onDelete,
     } catch {
       /* error は呼び出し側で表示 */
     }
+  }
+
+  if (isMobile) {
+    if (rows.length === 0) {
+      return (
+        <Card padding={3}>
+          <Text color="secondary">該当する売掛がありません</Text>
+        </Card>
+      )
+    }
+
+    return (
+      <VStack gap={2}>
+        {rows.map((row) =>
+          row.id === editingId ? (
+            <MobileEditCard
+              key={row.id}
+              row={row}
+              companies={companies}
+              options={options}
+              onSave={handleSaveEdit}
+              onCancel={handleCancel}
+              isSaving={isSaving}
+            />
+          ) : (
+            <MobileDisplayCard
+              key={row.id}
+              row={row}
+              onEdit={handleStartEdit}
+              onDelete={onDelete}
+              disabled={isSaving || editingId != null}
+            />
+          )
+        )}
+      </VStack>
+    )
   }
 
   return (
@@ -280,7 +502,7 @@ export function ReceivablesTable({ rows, companies, options, onUpdate, onDelete,
         ) : null}
         {rows.map((row) =>
           row.id === editingId ? (
-            <EditableRow
+            <DesktopEditableRow
               key={row.id}
               row={row}
               companies={companies}

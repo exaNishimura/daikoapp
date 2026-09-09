@@ -19,9 +19,8 @@ import {
 } from 'lucide-react'
 import { AppShell } from '@astryxdesign/core/AppShell'
 import { Button } from '@astryxdesign/core/Button'
-import { HStack } from '@astryxdesign/core/Layout'
-import { Text } from '@astryxdesign/core/Text'
 import { TopNav, TopNavHeading, TopNavMenu } from '@astryxdesign/core/TopNav'
+import { AccountMenu } from '@/components/AccountMenu'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { DispatchBoard } from '@/components/DispatchBoard'
 import { ShiftCalendar } from '@/components/ShiftCalendar'
@@ -49,6 +48,9 @@ import { TravelTimeMapPage } from '@/pages/TravelTimeMapPage'
 import { isNavItemActive, filterVisibleCategories } from '@/lib/navConfig'
 
 const SYSTEM_NAME = '運転代行管理システム'
+
+/** 内部スクロールが必要な画面。それ以外は height="auto" で TopNav を sticky にする。 */
+const FILL_SHELL_PATHS = new Set(['/dispatch', '/travel-times', '/shift/edit'])
 
 const NAV_ITEM_ICONS = {
   '/dispatch': Truck,
@@ -119,10 +121,7 @@ function AppTopNav() {
       ))}
       endContent={
         isAuthenticated ? (
-          <HStack gap={2} vAlign="center">
-            {user?.email ? <Text color="secondary">{user.email}</Text> : null}
-            <Button label="ログアウト" variant="ghost" size="sm" onClick={handleLogout} />
-          </HStack>
+          <AccountMenu email={user?.email} onLogout={handleLogout} />
         ) : (
           <Button label="ログイン" variant="primary" size="sm" href="/login" />
         )
@@ -249,8 +248,15 @@ function AppFrame() {
     return <AppRoutes />
   }
 
+  const shellHeight = FILL_SHELL_PATHS.has(location.pathname) ? 'fill' : 'auto'
+
   return (
-    <AppShell height="fill" contentPadding={0} variant="section" topNav={<AppTopNav />}>
+    <AppShell
+      height={shellHeight}
+      contentPadding={0}
+      variant="section"
+      topNav={<AppTopNav />}
+    >
       <LineHoldingAlertHost />
       <AppRoutes />
     </AppShell>

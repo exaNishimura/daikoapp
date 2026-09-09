@@ -12,6 +12,7 @@ import {
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
+import { SummaryStat } from '@/components/SummaryStat'
 import { LICENSE_TYPE1, formatYen } from '@/lib/shiftRequestEdit'
 
 function licenseTokenColor(licenseType) {
@@ -28,14 +29,13 @@ export function ShiftEditSummary({ staffSummary, monthLaborCost, requestRows }) 
   return (
     <Card padding={4}>
       <VStack gap={3}>
-        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
+        <HStack hAlign="between" vAlign="start" wrap="wrap" gap={2}>
           <Heading level={3}>希望採用サマリ</Heading>
-          <HStack gap={1} wrap="wrap" vAlign="center">
-            <Token size="md" color="green" label={`想定人件費 ${formatYen(monthLaborCost)}`} />
-            <Token
-              size="sm"
-              color="gray"
-              label={staffCount > 0 ? `希望提出 ${submittedCount}/${staffCount}人` : '希望未取得'}
+          <HStack gap={3} wrap="wrap" vAlign="start">
+            <SummaryStat label="想定人件費" value={formatYen(monthLaborCost)} />
+            <SummaryStat
+              label="希望提出"
+              value={staffCount > 0 ? `${submittedCount}/${staffCount}人` : '—'}
             />
           </HStack>
         </HStack>

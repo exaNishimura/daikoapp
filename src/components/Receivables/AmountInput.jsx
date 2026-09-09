@@ -18,16 +18,22 @@ function formatAmount(value) {
   return `¥${n.toLocaleString('ja-JP')}`
 }
 
-const INPUT_STYLE = {
-  width: '100%',
-  boxSizing: 'border-box',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  paddingBlock: 'var(--spacing-2)',
-  paddingInline: 'var(--spacing-3)',
-  font: 'inherit',
-  background: 'var(--color-bg)',
-  color: 'var(--color-text)',
+function inputStyle(size) {
+  const isLg = size === 'lg' || size === 'large'
+  const isMd = size === 'md' || size === 'medium'
+  return {
+    width: '100%',
+    boxSizing: 'border-box',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    paddingBlock: isLg || isMd ? 'var(--spacing-3)' : 'var(--spacing-2)',
+    paddingInline: 'var(--spacing-3)',
+    minHeight: isLg ? '3rem' : undefined,
+    font: 'inherit',
+    fontSize: isLg ? '1rem' : undefined,
+    background: 'var(--color-bg)',
+    color: 'var(--color-text)',
+  }
 }
 
 /**
@@ -44,6 +50,7 @@ export function AmountInput({
   placeholder = '¥0',
   disabled = false,
   isLabelHidden = false,
+  size = 'sm',
 }) {
   const inputId = useId()
   const [draft, setDraft] = useState(null)
@@ -75,7 +82,7 @@ export function AmountInput({
         placeholder={placeholder}
         disabled={disabled}
         inputMode="numeric"
-        style={INPUT_STYLE}
+        style={inputStyle(size)}
       />
     </Field>
   )

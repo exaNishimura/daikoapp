@@ -8,6 +8,12 @@ body,
   margin: 0;
 }
 
+/* height=auto のとき TopNav が sticky。テーブルの sticky 列 (z-index 2–4) より手前に出す */
+.astryx-app-shell-header {
+  z-index: 20;
+  background-color: var(--color-background-surface);
+}
+
 body {
   font-family: var(--font-family-body);
   -webkit-font-smoothing: antialiased;

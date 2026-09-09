@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Theme } from '@astryxdesign/core/theme'
 import { stoneTheme } from '@/theme/astryx/stoneTheme'
 import dayjs from 'dayjs'
@@ -11,6 +12,7 @@ import {
   monthRange,
   dateInputMonthBounds,
   dayjsToMonthString,
+  shiftMonth,
 } from './monthUtils'
 
 function renderWithTheme(ui) {
@@ -22,15 +24,34 @@ function renderWithTheme(ui) {
 }
 
 describe('MonthPicker (smoke)', () => {
-  it('renders the given value formatted as YYYY年MM月', () => {
+  it('renders year and month selectors for the given value', () => {
     renderWithTheme(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" />)
     expect(screen.getByText('対象月')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('2026年05月')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '前月' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '翌月' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '年' })).toHaveTextContent('2026年')
+    expect(screen.getByRole('combobox', { name: '月' })).toHaveTextContent('5月')
   })
 
   it('renders an empty picker when value is null', () => {
     renderWithTheme(<MonthPicker value={null} onChange={() => {}} label="対象月" />)
-    expect(screen.queryByDisplayValue(/2026/)).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '年' })).not.toHaveTextContent('2026年')
+    expect(screen.getByRole('combobox', { name: '月' })).not.toHaveTextContent('5月')
+  })
+
+  it('shows YYYY年M月 between prev/next when full width', () => {
+    renderWithTheme(
+      <MonthPicker value="2026-05" onChange={() => {}} label="対象月" width="100%" />
+    )
+    expect(screen.getByText('2026年5月')).toBeInTheDocument()
+  })
+
+  it('emits the previous month from the 前月 button', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    renderWithTheme(<MonthPicker value="2026-01" onChange={onChange} label="対象月" />)
+    await user.click(screen.getByRole('button', { name: '前月' }))
+    expect(onChange).toHaveBeenCalledWith('2025-12')
   })
 })
 
@@ -128,6 +149,16 @@ describe('dateInputMonthBounds', () => {
         />
       )
     ).not.toThrow()
+  })
+})
+
+describe('shiftMonth', () => {
+  it('moves backward across a year boundary', () => {
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12')
+  })
+
+  it('moves forward within the same year', () => {
+    expect(shiftMonth('2026-05', 1)).toBe('2026-06')
   })
 })
 

@@ -8,6 +8,7 @@ import { Heading } from '@astryxdesign/core/Heading'
 import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { VStack } from '@astryxdesign/core/Layout'
+import { canUseDevAuthBypass } from '@/lib/devAuth'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function LoginPage() {
@@ -15,8 +16,9 @@ export function LoginPage() {
   const [error, setError] = useState(null)
   const [info, setInfo] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const { sendMagicLink, isAuthenticated, loading } = useAuth()
+  const { sendMagicLink, loginWithDevBypass, isAuthenticated, loading } = useAuth()
   const location = useLocation()
+  const showDevBypass = canUseDevAuthBypass()
 
   if (loading) return null
   if (isAuthenticated) {
@@ -93,6 +95,19 @@ export function LoginPage() {
             isLoading={submitting}
             label={submitting ? '送信中...' : 'ログインリンクを送信'}
           />
+          {showDevBypass ? (
+            <Button
+              type="button"
+              variant="secondary"
+              width="100%"
+              isDisabled={submitting}
+              label="認証なしで入る（ローカル開発）"
+              onClick={() => {
+                const result = loginWithDevBypass()
+                if (!result.success) setError(result.error)
+              }}
+            />
+          ) : null}
         </VStack>
       </Card>
     </Center>

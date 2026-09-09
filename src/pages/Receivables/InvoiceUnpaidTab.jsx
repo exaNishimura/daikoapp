@@ -7,7 +7,7 @@ import { Divider } from '@astryxdesign/core/Divider'
 import { Grid } from '@astryxdesign/core/Grid'
 import { Heading } from '@astryxdesign/core/Heading'
 import { IconButton } from '@astryxdesign/core/IconButton'
-import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { VStack } from '@astryxdesign/core/Layout'
 import { Spinner } from '@astryxdesign/core/Spinner'
 import {
   Table,
@@ -19,7 +19,8 @@ import {
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
-import { CircleAlert, Download } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
+import { SummaryStat } from '@/components/SummaryStat'
 import {
   useUnpaidInvoices,
   useDownloadInvoice,
@@ -111,42 +112,22 @@ export function InvoiceUnpaidTab() {
         <VStack gap={3}>
           <Heading level={3}>未入金サマリ</Heading>
           <Grid columns={{ minWidth: 140 }} gap={2}>
-            <VStack gap={0}>
-              <Text size="sm" color="secondary">
-                総未収金額
-              </Text>
-              <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                ¥{summary.total_unpaid.toLocaleString('ja-JP')}
-              </Text>
-            </VStack>
-            <VStack gap={0}>
-              <Text size="sm" color="secondary">
-                件数
-              </Text>
-              <Text weight="semibold">{summary.invoice_count}</Text>
-            </VStack>
-            <VStack gap={0}>
-              <Text size="sm" color="secondary">
-                平均滞留日数
-              </Text>
-              <Text weight="semibold">{summary.average_days_overdue} 日</Text>
-            </VStack>
-            <VStack gap={0}>
-              <Text size="sm" color="secondary">
-                60 日超アラート
-              </Text>
-              <HStack gap={1} vAlign="center">
-                {summary.over_60_count > 0 ? (
-                  <CircleAlert size={16} color="var(--color-text-red)" />
-                ) : null}
-                <Text
-                  weight="semibold"
-                  style={summary.over_60_count > 0 ? { color: 'var(--color-text-red)' } : undefined}
-                >
-                  {summary.over_60_count} 件
-                </Text>
-              </HStack>
-            </VStack>
+            <SummaryStat
+              label="総未収金額"
+              value={`¥${summary.total_unpaid.toLocaleString('ja-JP')}`}
+            />
+            <SummaryStat label="件数" value={summary.invoice_count} />
+            <SummaryStat label="平均滞留日数" value={`${summary.average_days_overdue} 日`} />
+            <SummaryStat
+              label="60 日超アラート"
+              value={`${summary.over_60_count} 件`}
+              tone={summary.over_60_count > 0 ? 'danger' : undefined}
+              start={
+                summary.over_60_count > 0 ? (
+                  <CircleAlert size={20} color="var(--color-text-red)" />
+                ) : null
+              }
+            />
           </Grid>
 
           {summary.by_company.length > 0 ? (
@@ -160,13 +141,13 @@ export function InvoiceUnpaidTab() {
                     variant={c.max_days_overdue > 60 ? 'red' : 'muted'}
                   >
                     <VStack gap={0}>
-                      <Text size="sm" color="secondary">
+                      <Text type="supporting">
                         {c.invoice_display_name || c.company_name}
                       </Text>
-                      <Text weight="semibold" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      <Text type="large" hasTabularNumbers>
                         ¥{c.total_unpaid.toLocaleString('ja-JP')}
                       </Text>
-                      <Text size="sm" color="secondary">
+                      <Text type="supporting">
                         {c.invoice_count} 件 · 最長 {c.max_days_overdue} 日
                       </Text>
                     </VStack>
