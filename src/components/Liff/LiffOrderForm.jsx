@@ -10,6 +10,7 @@ import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import {
   callLineIntakeApi,
   fetchLiffNightOccupancy,
@@ -375,7 +376,14 @@ export function LiffOrderForm() {
         </RadioList>
       ) : null}
 
-      <TextInput label="連絡先電話番号" value={phone} onChange={setPhone} isRequired width="100%" />
+      <TextInput
+        label="連絡先電話番号"
+        value={phone}
+        onChange={setPhone}
+        isRequired
+        size={FORM_FIELD_SIZE}
+        width="100%"
+      />
 
       <VStack gap={3} className="liff-order-form__unit">
         {orderType === 'SCHEDULED' ? (
@@ -387,6 +395,7 @@ export function LiffOrderForm() {
               min={getMinLiffPickupDate()}
               isRequired
               weekStartsOn="mon"
+              size={FORM_FIELD_SIZE}
               width="100%"
             />
             <HStack gap={3}>
@@ -394,6 +403,7 @@ export function LiffOrderForm() {
                 label="時"
                 isRequired
                 width="100%"
+                size={FORM_FIELD_SIZE}
                 value={
                   unit.pickup_hour === '' || unit.pickup_hour == null
                     ? undefined
@@ -410,6 +420,7 @@ export function LiffOrderForm() {
                 label="分"
                 isRequired
                 width="100%"
+                size={FORM_FIELD_SIZE}
                 value={
                   unit.pickup_minute === '' || unit.pickup_minute == null
                     ? undefined
@@ -459,6 +470,7 @@ export function LiffOrderForm() {
           value={unit.vehicle_info}
           onChange={(value) => updateUnit({ vehicle_info: value })}
           isRequired
+          size={FORM_FIELD_SIZE}
           width="100%"
           placeholder="車種・色・ナンバー等"
         />

@@ -4,6 +4,7 @@ import { Button } from '@astryxdesign/core/Button'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
 import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
 import { TextInput } from '@astryxdesign/core/TextInput'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { verifyShiftPin } from '@/services/employeeShiftService'
 import {
   clearEmployeeShiftSession,
@@ -82,6 +83,7 @@ export function ShiftPinGate({ children }) {
                 hasAutoFocus
                 isDisabled={submitting}
                 htmlName="pin"
+                size={FORM_FIELD_SIZE}
                 width="100%"
                 status={error ? { type: 'error', message: error } : undefined}
               />

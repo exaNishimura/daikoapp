@@ -19,6 +19,7 @@ import {
   formatReservationMinuteLabel,
   splitReservationDateTime,
 } from '@/lib/reservation/reservationTime'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { missingReservationFields } from '@/services/reservationService'
 import { CustomerNameSelect } from './CustomerNameSelect'
 import './ReservationFormDialog.css'
@@ -95,7 +96,7 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
               onChange={(value) => setReservedDate(value ?? '')}
               isRequired
               weekStartsOn="mon"
-              size="sm"
+              size={FORM_FIELD_SIZE}
               width="100%"
               status={reservedAtError}
             />
@@ -104,6 +105,7 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
                 label="時"
                 isRequired
                 width="100%"
+                size={FORM_FIELD_SIZE}
                 value={reservedHour === '' || reservedHour == null ? undefined : String(reservedHour)}
                 onChange={(next) => setReservedHour(next === '' ? '' : Number(next))}
                 options={RESERVATION_HOURS.map((hour) => ({
@@ -116,6 +118,7 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
                 label="分"
                 isRequired
                 width="100%"
+                size={FORM_FIELD_SIZE}
                 value={
                   reservedMinute === '' || reservedMinute == null
                     ? undefined
@@ -156,10 +159,18 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
               value={phone}
               onChange={setPhone}
               isRequired
+              size={FORM_FIELD_SIZE}
               width="100%"
               status={fieldErrors.phone ? { type: 'error', message: '必須です' } : undefined}
             />
-            <TextArea label="メモ（備忘）" value={memo} onChange={setMemo} rows={2} width="100%" />
+            <TextArea
+              label="メモ（備忘）"
+              value={memo}
+              onChange={setMemo}
+              rows={2}
+              size={FORM_FIELD_SIZE}
+              width="100%"
+            />
           </VStack>
         </LayoutContent>
       }

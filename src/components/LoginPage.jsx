@@ -9,6 +9,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { VStack } from '@astryxdesign/core/Layout'
 import { canUseDevAuthBypass } from '@/lib/devAuth'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function LoginPage() {
@@ -85,6 +86,7 @@ export function LoginPage() {
             isRequired
             hasAutoFocus
             isDisabled={submitting}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <Button

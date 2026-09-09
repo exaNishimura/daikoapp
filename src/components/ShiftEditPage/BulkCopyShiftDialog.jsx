@@ -4,6 +4,7 @@ import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
 import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 /**
  * 一括コピー用ダイアログ。
@@ -65,6 +66,7 @@ export function BulkCopyShiftDialog({
                   value={bulkCopySourceDate}
                   onChange={setBulkCopySourceDate}
                   placeholder="コピー元の日付"
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                 />
               )}

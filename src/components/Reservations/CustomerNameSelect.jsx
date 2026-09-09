@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Typeahead, TypeaheadItem } from '@astryxdesign/core/Typeahead'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 const FREE_OPTION_ID = '__free__'
 
@@ -63,6 +64,7 @@ export function CustomerNameSelect({
   disabled = false,
   status,
   onChangeQuery,
+  size = FORM_FIELD_SIZE,
 }) {
   const [query, setQuery] = useState('')
 
@@ -155,7 +157,7 @@ export function CustomerNameSelect({
       isRequired={isRequired}
       isDisabled={disabled}
       isLoading={isLoading}
-      size="sm"
+      size={size}
       width="100%"
       debounceMs={0}
       maxMenuItems={50}

@@ -21,6 +21,7 @@ import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
 import { Text } from '@astryxdesign/core/Text'
 import { TextArea } from '@astryxdesign/core/TextArea'
 import { TextInput } from '@astryxdesign/core/TextInput'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
@@ -102,6 +103,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                     timeIncrement={15}
                     timeOptionInterval={15}
                     isRequired
+                    size={FORM_FIELD_SIZE}
                     width="100%"
                   />
                 ) : null}
@@ -117,6 +119,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                       : undefined
                   }
                   placeholder="例: モンガータ"
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                 />
 
@@ -181,6 +184,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                   value={formData.contact_phone}
                   onChange={namedChange(handleChange, 'contact_phone')}
                   placeholder="例: 090-1234-5678"
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                 />
 
@@ -194,6 +198,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                         value={formData.car_model}
                         onChange={namedChange(handleChange, 'car_model')}
                         placeholder="例: プリウス"
+                        size={FORM_FIELD_SIZE}
                         width="100%"
                       />
                     </StackItem>
@@ -204,6 +209,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                         value={formData.car_color}
                         onChange={namedChange(handleChange, 'car_color')}
                         placeholder="例: 白"
+                        size={FORM_FIELD_SIZE}
                         width="100%"
                       />
                     </StackItem>
@@ -214,6 +220,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                     value={formData.car_plate}
                     onChange={namedChange(handleChange, 'car_plate')}
                     placeholder="例: 三重500あ1234"
+                    size={FORM_FIELD_SIZE}
                     width="100%"
                   />
                   <TextArea
@@ -223,6 +230,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                     onChange={namedChange(handleChange, 'parking_note')}
                     rows={3}
                     placeholder="駐車位置やその他のメモ..."
+                    size={FORM_FIELD_SIZE}
                     width="100%"
                   />
                 </VStack>

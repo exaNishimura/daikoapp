@@ -8,6 +8,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { PageFrame } from '@/components/PageFrame'
 import { useAdminLineUnitAction, useLineIntakeSettings } from '@/hooks/useLineIntake'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 export function LineSettingsPage() {
   const { data, isLoading, error } = useLineIntakeSettings()
@@ -65,36 +66,42 @@ export function LineSettingsPage() {
             label="平日稼働台数"
             value={String(form.weekday_fleet_count)}
             onChange={(value) => setField('weekday_fleet_count', value)}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <TextInput
             label="金土稼働台数"
             value={String(form.weekend_fleet_count)}
             onChange={(value) => setField('weekend_fleet_count', value)}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <TextInput
             label="最大台数（将来）"
             value={String(form.max_fleet_count)}
             onChange={(value) => setField('max_fleet_count', value)}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <TextInput
             label="仮想余裕枠上限 (+1〜+2)"
             value={String(form.extra_capacity_max)}
             onChange={(value) => setField('extra_capacity_max', value)}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <TextInput
             label="LINE割引額（円）"
             value={String(form.discount_amount)}
             onChange={(value) => setField('discount_amount', value)}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <TextInput
             label="配車画面 PIN 変更（6桁・空なら変更なし）"
             value={pin}
             onChange={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <Text color="secondary">

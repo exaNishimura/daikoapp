@@ -30,6 +30,7 @@ import { CopyShiftDialog } from './ShiftEditPage/CopyShiftDialog'
 import { BulkCopyShiftDialog } from './ShiftEditPage/BulkCopyShiftDialog'
 import { DayAvailabilityTokens, RequestPicker } from './ShiftEditPage/RequestPicker'
 import { ShiftEditSummary } from './ShiftEditPage/ShiftEditSummary'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import './ShiftEditPage.css'
 
 const NATIVE_INPUT_STYLE = {
@@ -40,6 +41,7 @@ const NATIVE_INPUT_STYLE = {
   paddingBlock: 'var(--spacing-2)',
   paddingInline: 'var(--spacing-3)',
   font: 'inherit',
+  fontSize: 'var(--font-size-base)',
   background: 'var(--color-bg)',
   color: 'var(--color-text)',
 }
@@ -86,7 +88,7 @@ function ShiftFields({ values, onChange, employeeSelectOptions }) {
         value={values.car || undefined}
         onChange={(car) => onChange({ ...values, car })}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <Selector
         label="役割"
@@ -94,7 +96,7 @@ function ShiftFields({ values, onChange, employeeSelectOptions }) {
         value={values.role || undefined}
         onChange={(role) => onChange({ ...values, role })}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <Selector
         label="スタッフ"
@@ -102,7 +104,7 @@ function ShiftFields({ values, onChange, employeeSelectOptions }) {
         value={values.employee_id ? String(values.employee_id) : undefined}
         onChange={(employee_id) => onChange({ ...values, employee_id })}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <HStack gap={2} wrap="wrap">
         <TimeField
@@ -122,8 +124,8 @@ function ShiftFields({ values, onChange, employeeSelectOptions }) {
         onChange={(note) => onChange({ ...values, note })}
         placeholder="例: 無人回避"
         rows={1}
+        size={FORM_FIELD_SIZE}
         width="100%"
-        size="sm"
       />
     </VStack>
   )

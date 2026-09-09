@@ -3,6 +3,7 @@ import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
 import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 /**
  * 単日コピー用ダイアログ。
@@ -56,6 +57,7 @@ export function CopyShiftDialog({
                 options={options}
                 onChange={onCopyFromDate}
                 placeholder="日付を選択"
+                size={FORM_FIELD_SIZE}
                 width="100%"
               />
             </VStack>

@@ -6,6 +6,7 @@ import { HStack, StackItem, VStack } from '@astryxdesign/core/Layout'
 import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { getAddressFromCity } from '@/utils/addressUtils'
 
 function namedChange(handleChange, name) {
@@ -97,6 +98,7 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
         onChange={namedChange(handleChange, 'pickup_location')}
         placeholder="例: モンガータ"
         width="100%"
+        size={FORM_FIELD_SIZE}
       />
       <PlacesAutocompleteField
         label="出発地"
@@ -232,7 +234,7 @@ function DurationFields({ editing, order, formData, handleChange }) {
             htmlName="base_duration_min"
             value={String(formData.base_duration_min ?? '')}
             onChange={namedChange(handleChange, 'base_duration_min')}
-            size="sm"
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <TextInput
@@ -240,7 +242,7 @@ function DurationFields({ editing, order, formData, handleChange }) {
             htmlName="buffer_min"
             value={String(formData.buffer_min ?? '')}
             onChange={namedChange(handleChange, 'buffer_min')}
-            size="sm"
+            size={FORM_FIELD_SIZE}
             width="100%"
           />
           <Text color="secondary">

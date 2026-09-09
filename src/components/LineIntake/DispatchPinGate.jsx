@@ -6,6 +6,7 @@ import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesi
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { callLineIntakeApi } from '@/services/lineIntakeService'
 import { isDispatchPinUnlocked, markDispatchPinUnlocked } from '@/lib/lineIntake/dispatchPinSession'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 /**
  * 配車画面はセッション中 1 回だけ PIN。予約ごとの承認には使わない。
@@ -77,6 +78,7 @@ export function DispatchPinGate({ children }) {
                 hasAutoFocus
                 isDisabled={submitting}
                 htmlName="pin"
+                size={FORM_FIELD_SIZE}
                 width="100%"
                 status={error ? { type: 'error', message: error } : undefined}
               />

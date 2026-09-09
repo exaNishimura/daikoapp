@@ -21,6 +21,7 @@ import {
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { Token } from '@astryxdesign/core/Token'
 import { PageFrame } from '@/components/PageFrame'
 import {
@@ -423,6 +424,7 @@ export function EmployeeManagement() {
                   onChange={(value) => setFormData({ ...formData, name: value })}
                   isRequired
                   isDisabled={loading}
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                 />
                 {editingId ? (
@@ -433,6 +435,7 @@ export function EmployeeManagement() {
                     isDisabled={loading}
                     placeholder="例: 北島"
                     description="売上インポート等で古い表記のまま残っている場合に入力（シフトは従業員IDで連携）"
+                    size={FORM_FIELD_SIZE}
                     width="100%"
                   />
                 ) : null}
@@ -442,6 +445,7 @@ export function EmployeeManagement() {
                   value={formData.license_type}
                   onChange={(value) => setFormData({ ...formData, license_type: value })}
                   isDisabled={loading}
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                   options={LICENSE_TYPES.map((type) => ({ value: type, label: type }))}
                 />
@@ -451,6 +455,7 @@ export function EmployeeManagement() {
                   value={formData.color}
                   onChange={(value) => setFormData({ ...formData, color: value })}
                   isDisabled={loading}
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                   options={DEFAULT_COLORS.map((color) => ({
                     value: color.value,
@@ -463,6 +468,7 @@ export function EmployeeManagement() {
                   onChange={(value) => setFormData({ ...formData, hourly_wage: value })}
                   description="円単位で入力してください"
                   isDisabled={loading}
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                 />
                 <TextInput
@@ -473,6 +479,7 @@ export function EmployeeManagement() {
                   }
                   description="数値が小さいほど上に表示されます"
                   isDisabled={loading}
+                  size={FORM_FIELD_SIZE}
                   width="100%"
                 />
                 <Switch
@@ -545,6 +552,7 @@ export function EmployeeManagement() {
                     label="手動指定（6桁）"
                     value={customPin}
                     onChange={(value) => setCustomPin(value.replace(/\D/g, '').slice(0, 6))}
+                    size={FORM_FIELD_SIZE}
                     width="100%"
                   />
                 ) : null}

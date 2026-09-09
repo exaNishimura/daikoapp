@@ -4,6 +4,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { TextArea } from '@astryxdesign/core/TextArea'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { VStack } from '@astryxdesign/core/Layout'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
@@ -18,7 +19,7 @@ function ContactEditFields({ formData, handleChange }) {
         value={formData.contact_phone}
         onChange={namedChange(handleChange, 'contact_phone')}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <TextInput
         label="車種"
@@ -26,7 +27,7 @@ function ContactEditFields({ formData, handleChange }) {
         value={formData.car_model}
         onChange={namedChange(handleChange, 'car_model')}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <TextInput
         label="ナンバー"
@@ -34,7 +35,7 @@ function ContactEditFields({ formData, handleChange }) {
         value={formData.car_plate}
         onChange={namedChange(handleChange, 'car_plate')}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <TextInput
         label="色"
@@ -42,7 +43,7 @@ function ContactEditFields({ formData, handleChange }) {
         value={formData.car_color}
         onChange={namedChange(handleChange, 'car_color')}
         width="100%"
-        size="sm"
+        size={FORM_FIELD_SIZE}
       />
       <TextArea
         label="駐車位置メモ"
@@ -51,6 +52,7 @@ function ContactEditFields({ formData, handleChange }) {
         onChange={namedChange(handleChange, 'parking_note')}
         rows={3}
         width="100%"
+        size={FORM_FIELD_SIZE}
       />
     </>
   )
