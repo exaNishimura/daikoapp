@@ -21,7 +21,7 @@ import { AmountInput } from '@/components/Receivables/AmountInput'
 import { StatusBadge } from '@/components/Receivables/StatusBadge'
 import { receivableStatus } from '@/components/Receivables/statusUtils'
 import { dateInputMonthBounds, toAstryxSize } from '@/components/Receivables/monthUtils'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import {
   formatVehicleNumLabel,
   parseVehicleNumForSave,
@@ -419,7 +419,7 @@ function MobileDisplayCard({ row, onEdit, onDelete, disabled }) {
  * @param {boolean} [props.isSaving]
  */
 export function ReceivablesTable({ rows, companies, options, onUpdate, onDelete, isSaving }) {
-  const isMobile = useMediaQuery('(max-width: 767px)')
+  const isMobile = useIsMobile()
   const [editingId, setEditingId] = useState(null)
 
   const handleStartEdit = (row) => {

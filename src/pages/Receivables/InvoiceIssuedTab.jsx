@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
 import { Center } from '@astryxdesign/core/Center'
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput'
 import { IconButton } from '@astryxdesign/core/IconButton'
@@ -22,20 +23,11 @@ import {
   useMarkInvoicePaid,
   useRevokeInvoice,
 } from '@/hooks/billing/useInvoices'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useMobileLayout } from '@/hooks/useMobileLayout'
+import { formatBillingMonth, formatIsoDate } from '@/components/Receivables/monthUtils'
 import { downloadInvoicesZip } from '@/lib/billing/downloadInvoicesZip'
 import { InvoiceReissueDialog } from './InvoiceReissueDialog'
-
-function fmtMonth(billingMonth) {
-  if (!billingMonth) return ''
-  const m = String(billingMonth).match(/^(\d{4})-(\d{2})/)
-  return m ? `${m[1]}年${m[2]}月` : billingMonth
-}
-
-function fmtDate(s) {
-  if (!s) return '—'
-  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? `${m[1]}/${m[2]}/${m[3]}` : s
-}
 
 /** 発行時と同じ命名: `YYYYMM_会社名様_請求書_#id`（同月複数枚を区別） */
 function invoiceDisplayName(row, year, month) {
@@ -45,7 +37,79 @@ function invoiceDisplayName(row, year, month) {
   return `${ymPrefix}_${baseName}様_請求書_#${row.id}`
 }
 
+function IssuedCard({
+  row,
+  onTogglePaid,
+  onDownload,
+  onReissue,
+  onRevoke,
+  markPaidPending,
+  dlPending,
+  revokePending,
+  zipBusy,
+}) {
+  const companyLabel = row.companies?.invoice_display_name || row.companies?.name
+  return (
+    <Card padding={3}>
+      <VStack gap={2}>
+        <HStack hAlign="between" vAlign="start" gap={2} wrap="wrap">
+          <VStack gap={0}>
+            <Text weight="medium">{companyLabel}</Text>
+            <Text color="secondary">
+              {formatBillingMonth(row.billing_month)} / 発行 {formatIsoDate(row.issue_date)}
+            </Text>
+          </VStack>
+          <Text type="large" hasTabularNumbers>
+            ¥{Number(row.total_amount).toLocaleString('ja-JP')}
+          </Text>
+        </HStack>
+        <Text color="secondary">{row.line_count} 件</Text>
+        <CheckboxInput
+          label={
+            row.paid_at ? `入金済（${formatIsoDate(row.paid_at.slice(0, 10))}）` : '入金済にする'
+          }
+          value={!!row.paid_at}
+          onChange={() => onTogglePaid(row)}
+          isDisabled={markPaidPending}
+          size="lg"
+        />
+        <VStack gap={1}>
+          <Button
+            label="ダウンロード"
+            variant="secondary"
+            size="lg"
+            width="100%"
+            icon={<Download />}
+            onClick={() => onDownload(row)}
+            isDisabled={!row.file_path || dlPending || zipBusy}
+          />
+          <Button
+            label="修正して再発行"
+            variant="secondary"
+            size="lg"
+            width="100%"
+            icon={<RefreshCw />}
+            onClick={() => onReissue(row)}
+            isDisabled={!!row.paid_at || revokePending || zipBusy}
+          />
+          <Button
+            label="取消"
+            variant="destructive"
+            size="lg"
+            width="100%"
+            icon={<Trash2 />}
+            onClick={() => onRevoke(row)}
+            isDisabled={!!row.paid_at || revokePending || zipBusy}
+          />
+        </VStack>
+      </VStack>
+    </Card>
+  )
+}
+
 export function InvoiceIssuedTab({ year, month }) {
+  const isMobile = useIsMobile()
+  const { actionButtonProps } = useMobileLayout()
   const invoicesQuery = useInvoices({ year, month })
   const dlInvoice = useDownloadInvoice()
   const markPaid = useMarkInvoicePaid()
@@ -78,7 +142,7 @@ export function InvoiceIssuedTab({ year, month }) {
   const handleRevoke = async (row) => {
     if (
       !window.confirm(
-        `「${row.companies?.name}」の ${fmtMonth(row.billing_month)} 請求書（#${row.id}）を取消します。よろしいですか?`
+        `「${row.companies?.name}」の ${formatBillingMonth(row.billing_month)} 請求書（#${row.id}）を取消します。よろしいですか?`
       )
     ) {
       return
@@ -181,92 +245,111 @@ export function InvoiceIssuedTab({ year, month }) {
             </Text>
             <Button
               variant="secondary"
-              size="sm"
               icon={<FolderArchive />}
               label={zipBusy ? 'zip 生成中…' : '全件 zip で DL'}
               onClick={handleZipDownload}
               isDisabled={zipBusy || downloadableCount === 0}
               isLoading={zipBusy}
+              {...(isMobile ? actionButtonProps : { size: 'sm' })}
             />
           </HStack>
-          <Table density="compact" hasHover>
-            <TableHeader>
-              <TableRow isHeaderRow>
-                <TableHeaderCell>請求月</TableHeaderCell>
-                <TableHeaderCell>取引先</TableHeaderCell>
-                <TableHeaderCell>発行日</TableHeaderCell>
-                <TableHeaderCell>件数</TableHeaderCell>
-                <TableHeaderCell>金額</TableHeaderCell>
-                <TableHeaderCell>入金</TableHeaderCell>
-                <TableHeaderCell>操作</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          {isMobile ? (
+            <VStack gap={2}>
               {rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{fmtMonth(r.billing_month)}</TableCell>
-                  <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
-                  <TableCell>{fmtDate(r.issue_date)}</TableCell>
-                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    {r.line_count}
-                  </TableCell>
-                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    ¥{Number(r.total_amount).toLocaleString('ja-JP')}
-                  </TableCell>
-                  <TableCell>
-                    <VStack gap={0} hAlign="center">
-                      <CheckboxInput
-                        label={`${r.companies?.name ?? r.id} 入金済`}
-                        isLabelHidden
-                        value={!!r.paid_at}
-                        onChange={() => handleTogglePaid(r)}
-                        isDisabled={markPaid.isPending}
-                        size="sm"
-                      />
-                      {r.paid_at ? (
-                        <Text size="sm" color="secondary">
-                          {fmtDate(r.paid_at.slice(0, 10))}
-                        </Text>
-                      ) : null}
-                    </VStack>
-                  </TableCell>
-                  <TableCell>
-                    <HStack gap={0} hAlign="center">
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
-                        label="ダウンロード"
-                        tooltip="ダウンロード"
-                        icon={<Download />}
-                        onClick={() => handleDownload(r)}
-                        isDisabled={!r.file_path || dlInvoice.isPending || zipBusy}
-                      />
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
-                        label="修正して再発行"
-                        tooltip={
-                          r.paid_at ? '入金済みのため修正不可（先に入金解除）' : '修正して再発行'
-                        }
-                        icon={<RefreshCw />}
-                        onClick={() => setReissueTarget(r)}
-                        isDisabled={!!r.paid_at || revoke.isPending || zipBusy}
-                      />
-                      <IconButton
-                        size="sm"
-                        variant="destructive"
-                        label="取消"
-                        tooltip={r.paid_at ? '入金済みのため取消不可' : '取消'}
-                        icon={<Trash2 />}
-                        onClick={() => handleRevoke(r)}
-                        isDisabled={!!r.paid_at || revoke.isPending || zipBusy}
-                      />
-                    </HStack>
-                  </TableCell>
-                </TableRow>
+                <IssuedCard
+                  key={r.id}
+                  row={r}
+                  onTogglePaid={handleTogglePaid}
+                  onDownload={handleDownload}
+                  onReissue={setReissueTarget}
+                  onRevoke={handleRevoke}
+                  markPaidPending={markPaid.isPending}
+                  dlPending={dlInvoice.isPending}
+                  revokePending={revoke.isPending}
+                  zipBusy={zipBusy}
+                />
               ))}
-            </TableBody>
-          </Table>
+            </VStack>
+          ) : (
+            <Table density="compact" hasHover>
+              <TableHeader>
+                <TableRow isHeaderRow>
+                  <TableHeaderCell>請求月</TableHeaderCell>
+                  <TableHeaderCell>取引先</TableHeaderCell>
+                  <TableHeaderCell>発行日</TableHeaderCell>
+                  <TableHeaderCell>件数</TableHeaderCell>
+                  <TableHeaderCell>金額</TableHeaderCell>
+                  <TableHeaderCell>入金</TableHeaderCell>
+                  <TableHeaderCell>操作</TableHeaderCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell>{formatBillingMonth(r.billing_month)}</TableCell>
+                    <TableCell>{r.companies?.invoice_display_name || r.companies?.name}</TableCell>
+                    <TableCell>{formatIsoDate(r.issue_date)}</TableCell>
+                    <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {r.line_count}
+                    </TableCell>
+                    <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      ¥{Number(r.total_amount).toLocaleString('ja-JP')}
+                    </TableCell>
+                    <TableCell>
+                      <VStack gap={0} hAlign="center">
+                        <CheckboxInput
+                          label={`${r.companies?.name ?? r.id} 入金済`}
+                          isLabelHidden
+                          value={!!r.paid_at}
+                          onChange={() => handleTogglePaid(r)}
+                          isDisabled={markPaid.isPending}
+                          size="sm"
+                        />
+                        {r.paid_at ? (
+                          <Text size="sm" color="secondary">
+                            {formatIsoDate(r.paid_at.slice(0, 10))}
+                          </Text>
+                        ) : null}
+                      </VStack>
+                    </TableCell>
+                    <TableCell>
+                      <HStack gap={0} hAlign="center">
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          label="ダウンロード"
+                          tooltip="ダウンロード"
+                          icon={<Download />}
+                          onClick={() => handleDownload(r)}
+                          isDisabled={!r.file_path || dlInvoice.isPending || zipBusy}
+                        />
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          label="修正して再発行"
+                          tooltip={
+                            r.paid_at ? '入金済みのため修正不可（先に入金解除）' : '修正して再発行'
+                          }
+                          icon={<RefreshCw />}
+                          onClick={() => setReissueTarget(r)}
+                          isDisabled={!!r.paid_at || revoke.isPending || zipBusy}
+                        />
+                        <IconButton
+                          size="sm"
+                          variant="destructive"
+                          label="取消"
+                          tooltip={r.paid_at ? '入金済みのため取消不可' : '取消'}
+                          icon={<Trash2 />}
+                          onClick={() => handleRevoke(r)}
+                          isDisabled={!!r.paid_at || revoke.isPending || zipBusy}
+                        />
+                      </HStack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </VStack>
       )}
 

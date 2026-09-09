@@ -3,6 +3,7 @@ import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { fromMonthString, shiftMonth, toAstryxSize, toMonthString } from './monthUtils'
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
@@ -22,12 +23,18 @@ function buildYearOptions(selectedYear) {
 }
 
 /**
- * 月選択。I/O は常に 'YYYY-MM'。年・月のセレクト + 前月/翌月。
+ * 対象月選択の共通 UI。
+ * I/O は常に 'YYYY-MM'。上段: 前月 / YYYY年M月 / 翌月、下段: 年・月セレクト。
+ * size / width 未指定時はモバイルで large + 100% を自動適用。
  */
-export function MonthPicker({ value, onChange, label = '対象月', size = 'small', width }) {
+export function MonthPicker({ value, onChange, label = '対象月', size, width }) {
+  const isMobile = useIsMobile()
+  const resolvedSize = size ?? (isMobile ? 'large' : 'small')
+  const resolvedWidth = width ?? (isMobile ? '100%' : undefined)
+
   const parsed = fromMonthString(value)
-  const controlSize = toAstryxSize(size)
-  const isFullWidth = Boolean(width)
+  const controlSize = toAstryxSize(resolvedSize)
+  const isFullWidth = Boolean(resolvedWidth)
   const now = new Date()
   const year = parsed?.year ?? now.getFullYear()
   const month = parsed?.month ?? now.getMonth() + 1
@@ -36,80 +43,57 @@ export function MonthPicker({ value, onChange, label = '対象月', size = 'smal
     onChange?.(toMonthString({ year: nextYear, month: nextMonth }))
   }
 
-  const prevButton = (
-    <IconButton
-      label="前月"
-      tooltip="前月"
-      icon={<ChevronLeft />}
-      variant="secondary"
-      size={controlSize}
-      onClick={() => onChange?.(shiftMonth(value, -1))}
-    />
-  )
-  const nextButton = (
-    <IconButton
-      label="翌月"
-      tooltip="翌月"
-      icon={<ChevronRight />}
-      variant="secondary"
-      size={controlSize}
-      onClick={() => onChange?.(shiftMonth(value, 1))}
-    />
-  )
-  const yearSelector = (
-    <Selector
-      label="年"
-      isLabelHidden
-      options={buildYearOptions(year)}
-      value={parsed ? String(year) : undefined}
-      onChange={(next) => emit(Number(next), month)}
-      size={controlSize}
-      width={isFullWidth ? '100%' : 128}
-    />
-  )
-  const monthSelector = (
-    <Selector
-      label="月"
-      isLabelHidden
-      options={MONTH_OPTIONS}
-      value={parsed ? String(month) : undefined}
-      onChange={(next) => emit(year, Number(next))}
-      size={controlSize}
-      width={isFullWidth ? '100%' : 96}
-    />
-  )
-
   return (
-    <VStack gap={1} width={width}>
+    <VStack gap={1} width={resolvedWidth}>
       {label ? (
         <Text size="sm" color="secondary">
           {label}
         </Text>
       ) : null}
-      {isFullWidth ? (
-        <VStack gap={1}>
-          <HStack gap={1} hAlign="between" vAlign="center">
-            {prevButton}
-            <Text weight="semibold">
-              {year}年{month}月
-            </Text>
-            {nextButton}
-          </HStack>
-          <HStack gap={1}>
-            {yearSelector}
-            {monthSelector}
-          </HStack>
-        </VStack>
-      ) : (
-        <HStack gap={1} vAlign="center">
-          {prevButton}
-          {yearSelector}
-          {monthSelector}
-          {nextButton}
+      <VStack gap={1}>
+        <HStack gap={1} hAlign={isFullWidth ? 'between' : 'start'} vAlign="center">
+          <IconButton
+            label="前月"
+            tooltip="前月"
+            icon={<ChevronLeft />}
+            variant="secondary"
+            size={controlSize}
+            onClick={() => onChange?.(shiftMonth(value, -1))}
+          />
+          <Text weight="semibold">
+            {year}年{month}月
+          </Text>
+          <IconButton
+            label="翌月"
+            tooltip="翌月"
+            icon={<ChevronRight />}
+            variant="secondary"
+            size={controlSize}
+            onClick={() => onChange?.(shiftMonth(value, 1))}
+          />
         </HStack>
-      )}
+        <HStack gap={1}>
+          <Selector
+            label="年"
+            isLabelHidden
+            options={buildYearOptions(year)}
+            value={parsed ? String(year) : undefined}
+            onChange={(next) => emit(Number(next), month)}
+            size={controlSize}
+            width={isFullWidth ? '100%' : 128}
+          />
+          <Selector
+            label="月"
+            isLabelHidden
+            options={MONTH_OPTIONS}
+            value={parsed ? String(month) : undefined}
+            onChange={(next) => emit(year, Number(next))}
+            size={controlSize}
+            width={isFullWidth ? '100%' : 96}
+          />
+        </HStack>
+      </VStack>
     </VStack>
   )
 }
 
-export { dayjsToMonthString } from './monthUtils'

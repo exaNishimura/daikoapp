@@ -4,20 +4,19 @@ import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Card } from '@astryxdesign/core/Card'
 import { Divider } from '@astryxdesign/core/Divider'
-import { Heading } from '@astryxdesign/core/Heading'
-import { IconButton } from '@astryxdesign/core/IconButton'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
-import { ArrowLeft, Download, Upload } from 'lucide-react'
+import { Download, Upload } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
 import { SummaryStat } from '@/components/SummaryStat'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
-import { fromMonthString, toMonthString } from '@/components/Receivables/monthUtils'
+import { currentYearMonth, fromMonthString } from '@/components/Receivables/monthUtils'
 import { CompanySelect } from '@/components/Receivables/CompanySelect'
 import { useCompanies } from '@/hooks/billing/useCompanies'
-import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useMobileLayout } from '@/hooks/useMobileLayout'
 import {
   useCreateReceivable,
   useDeleteReceivable,
@@ -28,11 +27,6 @@ import { buildReceivablesCsv } from '@/lib/billing/exportReceivablesCsv'
 import { summarizeReceivables } from '@/lib/billing/receivablesSummary'
 import { ReceivablesTable } from './ReceivablesTable'
 import { ReceivablesAddRow } from './ReceivablesAddRow'
-
-function currentYearMonth() {
-  const d = new Date()
-  return toMonthString(d) ?? '2026-01'
-}
 
 function downloadTextFile(filename, content, mimeType = 'text/csv;charset=utf-8') {
   const blob = new Blob([content], { type: mimeType })
@@ -60,9 +54,7 @@ const PAID_OPTIONS = [
 
 export function ReceivablesListPage() {
   const navigate = useNavigate()
-  const isMobile = useMediaQuery('(max-width: 767px)')
-  const controlSize = isMobile ? 'lg' : 'sm'
-  const fieldWidth = isMobile ? '100%' : undefined
+  const { controlSize, fieldWidth } = useMobileLayout()
 
   const [monthValue, setMonthValue] = useState(currentYearMonth)
   const [companyId, setCompanyId] = useState(null)
@@ -164,51 +156,39 @@ export function ReceivablesListPage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
-          <HStack gap={2} vAlign="center">
-            <IconButton
-              label="戻る"
-              icon={<ArrowLeft />}
-              variant="ghost"
-              onClick={() => navigate(-1)}
-            />
-            <Heading level={1}>売掛一覧</Heading>
-          </HStack>
-          <HStack gap={1} wrap="wrap">
-            <Button
-              variant="ghost"
-              size={controlSize}
-              icon={<Upload />}
-              label="Excel インポート"
-              onClick={() => navigate('/admin/receivables/import')}
-            />
-            <Button
-              variant="secondary"
-              size={controlSize}
-              icon={<Download />}
-              label="CSV エクスポート"
-              onClick={handleExportCsv}
-              isDisabled={receivablesQuery.isLoading || rows.length === 0}
-            />
-          </HStack>
-        </HStack>
+        <PageHeader
+          title="売掛一覧"
+          actions={
+            <HStack gap={1} wrap="wrap">
+              <Button
+                variant="ghost"
+                size={controlSize}
+                icon={<Upload />}
+                label="Excel インポート"
+                onClick={() => navigate('/admin/receivables/import')}
+              />
+              <Button
+                variant="secondary"
+                size={controlSize}
+                icon={<Download />}
+                label="CSV エクスポート"
+                onClick={handleExportCsv}
+                isDisabled={receivablesQuery.isLoading || rows.length === 0}
+              />
+            </HStack>
+          }
+        />
 
         <Card padding={3}>
           <HStack gap={2} wrap="wrap" vAlign="start">
-            <MonthPicker
-              value={monthValue}
-              onChange={setMonthValue}
-              label="対象月"
-              size={isMobile ? 'large' : 'small'}
-              width={isMobile ? '100%' : undefined}
-            />
+            <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
             <CompanySelect
               companies={allCompanies}
               value={companyId}
               onChange={setCompanyId}
               includeInactive
               label="取引先 (全て)"
-              size={isMobile ? 'lg' : 'small'}
+              size={controlSize}
             />
             <Selector
               label="請求状態"

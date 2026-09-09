@@ -21,6 +21,9 @@ import { Send, Eye } from 'lucide-react'
 import { SummaryStat } from '@/components/SummaryStat'
 import { useUnbilledByCompany } from '@/hooks/billing/useReceivables'
 import { useIssueInvoices, usePreviewInvoice } from '@/hooks/billing/useInvoices'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useMobileLayout } from '@/hooks/useMobileLayout'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import {
   STRATEGIES,
   INVOICE_MAX_LINES,
@@ -36,10 +39,70 @@ const STRATEGY_LABEL = {
   [STRATEGIES.SKIP]: 'スキップ',
 }
 
+function IssueRowCard({ row, decision, isOverflow, onUpdate, onPreview, previewBusy }) {
+  return (
+    <Card
+      padding={3}
+      style={isOverflow ? { backgroundColor: 'var(--color-background-yellow)' } : undefined}
+    >
+      <VStack gap={2}>
+        <HStack hAlign="between" vAlign="start" gap={2} wrap="wrap">
+          <CheckboxInput
+            label={row.invoice_display_name || row.company_name}
+            value={decision.selected}
+            onChange={(checked) => onUpdate(row.company_id, { selected: checked })}
+            size="lg"
+          />
+          <VStack gap={0} hAlign="end">
+            <Text type="large" hasTabularNumbers>
+              ¥{row.total_amount.toLocaleString('ja-JP')}
+            </Text>
+            <Text color="secondary">{row.line_count} 件</Text>
+          </VStack>
+        </HStack>
+        {isOverflow ? (
+          <Text size="sm" style={{ color: 'var(--color-text-yellow)' }}>
+            {INVOICE_MAX_LINES} 件超過 — 対応方針を選択
+          </Text>
+        ) : null}
+        {isOverflow ? (
+          <RadioList
+            label="発行戦略"
+            value={decision.strategy}
+            onChange={(strategy) => onUpdate(row.company_id, { strategy })}
+            orientation="vertical"
+            size="lg"
+          >
+            <RadioListItem value={STRATEGIES.MERGE} label={STRATEGY_LABEL[STRATEGIES.MERGE]} />
+            <RadioListItem value={STRATEGIES.SPLIT} label={STRATEGY_LABEL[STRATEGIES.SPLIT]} />
+            <RadioListItem value={STRATEGIES.SKIP} label={STRATEGY_LABEL[STRATEGIES.SKIP]} />
+          </RadioList>
+        ) : (
+          <Text size="sm" color="secondary">
+            {STRATEGY_LABEL[STRATEGIES.NORMAL]}
+          </Text>
+        )}
+        <Button
+          label="プレビュー"
+          variant="secondary"
+          size="lg"
+          width="100%"
+          icon={<Eye />}
+          isDisabled={previewBusy}
+          isLoading={previewBusy}
+          onClick={() => onPreview(row)}
+        />
+      </VStack>
+    </Card>
+  )
+}
+
 /**
  * 月選択 → 未請求売掛を企業別に集約してプレビュー → 戦略選択 → 発行。
  */
 export function InvoiceIssueTab({ year, month }) {
+  const isMobile = useIsMobile()
+  const { actionButtonProps } = useMobileLayout()
   const unbilledQuery = useUnbilledByCompany(year, month)
   const issueMutation = useIssueInvoices()
   const previewMutation = usePreviewInvoice()
@@ -183,103 +246,124 @@ export function InvoiceIssueTab({ year, month }) {
             isLoading={issueMutation.isPending}
             onClick={handleIssue}
             label={issueMutation.isPending ? '発行中…' : `${selectedCount} 社を発行`}
+            {...actionButtonProps}
           />
         </HStack>
       </Card>
 
-      <Table density="compact" hasHover>
-        <TableHeader>
-          <TableRow isHeaderRow>
-            <TableHeaderCell />
-            <TableHeaderCell>取引先</TableHeaderCell>
-            <TableHeaderCell>件数</TableHeaderCell>
-            <TableHeaderCell>合計</TableHeaderCell>
-            <TableHeaderCell>戦略</TableHeaderCell>
-            <TableHeaderCell />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      {isMobile ? (
+        <VStack gap={2}>
           {rows.map((r) => {
             const d = decisionFor(r)
             const isOverflow = r.line_count > INVOICE_MAX_LINES
             return (
-              <TableRow
+              <IssueRowCard
                 key={r.company_id}
-                style={
-                  isOverflow ? { backgroundColor: 'var(--color-background-yellow)' } : undefined
-                }
-              >
-                <TableCell>
-                  <CheckboxInput
-                    label={`${r.invoice_display_name || r.company_name} を発行対象にする`}
-                    isLabelHidden
-                    value={d.selected}
-                    onChange={(checked) => update(r.company_id, { selected: checked })}
-                    size="sm"
-                  />
-                </TableCell>
-                <TableCell>
-                  <VStack gap={0}>
-                    <Text>{r.invoice_display_name || r.company_name}</Text>
-                    {isOverflow ? (
-                      <Text size="sm" style={{ color: 'var(--color-text-yellow)' }}>
-                        {INVOICE_MAX_LINES} 件超過
-                      </Text>
-                    ) : null}
-                  </VStack>
-                </TableCell>
-                <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                  {r.line_count}
-                </TableCell>
-                <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                  ¥{r.total_amount.toLocaleString('ja-JP')}
-                </TableCell>
-                <TableCell>
-                  {isOverflow ? (
-                    <RadioList
-                      label="発行戦略"
-                      isLabelHidden
-                      value={d.strategy}
-                      onChange={(strategy) => update(r.company_id, { strategy })}
-                      orientation="horizontal"
-                      size="sm"
-                    >
-                      <RadioListItem
-                        value={STRATEGIES.MERGE}
-                        label={STRATEGY_LABEL[STRATEGIES.MERGE]}
-                      />
-                      <RadioListItem
-                        value={STRATEGIES.SPLIT}
-                        label={STRATEGY_LABEL[STRATEGIES.SPLIT]}
-                      />
-                      <RadioListItem
-                        value={STRATEGIES.SKIP}
-                        label={STRATEGY_LABEL[STRATEGIES.SKIP]}
-                      />
-                    </RadioList>
-                  ) : (
-                    <Text size="sm" color="secondary">
-                      {STRATEGY_LABEL[STRATEGIES.NORMAL]}
-                    </Text>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    size="sm"
-                    variant="ghost"
-                    label="プレビュー (発行はしません)"
-                    tooltip="プレビュー (発行はしません)"
-                    icon={<Eye />}
-                    isDisabled={previewBusyId === r.company_id}
-                    isLoading={previewBusyId === r.company_id}
-                    onClick={() => handlePreview(r)}
-                  />
-                </TableCell>
-              </TableRow>
+                row={r}
+                decision={d}
+                isOverflow={isOverflow}
+                onUpdate={update}
+                onPreview={handlePreview}
+                previewBusy={previewBusyId === r.company_id}
+              />
             )
           })}
-        </TableBody>
-      </Table>
+        </VStack>
+      ) : (
+        <Table density="compact" hasHover>
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell />
+              <TableHeaderCell>取引先</TableHeaderCell>
+              <TableHeaderCell>件数</TableHeaderCell>
+              <TableHeaderCell>合計</TableHeaderCell>
+              <TableHeaderCell>戦略</TableHeaderCell>
+              <TableHeaderCell />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => {
+              const d = decisionFor(r)
+              const isOverflow = r.line_count > INVOICE_MAX_LINES
+              return (
+                <TableRow
+                  key={r.company_id}
+                  style={
+                    isOverflow ? { backgroundColor: 'var(--color-background-yellow)' } : undefined
+                  }
+                >
+                  <TableCell>
+                    <CheckboxInput
+                      label={`${r.invoice_display_name || r.company_name} を発行対象にする`}
+                      isLabelHidden
+                      value={d.selected}
+                      onChange={(checked) => update(r.company_id, { selected: checked })}
+                      size="sm"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <VStack gap={0}>
+                      <Text>{r.invoice_display_name || r.company_name}</Text>
+                      {isOverflow ? (
+                        <Text size="sm" style={{ color: 'var(--color-text-yellow)' }}>
+                          {INVOICE_MAX_LINES} 件超過
+                        </Text>
+                      ) : null}
+                    </VStack>
+                  </TableCell>
+                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    {r.line_count}
+                  </TableCell>
+                  <TableCell style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    ¥{r.total_amount.toLocaleString('ja-JP')}
+                  </TableCell>
+                  <TableCell>
+                    {isOverflow ? (
+                      <RadioList
+                        label="発行戦略"
+                        isLabelHidden
+                        value={d.strategy}
+                        onChange={(strategy) => update(r.company_id, { strategy })}
+                        orientation="horizontal"
+                        size={FORM_FIELD_SIZE}
+                      >
+                        <RadioListItem
+                          value={STRATEGIES.MERGE}
+                          label={STRATEGY_LABEL[STRATEGIES.MERGE]}
+                        />
+                        <RadioListItem
+                          value={STRATEGIES.SPLIT}
+                          label={STRATEGY_LABEL[STRATEGIES.SPLIT]}
+                        />
+                        <RadioListItem
+                          value={STRATEGIES.SKIP}
+                          label={STRATEGY_LABEL[STRATEGIES.SKIP]}
+                        />
+                      </RadioList>
+                    ) : (
+                      <Text size="sm" color="secondary">
+                        {STRATEGY_LABEL[STRATEGIES.NORMAL]}
+                      </Text>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="sm"
+                      variant="ghost"
+                      label="プレビュー (発行はしません)"
+                      tooltip="プレビュー (発行はしません)"
+                      icon={<Eye />}
+                      isDisabled={previewBusyId === r.company_id}
+                      isLoading={previewBusyId === r.company_id}
+                      onClick={() => handlePreview(r)}
+                    />
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      )}
 
       {result ? (
         <InvoiceIssueResultDialog

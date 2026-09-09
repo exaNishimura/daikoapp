@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Card } from '@astryxdesign/core/Card'
-import { Heading } from '@astryxdesign/core/Heading'
-import { IconButton } from '@astryxdesign/core/IconButton'
-import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { VStack } from '@astryxdesign/core/Layout'
 import { TabList, Tab } from '@astryxdesign/core/TabList'
-import { ArrowLeft } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
-import { fromMonthString, toMonthString, monthRange } from '@/components/Receivables/monthUtils'
+import { currentYearMonth, fromMonthString, monthRange } from '@/components/Receivables/monthUtils'
 import { useDailySales, useUpsertDailySale } from '@/hooks/billing/useDailySales'
 import {
   useFixedExpenses,
@@ -23,14 +20,9 @@ import { DailySalesTable } from './DailySalesTable'
 import { MonthlyFixedExpensesPanel } from './MonthlyFixedExpensesPanel'
 import { MonthlySummary } from './MonthlySummary'
 
-function currentYearMonth() {
-  return toMonthString(new Date()) ?? '2026-01'
-}
-
 const TABS = { daily: 'daily', fixed: 'fixed' }
 
 export function DailySalesPage() {
-  const navigate = useNavigate()
   const [monthValue, setMonthValue] = useState(currentYearMonth)
   const [tab, setTab] = useState(TABS.daily)
   const [error, setError] = useState(null)
@@ -109,18 +101,10 @@ export function DailySalesPage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
-          <HStack gap={2} vAlign="center">
-            <IconButton
-              label="戻る"
-              icon={<ArrowLeft />}
-              variant="ghost"
-              onClick={() => navigate(-1)}
-            />
-            <Heading level={1}>売上管理</Heading>
-          </HStack>
-          <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
-        </HStack>
+        <PageHeader
+          title="売上管理"
+          actions={<MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />}
+        />
 
         {error ? (
           <Banner

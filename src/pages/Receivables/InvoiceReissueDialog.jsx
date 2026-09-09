@@ -28,6 +28,7 @@ import { getCompanyProfile } from '@/services/billing/companyProfileService'
 import { getReceivables } from '@/services/billing/receivablesService'
 import { generateInvoicePdf } from '@/lib/pdf/generateInvoicePdf'
 import { formatIsoDate, resolveIssueDate } from '@/lib/excel/formatters'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import {
   parseVehicleNumForSave,
   validateReceivableForm,
@@ -429,7 +430,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                         value={issueDate || undefined}
                         onChange={(next) => setIssueDate(next ?? '')}
                         format="system_date"
-                        size="sm"
+                        size={FORM_FIELD_SIZE}
                         weekStartsOn="mon"
                         isRequired
                         status={
@@ -452,7 +453,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                           value={strategy}
                           onChange={setStrategy}
                           orientation="horizontal"
-                          size="sm"
+                          size={FORM_FIELD_SIZE}
                         >
                           <RadioListItem
                             value={STRATEGIES.MERGE}
@@ -500,7 +501,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                                     }
                                     min={dateBounds.min}
                                     max={dateBounds.max}
-                                    size="sm"
+                                    size={FORM_FIELD_SIZE}
                                     width="100%"
                                     status={
                                       errors.work_date
@@ -516,13 +517,14 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                                       updateLine(line.key, { vehicle_num })
                                     }
                                     isLabelHidden
+                                    size={FORM_FIELD_SIZE}
                                   />
                                 </TableCell>
                                 <TableCell style={{ minWidth: 120 }}>
                                   <TextInput
                                     label="出発地"
                                     isLabelHidden
-                                    size="sm"
+                                    size={FORM_FIELD_SIZE}
                                     value={line.departure}
                                     onChange={(departure) => updateLine(line.key, { departure })}
                                     placeholder="出発地"
@@ -533,7 +535,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                                   <TextInput
                                     label="到着地"
                                     isLabelHidden
-                                    size="sm"
+                                    size={FORM_FIELD_SIZE}
                                     value={line.destination}
                                     onChange={(destination) =>
                                       updateLine(line.key, { destination })
@@ -547,13 +549,14 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                                     value={line.amount}
                                     onChange={(amount) => updateLine(line.key, { amount })}
                                     isLabelHidden
+                                    size={FORM_FIELD_SIZE}
                                   />
                                 </TableCell>
                                 <TableCell style={{ minWidth: 140 }}>
                                   <TextInput
                                     label="備考"
                                     isLabelHidden
-                                    size="sm"
+                                    size={FORM_FIELD_SIZE}
                                     value={line.note}
                                     onChange={(note) => updateLine(line.key, { note })}
                                     placeholder="備考"

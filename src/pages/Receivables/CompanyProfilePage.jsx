@@ -1,19 +1,18 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Card } from '@astryxdesign/core/Card'
 import { Center } from '@astryxdesign/core/Center'
 import { Divider } from '@astryxdesign/core/Divider'
 import { Grid, GridSpan } from '@astryxdesign/core/Grid'
-import { Heading } from '@astryxdesign/core/Heading'
-import { IconButton } from '@astryxdesign/core/IconButton'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
 import { TextInput } from '@astryxdesign/core/TextInput'
-import { ArrowLeft, RotateCcw, Save } from 'lucide-react'
+import { RotateCcw, Save } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
+import { useMobileLayout } from '@/hooks/useMobileLayout'
 import { useCompanyProfile, useUpdateCompanyProfile } from '@/hooks/billing/useCompanyProfile'
 import {
   BANK_ACCOUNT_TYPES,
@@ -37,6 +36,8 @@ function fieldStatus(message) {
 }
 
 function ProfileForm({ initial, onSave, isSaving }) {
+  const { isMobile, fieldSize, actionButtonProps } = useMobileLayout()
+  const gridColumns = isMobile ? 1 : 2
   const [form, setForm] = useState(initial)
   const [serverSnapshot, setServerSnapshot] = useState(initial)
   const [error, setError] = useState(null)
@@ -104,7 +105,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
       ) : null}
       <Card padding={4}>
         <VStack gap={4}>
-          <Grid columns={2} gap={2}>
+          <Grid columns={gridColumns} gap={2}>
             <GridSpan columns="full">
               <TextInput
                 label="屋号 / 社名"
@@ -113,6 +114,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
                 status={fieldStatus(errors.name)}
                 description={errors.name ? undefined : '請求書ヘッダに刷り込まれる社名'}
                 isRequired
+                size={fieldSize}
                 width="100%"
                 isDisabled={isSaving}
               />
@@ -127,6 +129,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
                 errors.postal_code ? undefined : '123-4567 形式（ハイフン無しでも自動補完）'
               }
               isRequired
+              size={fieldSize}
               width="100%"
               isDisabled={isSaving}
             />
@@ -137,6 +140,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
               status={fieldStatus(errors.invoice_number)}
               description={errors.invoice_number ? undefined : '例: T1234567890123'}
               isRequired
+              size={fieldSize}
               width="100%"
               isDisabled={isSaving}
             />
@@ -147,6 +151,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
                 onChange={handleChange('address')}
                 status={fieldStatus(errors.address)}
                 isRequired
+                size={fieldSize}
                 width="100%"
                 isDisabled={isSaving}
               />
@@ -155,13 +160,14 @@ function ProfileForm({ initial, onSave, isSaving }) {
 
           <Divider label="振込先" />
 
-          <Grid columns={2} gap={2}>
+          <Grid columns={gridColumns} gap={2}>
             <TextInput
               label="銀行名"
               value={form.bank}
               onChange={handleChange('bank')}
               status={fieldStatus(errors.bank)}
               isRequired
+              size={fieldSize}
               width="100%"
               isDisabled={isSaving}
             />
@@ -171,6 +177,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
               onChange={handleChange('bank_branch')}
               status={fieldStatus(errors.bank_branch)}
               isRequired
+              size={fieldSize}
               width="100%"
               isDisabled={isSaving}
             />
@@ -181,6 +188,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
               onChange={handleChange('bank_account_type')}
               status={fieldStatus(errors.bank_account_type)}
               isRequired
+              size={fieldSize}
               width="100%"
               isDisabled={isSaving}
             />
@@ -191,6 +199,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
               status={fieldStatus(errors.bank_account_number)}
               description={errors.bank_account_number ? undefined : '数字のみ。先頭 0 も保持'}
               isRequired
+              size={fieldSize}
               width="100%"
               isDisabled={isSaving}
             />
@@ -202,19 +211,21 @@ function ProfileForm({ initial, onSave, isSaving }) {
                 status={fieldStatus(errors.bank_account_holder)}
                 description={errors.bank_account_holder ? undefined : 'カタカナ推奨'}
                 isRequired
+                size={fieldSize}
                 width="100%"
                 isDisabled={isSaving}
               />
             </GridSpan>
           </Grid>
 
-          <HStack gap={1} hAlign="end">
+          <HStack gap={1} hAlign={isMobile ? undefined : 'end'} wrap="wrap">
             <Button
               label="元に戻す"
               variant="secondary"
               icon={<RotateCcw />}
               onClick={handleReset}
               isDisabled={isSaving || !isDirty}
+              {...actionButtonProps}
             />
             <Button
               label={isSaving ? '保存中...' : '保存'}
@@ -223,6 +234,7 @@ function ProfileForm({ initial, onSave, isSaving }) {
               onClick={handleSave}
               isDisabled={isSaving || !isValid || !isDirty}
               isLoading={isSaving}
+              {...actionButtonProps}
             />
           </HStack>
         </VStack>
@@ -232,7 +244,6 @@ function ProfileForm({ initial, onSave, isSaving }) {
 }
 
 export function CompanyProfilePage() {
-  const navigate = useNavigate()
   const profileQuery = useCompanyProfile()
   const updateMutation = useUpdateCompanyProfile()
 
@@ -244,15 +255,7 @@ export function CompanyProfilePage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack gap={2} vAlign="center">
-          <IconButton
-            label="戻る"
-            icon={<ArrowLeft />}
-            variant="ghost"
-            onClick={() => navigate(-1)}
-          />
-          <Heading level={1}>自社情報</Heading>
-        </HStack>
+        <PageHeader title="自社情報" />
 
         {profileQuery.error ? (
           <Banner

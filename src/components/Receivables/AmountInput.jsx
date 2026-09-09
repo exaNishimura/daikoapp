@@ -30,7 +30,7 @@ function inputStyle(size) {
     paddingInline: 'var(--spacing-3)',
     minHeight: isLg ? '3rem' : undefined,
     font: 'inherit',
-    fontSize: isLg ? '1rem' : undefined,
+    fontSize: isLg || isMd ? 'var(--font-size-base)' : undefined,
     background: 'var(--color-bg)',
     color: 'var(--color-text)',
   }

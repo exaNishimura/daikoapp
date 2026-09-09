@@ -10,6 +10,7 @@ import { TextInput } from '@astryxdesign/core/TextInput'
 import { Tokenizer } from '@astryxdesign/core/Tokenizer'
 import { Save } from 'lucide-react'
 import { normalizeAliases, validateCompanyForm } from '@/lib/billing/companyForm'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 const EMPTY_FORM = {
   name: '',
@@ -92,6 +93,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading, hand
               status={errors.name ? { type: 'error', message: errors.name } : undefined}
               description={errors.name ? undefined : '社内で識別する正式名称'}
               isRequired
+              size={FORM_FIELD_SIZE}
               width="100%"
               isDisabled={loading}
               hasAutoFocus
@@ -101,6 +103,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading, hand
               value={form.invoice_display_name ?? ''}
               onChange={(invoice_display_name) => setForm({ ...form, invoice_display_name })}
               description="空欄ならマスタ名をそのまま使用"
+              size={FORM_FIELD_SIZE}
               width="100%"
               isDisabled={loading}
             />
@@ -116,6 +119,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading, hand
                 })
               }
               hasCreate
+              size={FORM_FIELD_SIZE}
               width="100%"
               isDisabled={loading}
             />
@@ -127,6 +131,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading, hand
                 errors.display_order ? { type: 'error', message: errors.display_order } : undefined
               }
               description={errors.display_order ? undefined : '数値が小さいほど上に表示'}
+              size={FORM_FIELD_SIZE}
               width="100%"
               isDisabled={loading}
             />
@@ -140,6 +145,7 @@ function DialogBody({ company, existingCompanies, onSave, onClose, loading, hand
               label="メモ"
               value={form.memo ?? ''}
               onChange={(memo) => setForm({ ...form, memo })}
+              size={FORM_FIELD_SIZE}
               width="100%"
               rows={2}
               isDisabled={loading}

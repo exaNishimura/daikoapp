@@ -1,21 +1,14 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Heading } from '@astryxdesign/core/Heading'
-import { IconButton } from '@astryxdesign/core/IconButton'
 import { Card } from '@astryxdesign/core/Card'
-import { HStack, VStack } from '@astryxdesign/core/Layout'
+import { VStack } from '@astryxdesign/core/Layout'
 import { TabList, Tab } from '@astryxdesign/core/TabList'
-import { ArrowLeft } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
 import { MonthPicker } from '@/components/Receivables/MonthPicker'
-import { fromMonthString, toMonthString } from '@/components/Receivables/monthUtils'
+import { currentYearMonth, fromMonthString } from '@/components/Receivables/monthUtils'
 import { InvoiceIssueTab } from './InvoiceIssueTab'
 import { InvoiceIssuedTab } from './InvoiceIssuedTab'
 import { InvoiceUnpaidTab } from './InvoiceUnpaidTab'
-
-function currentYearMonth() {
-  return toMonthString(new Date()) ?? '2026-01'
-}
 
 const TABS = {
   issue: 'issue',
@@ -24,7 +17,6 @@ const TABS = {
 }
 
 export function InvoicesPage() {
-  const navigate = useNavigate()
   const [monthValue, setMonthValue] = useState(currentYearMonth)
   const [tab, setTab] = useState(TABS.issue)
 
@@ -33,20 +25,14 @@ export function InvoicesPage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
-          <HStack gap={2} vAlign="center">
-            <IconButton
-              label="戻る"
-              icon={<ArrowLeft />}
-              variant="ghost"
-              onClick={() => navigate(-1)}
-            />
-            <Heading level={1}>請求書</Heading>
-          </HStack>
-          {tab !== TABS.unpaid ? (
-            <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
-          ) : null}
-        </HStack>
+        <PageHeader
+          title="請求書"
+          actions={
+            tab !== TABS.unpaid ? (
+              <MonthPicker value={monthValue} onChange={setMonthValue} label="対象月" />
+            ) : null
+          }
+        />
 
         <Card padding={2}>
           <VStack gap={3}>

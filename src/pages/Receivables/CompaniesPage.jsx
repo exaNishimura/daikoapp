@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   DndContext,
   PointerSensor,
@@ -18,8 +17,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
 import { Center } from '@astryxdesign/core/Center'
-import { Heading } from '@astryxdesign/core/Heading'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Spinner } from '@astryxdesign/core/Spinner'
@@ -33,8 +32,11 @@ import {
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
-import { ArrowLeft, GripVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { GripVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useMobileLayout } from '@/hooks/useMobileLayout'
 import {
   useCompanies,
   useCreateCompany,
@@ -44,6 +46,39 @@ import {
   useReorderCompanies,
 } from '@/hooks/billing/useCompanies'
 import { CompanyEditDialog } from './CompanyEditDialog'
+
+function CompanyNameBlock({ company }) {
+  return (
+    <VStack gap={0}>
+      <Text weight="medium">{company.name}</Text>
+      {company.invoice_display_name && company.invoice_display_name !== company.name ? (
+        <Text size="sm" color="secondary">
+          請求書表記: {company.invoice_display_name}
+        </Text>
+      ) : null}
+    </VStack>
+  )
+}
+
+function CompanyAliases({ company }) {
+  const aliases = company.aliases ?? []
+  if (aliases.length === 0) return null
+  return (
+    <HStack gap={1} wrap="wrap">
+      {aliases.map((a) => (
+        <Token key={a} size="sm" label={a} />
+      ))}
+    </HStack>
+  )
+}
+
+function CompanyStatusToken({ company }) {
+  return company.is_active ? (
+    <Token size="sm" color="green" label="有効" />
+  ) : (
+    <Token size="sm" color="gray" label="無効" />
+  )
+}
 
 function SortableRow({ company, onEdit, onToggleActive, onDelete, disabled }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -71,29 +106,14 @@ function SortableRow({ company, onEdit, onToggleActive, onDelete, disabled }) {
         </HStack>
       </TableCell>
       <TableCell>
-        <VStack gap={0}>
-          <Text weight="medium">{company.name}</Text>
-          {company.invoice_display_name && company.invoice_display_name !== company.name ? (
-            <Text size="sm" color="secondary">
-              請求書表記: {company.invoice_display_name}
-            </Text>
-          ) : null}
-        </VStack>
+        <CompanyNameBlock company={company} />
       </TableCell>
       <TableCell>
-        <HStack gap={1} wrap="wrap">
-          {(company.aliases ?? []).map((a) => (
-            <Token key={a} size="sm" label={a} />
-          ))}
-        </HStack>
+        <CompanyAliases company={company} />
       </TableCell>
       <TableCell style={{ textAlign: 'right' }}>{company.display_order ?? 0}</TableCell>
       <TableCell>
-        {company.is_active ? (
-          <Token size="sm" color="green" label="有効" />
-        ) : (
-          <Token size="sm" color="gray" label="無効" />
-        )}
+        <CompanyStatusToken company={company} />
       </TableCell>
       <TableCell>
         <Text color="secondary">{company.memo || '—'}</Text>
@@ -147,8 +167,90 @@ function SortableRow({ company, onEdit, onToggleActive, onDelete, disabled }) {
   )
 }
 
+function SortableCard({ company, onEdit, onToggleActive, onDelete, disabled }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: company.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : company.is_active ? 1 : 0.55,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card padding={3}>
+        <VStack gap={2}>
+          <HStack hAlign="between" vAlign="start" gap={2}>
+            <HStack gap={2} vAlign="start">
+              <HStack
+                {...attributes}
+                {...listeners}
+                vAlign="center"
+                style={{ cursor: 'grab', touchAction: 'none' }}
+                aria-label="並び替え"
+              >
+                <GripVertical size={20} color="var(--color-text-secondary)" />
+              </HStack>
+              <CompanyNameBlock company={company} />
+            </HStack>
+            <CompanyStatusToken company={company} />
+          </HStack>
+          <CompanyAliases company={company} />
+          {company.memo ? <Text color="secondary">{company.memo}</Text> : null}
+          <HStack gap={1} wrap="wrap">
+            <Button
+              label="編集"
+              variant="secondary"
+              size="lg"
+              width="100%"
+              icon={<Pencil />}
+              onClick={() => onEdit(company)}
+              isDisabled={disabled}
+            />
+            {company.is_active ? (
+              <Button
+                label="無効化"
+                variant="destructive"
+                size="lg"
+                width="100%"
+                icon={<Trash2 />}
+                onClick={() => onToggleActive(company, false)}
+                isDisabled={disabled}
+              />
+            ) : (
+              <Button
+                label="有効化"
+                variant="secondary"
+                size="lg"
+                width="100%"
+                icon={<RotateCcw />}
+                onClick={() => onToggleActive(company, true)}
+                isDisabled={disabled}
+              />
+            )}
+            {!company.is_active ? (
+              <Button
+                label="削除"
+                variant="destructive"
+                size="lg"
+                width="100%"
+                icon={<Trash2 />}
+                onClick={() => onDelete(company)}
+                isDisabled={disabled}
+              />
+            ) : null}
+          </HStack>
+        </VStack>
+      </Card>
+    </div>
+  )
+}
+
 export function CompaniesPage() {
-  const navigate = useNavigate()
+  const isMobile = useIsMobile()
+  const { actionButtonProps } = useMobileLayout()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [error, setError] = useState(null)
@@ -267,24 +369,19 @@ export function CompaniesPage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack gap={2} wrap="wrap" vAlign="center" hAlign="between">
-          <HStack gap={2} vAlign="center">
-            <IconButton
-              label="戻る"
-              icon={<ArrowLeft />}
-              variant="ghost"
-              onClick={() => navigate(-1)}
+        <PageHeader
+          title="取引先マスタ"
+          actions={
+            <Button
+              variant="primary"
+              icon={<Plus />}
+              label="新規追加"
+              onClick={handleOpenNew}
+              isDisabled={loading}
+              {...actionButtonProps}
             />
-            <Heading level={1}>取引先マスタ</Heading>
-          </HStack>
-          <Button
-            variant="primary"
-            icon={<Plus />}
-            label="新規追加"
-            onClick={handleOpenNew}
-            isDisabled={loading}
-          />
-        </HStack>
+          }
+        />
 
         {companiesQuery.error ? (
           <Banner
@@ -334,21 +431,10 @@ export function CompaniesPage() {
               items={companies.map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
-              <Table density="compact" hasHover>
-                <TableHeader>
-                  <TableRow isHeaderRow>
-                    <TableHeaderCell />
-                    <TableHeaderCell>名前</TableHeaderCell>
-                    <TableHeaderCell>別名</TableHeaderCell>
-                    <TableHeaderCell>並び順</TableHeaderCell>
-                    <TableHeaderCell>状態</TableHeaderCell>
-                    <TableHeaderCell>メモ</TableHeaderCell>
-                    <TableHeaderCell>操作</TableHeaderCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {isMobile ? (
+                <VStack gap={2}>
                   {companies.map((c) => (
-                    <SortableRow
+                    <SortableCard
                       key={c.id}
                       company={c}
                       onEdit={handleEdit}
@@ -357,8 +443,34 @@ export function CompaniesPage() {
                       disabled={loading}
                     />
                   ))}
-                </TableBody>
-              </Table>
+                </VStack>
+              ) : (
+                <Table density="compact" hasHover>
+                  <TableHeader>
+                    <TableRow isHeaderRow>
+                      <TableHeaderCell />
+                      <TableHeaderCell>名前</TableHeaderCell>
+                      <TableHeaderCell>別名</TableHeaderCell>
+                      <TableHeaderCell>並び順</TableHeaderCell>
+                      <TableHeaderCell>状態</TableHeaderCell>
+                      <TableHeaderCell>メモ</TableHeaderCell>
+                      <TableHeaderCell>操作</TableHeaderCell>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {companies.map((c) => (
+                      <SortableRow
+                        key={c.id}
+                        company={c}
+                        onEdit={handleEdit}
+                        onToggleActive={handleToggleActive}
+                        onDelete={handleDelete}
+                        disabled={loading}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </SortableContext>
           </DndContext>
         ) : null}

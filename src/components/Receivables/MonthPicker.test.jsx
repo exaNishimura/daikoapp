@@ -13,6 +13,9 @@ import {
   dateInputMonthBounds,
   dayjsToMonthString,
   shiftMonth,
+  currentYearMonth,
+  formatBillingMonth,
+  formatIsoDate,
 } from './monthUtils'
 
 function renderWithTheme(ui) {
@@ -27,6 +30,7 @@ describe('MonthPicker (smoke)', () => {
   it('renders year and month selectors for the given value', () => {
     renderWithTheme(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" />)
     expect(screen.getByText('対象月')).toBeInTheDocument()
+    expect(screen.getByText('2026年5月')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '前月' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '翌月' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: '年' })).toHaveTextContent('2026年')
@@ -39,11 +43,13 @@ describe('MonthPicker (smoke)', () => {
     expect(screen.getByRole('combobox', { name: '月' })).not.toHaveTextContent('5月')
   })
 
-  it('shows YYYY年M月 between prev/next when full width', () => {
+  it('keeps the same stacked layout when full width', () => {
     renderWithTheme(
       <MonthPicker value="2026-05" onChange={() => {}} label="対象月" width="100%" />
     )
     expect(screen.getByText('2026年5月')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '年' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: '月' })).toBeInTheDocument()
   })
 
   it('emits the previous month from the 前月 button', async () => {
@@ -159,6 +165,25 @@ describe('shiftMonth', () => {
 
   it('moves forward within the same year', () => {
     expect(shiftMonth('2026-05', 1)).toBe('2026-06')
+  })
+})
+
+describe('currentYearMonth / formatBillingMonth / formatIsoDate', () => {
+  it('formats billing_month as YYYY年MM月', () => {
+    expect(formatBillingMonth('2026-09-01')).toBe('2026年09月')
+    expect(formatBillingMonth('2026-09')).toBe('2026年09月')
+    expect(formatBillingMonth(null)).toBe('')
+  })
+
+  it('formats ISO date as YYYY/MM/DD', () => {
+    expect(formatIsoDate('2026-09-15')).toBe('2026/09/15')
+    expect(formatIsoDate('2026-09-15T12:00:00Z')).toBe('2026/09/15')
+    expect(formatIsoDate(null)).toBe('—')
+  })
+
+  it('returns current month as YYYY-MM', () => {
+    const ym = currentYearMonth()
+    expect(ym).toMatch(/^\d{4}-\d{2}$/)
   })
 })
 

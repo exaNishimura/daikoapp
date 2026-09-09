@@ -11,5 +11,8 @@ export {
   dayjsToMonthString,
   shiftMonth,
   toAstryxSize,
+  currentYearMonth,
+  formatBillingMonth,
+  formatIsoDate,
 } from './monthUtils'
 export { receivableStatus, invoiceStatus } from './statusUtils'

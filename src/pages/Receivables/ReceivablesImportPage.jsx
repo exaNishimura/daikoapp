@@ -1,17 +1,16 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Card } from '@astryxdesign/core/Card'
-import { Heading } from '@astryxdesign/core/Heading'
-import { IconButton } from '@astryxdesign/core/IconButton'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Link } from '@astryxdesign/core/Link'
 import { List, ListItem } from '@astryxdesign/core/List'
+import { Heading } from '@astryxdesign/core/Heading'
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
 import { Text } from '@astryxdesign/core/Text'
-import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
+import { Download, RefreshCw } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
 import { parseSalesWorkbook } from '@/lib/excel/parseSalesWorkbook'
 import { findDuplicates } from '@/lib/billing/duplicateReceivables'
 import { buildImportPlan } from '@/lib/billing/buildImportPlan'
@@ -36,7 +35,6 @@ const MODE = { SKIP: 'skip', OVERWRITE: 'overwrite', MERGE: 'merge' }
  *   5. 保存 → bulk_import_receivables RPC
  */
 export function ReceivablesImportPage() {
-  const navigate = useNavigate()
   const companiesQuery = useCompanies()
   const importMutation = useBulkImportReceivables()
 
@@ -174,15 +172,7 @@ export function ReceivablesImportPage() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack gap={2} vAlign="center">
-          <IconButton
-            label="戻る"
-            icon={<ArrowLeft />}
-            variant="ghost"
-            onClick={() => navigate(-1)}
-          />
-          <Heading level={1}>Excel インポート</Heading>
-        </HStack>
+        <PageHeader title="Excel インポート" />
 
         <Banner
           status="warning"

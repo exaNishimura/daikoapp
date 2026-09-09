@@ -90,3 +90,28 @@ export function toAstryxSize(size) {
   if (size === 'lg' || size === 'large') return 'lg'
   return 'md'
 }
+
+/**
+ * 今日の年月を 'YYYY-MM' で返す。変換失敗時のフォールバック付き。
+ */
+export function currentYearMonth(fallback = '2026-01') {
+  return toMonthString(new Date()) ?? fallback
+}
+
+/**
+ * billing_month ('YYYY-MM-01' 等) → 'YYYY年MM月'
+ */
+export function formatBillingMonth(billingMonth) {
+  if (!billingMonth) return ''
+  const m = String(billingMonth).match(/^(\d{4})-(\d{2})/)
+  return m ? `${m[1]}年${m[2]}月` : String(billingMonth)
+}
+
+/**
+ * ISO 日付文字列 ('YYYY-MM-DD…') → 'YYYY/MM/DD'。不正なら '—'
+ */
+export function formatIsoDate(s) {
+  if (!s) return '—'
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : String(s)
+}

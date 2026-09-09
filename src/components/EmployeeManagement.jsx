@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
 import { Center } from '@astryxdesign/core/Center'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
-import { Heading } from '@astryxdesign/core/Heading'
 import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { Selector } from '@astryxdesign/core/Selector'
@@ -21,9 +21,11 @@ import {
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
 import { TextInput } from '@astryxdesign/core/TextInput'
-import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { Token } from '@astryxdesign/core/Token'
 import { PageFrame } from '@/components/PageFrame'
+import { PageHeader } from '@/components/PageHeader'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useMobileLayout } from '@/hooks/useMobileLayout'
 import {
   useEmployees,
   useCreateEmployee,
@@ -57,6 +59,8 @@ const COLOR_SWATCH_STYLE = {
 
 export function EmployeeManagement() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
+  const { fieldSize, actionButtonProps } = useMobileLayout()
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [editingId, setEditingId] = useState(null)
@@ -261,25 +265,21 @@ export function EmployeeManagement() {
   return (
     <PageFrame>
       <VStack gap={4}>
-        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-          <HStack gap={2} vAlign="center">
-            <IconButton
-              label="シフトへ戻る"
-              tooltip="シフトへ戻る"
-              variant="ghost"
-              icon={<ArrowLeft size={18} />}
-              onClick={() => navigate('/shift')}
+        <PageHeader
+          title="従業員マスタ"
+          backLabel="シフトへ戻る"
+          onBack={() => navigate('/shift')}
+          actions={
+            <Button
+              variant="primary"
+              label="新規追加"
+              icon={<Plus size={16} />}
+              onClick={() => handleOpenDialog()}
+              isDisabled={loading}
+              {...actionButtonProps}
             />
-            <Heading level={1}>従業員マスタ</Heading>
-          </HStack>
-          <Button
-            variant="primary"
-            label="新規追加"
-            icon={<Plus size={16} />}
-            onClick={() => handleOpenDialog()}
-            isDisabled={loading}
-          />
-        </HStack>
+          }
+        />
 
         {fetchError ? (
           <Banner
@@ -314,88 +314,156 @@ export function EmployeeManagement() {
         ) : null}
 
         {!loading && employees.length > 0 ? (
-          <Table hasHover density="compact">
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell>名前</TableHeaderCell>
-                <TableHeaderCell>免許種別</TableHeaderCell>
-                <TableHeaderCell>色</TableHeaderCell>
-                <TableHeaderCell>時給</TableHeaderCell>
-                <TableHeaderCell>状態</TableHeaderCell>
-                <TableHeaderCell>シフトPIN</TableHeaderCell>
-                <TableHeaderCell>並び順</TableHeaderCell>
-                <TableHeaderCell>操作</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          isMobile ? (
+            <VStack gap={2}>
               {employees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell>
-                    <Text weight="medium">{employee.name}</Text>
-                  </TableCell>
-                  <TableCell>
-                    <Token
-                      label={employee.license_type}
-                      size="sm"
-                      color={employee.license_type === '一種' ? 'blue' : 'purple'}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <HStack gap={1} vAlign="center">
-                      <span
-                        aria-hidden
-                        style={{ ...COLOR_SWATCH_STYLE, backgroundColor: employee.color }}
+                <Card key={employee.id} padding={3}>
+                  <VStack gap={2}>
+                    <HStack hAlign="between" vAlign="start" gap={2} wrap="wrap">
+                      <VStack gap={0}>
+                        <Text weight="medium">{employee.name}</Text>
+                        <Text color="secondary">並び順: {employee.sort_order || 0}</Text>
+                      </VStack>
+                      <Token
+                        label={employee.is_active ? '有効' : '無効'}
+                        size="sm"
+                        color={employee.is_active ? 'green' : 'gray'}
                       />
-                      <Text>{employee.color}</Text>
                     </HStack>
-                  </TableCell>
-                  <TableCell>
-                    <Text>¥{Number(employee.hourly_wage || 0).toLocaleString()}</Text>
-                  </TableCell>
-                  <TableCell>
-                    <Token
-                      label={employee.is_active ? '有効' : '無効'}
-                      size="sm"
-                      color={employee.is_active ? 'green' : 'gray'}
-                    />
-                  </TableCell>
-                  <TableCell>
+                    <HStack gap={2} wrap="wrap" vAlign="center">
+                      <Token
+                        label={employee.license_type}
+                        size="sm"
+                        color={employee.license_type === '一種' ? 'blue' : 'purple'}
+                      />
+                      <HStack gap={1} vAlign="center">
+                        <span
+                          aria-hidden
+                          style={{ ...COLOR_SWATCH_STYLE, backgroundColor: employee.color }}
+                        />
+                        <Text>{employee.color}</Text>
+                      </HStack>
+                      <Text type="large" hasTabularNumbers>
+                        ¥{Number(employee.hourly_wage || 0).toLocaleString()}
+                      </Text>
+                    </HStack>
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      label={employee.shift_pin_configured ? '設定済' : '未設定'}
+                      size="lg"
+                      variant="secondary"
+                      width="100%"
+                      label={
+                        employee.shift_pin_configured ? 'シフトPIN（設定済）' : 'シフトPIN（未設定）'
+                      }
                       onClick={() => handleOpenPinDialog(employee)}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Text>{employee.sort_order || 0}</Text>
-                  </TableCell>
-                  <TableCell>
                     <HStack gap={1}>
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
+                      <Button
                         label="編集"
-                        tooltip="編集"
-                        icon={<Pencil size={14} />}
+                        variant="secondary"
+                        size="lg"
+                        width="100%"
+                        icon={<Pencil size={16} />}
                         onClick={() => handleOpenDialog(employee)}
                         isDisabled={loading}
                       />
-                      <IconButton
-                        size="sm"
-                        variant="ghost"
+                      <Button
                         label="削除"
-                        tooltip="削除"
-                        icon={<Trash2 size={14} />}
+                        variant="destructive"
+                        size="lg"
+                        width="100%"
+                        icon={<Trash2 size={16} />}
                         onClick={() => handleDelete(employee.id, employee.name)}
                         isDisabled={loading}
                       />
                     </HStack>
-                  </TableCell>
-                </TableRow>
+                  </VStack>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
+            </VStack>
+          ) : (
+            <Table hasHover density="compact">
+              <TableHeader>
+                <TableRow>
+                  <TableHeaderCell>名前</TableHeaderCell>
+                  <TableHeaderCell>免許種別</TableHeaderCell>
+                  <TableHeaderCell>色</TableHeaderCell>
+                  <TableHeaderCell>時給</TableHeaderCell>
+                  <TableHeaderCell>状態</TableHeaderCell>
+                  <TableHeaderCell>シフトPIN</TableHeaderCell>
+                  <TableHeaderCell>並び順</TableHeaderCell>
+                  <TableHeaderCell>操作</TableHeaderCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employees.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell>
+                      <Text weight="medium">{employee.name}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <Token
+                        label={employee.license_type}
+                        size="sm"
+                        color={employee.license_type === '一種' ? 'blue' : 'purple'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <HStack gap={1} vAlign="center">
+                        <span
+                          aria-hidden
+                          style={{ ...COLOR_SWATCH_STYLE, backgroundColor: employee.color }}
+                        />
+                        <Text>{employee.color}</Text>
+                      </HStack>
+                    </TableCell>
+                    <TableCell>
+                      <Text>¥{Number(employee.hourly_wage || 0).toLocaleString()}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <Token
+                        label={employee.is_active ? '有効' : '無効'}
+                        size="sm"
+                        color={employee.is_active ? 'green' : 'gray'}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        label={employee.shift_pin_configured ? '設定済' : '未設定'}
+                        onClick={() => handleOpenPinDialog(employee)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Text>{employee.sort_order || 0}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <HStack gap={1}>
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          label="編集"
+                          tooltip="編集"
+                          icon={<Pencil size={14} />}
+                          onClick={() => handleOpenDialog(employee)}
+                          isDisabled={loading}
+                        />
+                        <IconButton
+                          size="sm"
+                          variant="ghost"
+                          label="削除"
+                          tooltip="削除"
+                          icon={<Trash2 size={14} />}
+                          onClick={() => handleDelete(employee.id, employee.name)}
+                          isDisabled={loading}
+                        />
+                      </HStack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )
         ) : null}
 
         {!loading && employees.length === 0 ? (
@@ -424,7 +492,7 @@ export function EmployeeManagement() {
                   onChange={(value) => setFormData({ ...formData, name: value })}
                   isRequired
                   isDisabled={loading}
-                  size={FORM_FIELD_SIZE}
+                  size={fieldSize}
                   width="100%"
                 />
                 {editingId ? (
@@ -435,7 +503,7 @@ export function EmployeeManagement() {
                     isDisabled={loading}
                     placeholder="例: 北島"
                     description="売上インポート等で古い表記のまま残っている場合に入力（シフトは従業員IDで連携）"
-                    size={FORM_FIELD_SIZE}
+                    size={fieldSize}
                     width="100%"
                   />
                 ) : null}
@@ -445,7 +513,7 @@ export function EmployeeManagement() {
                   value={formData.license_type}
                   onChange={(value) => setFormData({ ...formData, license_type: value })}
                   isDisabled={loading}
-                  size={FORM_FIELD_SIZE}
+                  size={fieldSize}
                   width="100%"
                   options={LICENSE_TYPES.map((type) => ({ value: type, label: type }))}
                 />
@@ -455,7 +523,7 @@ export function EmployeeManagement() {
                   value={formData.color}
                   onChange={(value) => setFormData({ ...formData, color: value })}
                   isDisabled={loading}
-                  size={FORM_FIELD_SIZE}
+                  size={fieldSize}
                   width="100%"
                   options={DEFAULT_COLORS.map((color) => ({
                     value: color.value,
@@ -468,7 +536,7 @@ export function EmployeeManagement() {
                   onChange={(value) => setFormData({ ...formData, hourly_wage: value })}
                   description="円単位で入力してください"
                   isDisabled={loading}
-                  size={FORM_FIELD_SIZE}
+                  size={fieldSize}
                   width="100%"
                 />
                 <TextInput
@@ -479,7 +547,7 @@ export function EmployeeManagement() {
                   }
                   description="数値が小さいほど上に表示されます"
                   isDisabled={loading}
-                  size={FORM_FIELD_SIZE}
+                  size={fieldSize}
                   width="100%"
                 />
                 <Switch
@@ -493,12 +561,13 @@ export function EmployeeManagement() {
           }
           footer={
             <LayoutFooter>
-              <HStack gap={2} hAlign="end" wrap="wrap">
+              <HStack gap={2} hAlign={isMobile ? undefined : 'end'} wrap="wrap">
                 <Button
                   label="キャンセル"
                   variant="secondary"
                   onClick={handleCloseDialog}
                   isDisabled={loading}
+                  {...actionButtonProps}
                 />
                 <Button
                   label="保存"
@@ -506,6 +575,7 @@ export function EmployeeManagement() {
                   onClick={handleSave}
                   isDisabled={loading}
                   isLoading={isMutating}
+                  {...actionButtonProps}
                 />
               </HStack>
             </LayoutFooter>
@@ -552,7 +622,7 @@ export function EmployeeManagement() {
                     label="手動指定（6桁）"
                     value={customPin}
                     onChange={(value) => setCustomPin(value.replace(/\D/g, '').slice(0, 6))}
-                    size={FORM_FIELD_SIZE}
+                    size={fieldSize}
                     width="100%"
                   />
                 ) : null}
