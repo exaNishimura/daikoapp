@@ -44,6 +44,8 @@ import { ReceivablesListPage } from '@/pages/Receivables/ReceivablesListPage'
 import { DailySalesPage } from '@/pages/Receivables/DailySalesPage'
 import { InvoicesPage } from '@/pages/Receivables/InvoicesPage'
 import { ReceivablesImportPage } from '@/pages/Receivables/ReceivablesImportPage'
+import { AdminPayrollPage } from '@/pages/Payroll/AdminPayrollPage'
+import { PayslipMemberPage } from '@/pages/Payroll/PayslipMemberPage'
 import { useCompanyProfile } from '@/hooks/billing/useCompanyProfile'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { TravelTimeMapPage } from '@/pages/TravelTimeMapPage'
@@ -66,6 +68,8 @@ const NAV_ITEM_ICONS = {
   '/admin/sales': LayoutDashboard,
   '/admin/receivables': Wallet,
   '/admin/invoices': FileText,
+  '/admin/payroll': Wallet,
+  '/payroll': FileText,
   '/employees': Users,
   '/admin/companies': Building2,
   '/admin/company-profile': ClipboardList,
@@ -158,6 +162,15 @@ function AppRoutes() {
       <Route path="/travel-times" element={<TravelTimeMapPage />} />
       <Route path="/shift" element={<ShiftCalendar />} />
       <Route path="/shift/request" element={<ShiftRequestPage />} />
+      <Route path="/payroll" element={<PayslipMemberPage />} />
+      <Route
+        path="/admin/payroll"
+        element={
+          <ProtectedRoute>
+            <AdminPayrollPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/shift/requests"
         element={

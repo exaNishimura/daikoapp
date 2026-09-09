@@ -82,3 +82,11 @@ export async function saveShiftAvailabilityRequest(month, payload) {
 export async function listShiftAvailabilityRequests(month) {
   return callEmployeeShiftApi({ action: 'list_requests', month })
 }
+
+export async function listMyPayslips() {
+  return callEmployeeShiftApi({ action: 'list_payslips' }, { employeeSession: true })
+}
+
+export async function getMyPayslip(params) {
+  return callEmployeeShiftApi({ action: 'get_payslip', ...params }, { employeeSession: true })
+}

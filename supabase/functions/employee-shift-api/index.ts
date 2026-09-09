@@ -7,6 +7,7 @@
  * - clear_shift_pin: 管理者が PIN 解除
  * - get_request / save_request: 従業員セッションで希望 CRUD
  * - list_requests: 管理者が月次希望一覧
+ * - list_payslips / get_payslip: 従業員セッションで公開済給与明細
  *
  * Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EMPLOYEE_SHIFT_SESSION_SECRET (推奨)
  */
@@ -326,6 +327,56 @@ async function handleListRequests(supabase, body, staffUser) {
   return json({ ok: true, month, rows })
 }
 
+const PAYSLIP_PUBLIC_FIELDS =
+  'id, employee_id, year_month, status, total_hours, hourly_wage_snapshot, base_pay, allowance, gross_pay, social_insurance, other_deduction, taxable_base, tax_table_type, dependents_count, withholding_tax, net_pay, note, published_at'
+
+async function handleListPayslips(supabase, employeeSession) {
+  if (!employeeSession) return json({ error: '従業員セッションが必要です' }, 401)
+
+  const { data: emp, error: empErr } = await supabase
+    .from('employees')
+    .select('id, name, employment_type')
+    .eq('id', employeeSession.employee_id)
+    .maybeSingle()
+
+  if (empErr) return json({ error: empErr.message }, 500)
+  if (!emp) return json({ error: '従業員が見つかりません' }, 404)
+  if (emp.employment_type === 'CONTRACT') {
+    return json({ ok: true, slips: [], reason: 'CONTRACT_NOT_ELIGIBLE' })
+  }
+
+  const { data, error } = await supabase
+    .from('payroll_slips')
+    .select(PAYSLIP_PUBLIC_FIELDS)
+    .eq('employee_id', employeeSession.employee_id)
+    .eq('status', 'PUBLISHED')
+    .order('year_month', { ascending: false })
+
+  if (error) return json({ error: error.message }, 500)
+  return json({ ok: true, slips: data || [], employee: { id: emp.id, name: emp.name } })
+}
+
+async function handleGetPayslip(supabase, body, employeeSession) {
+  if (!employeeSession) return json({ error: '従業員セッションが必要です' }, 401)
+  const id = body.id
+  const month = body.month ? normalizeMonth(body.month) : null
+  if (!id && !month) return json({ error: 'id or month required' }, 400)
+
+  let query = supabase
+    .from('payroll_slips')
+    .select(PAYSLIP_PUBLIC_FIELDS)
+    .eq('employee_id', employeeSession.employee_id)
+    .eq('status', 'PUBLISHED')
+
+  if (id) query = query.eq('id', id)
+  else query = query.eq('year_month', month)
+
+  const { data, error } = await query.maybeSingle()
+  if (error) return json({ error: error.message }, 500)
+  if (!data) return json({ error: '明細が見つかりません' }, 404)
+  return json({ ok: true, slip: data })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -344,11 +395,13 @@ Deno.serve(async (req) => {
     if (action === 'get_request') return await handleGetRequest(supabase, body, employeeSession)
     if (action === 'save_request') return await handleSaveRequest(supabase, body, employeeSession)
     if (action === 'list_requests') return await handleListRequests(supabase, body, staffUser)
+    if (action === 'list_payslips') return await handleListPayslips(supabase, employeeSession)
+    if (action === 'get_payslip') return await handleGetPayslip(supabase, body, employeeSession)
 
     return json(
       {
         error: 'Unknown action',
-        hint: 'verify_shift_pin|set_shift_pin|clear_shift_pin|get_request|save_request|list_requests',
+        hint: 'verify_shift_pin|set_shift_pin|clear_shift_pin|get_request|save_request|list_requests|list_payslips|get_payslip',
       },
       400
     )

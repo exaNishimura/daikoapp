@@ -107,6 +107,11 @@ export const queryKeys = {
     all: ['fixedExpenses'],
     byMonth: (year, month) => ['fixedExpenses', 'byMonth', year, month],
   },
+  payroll: {
+    all: ['payroll'],
+    byMonth: (yearMonth) => ['payroll', 'byMonth', yearMonth],
+    detail: (id) => ['payroll', 'detail', id],
+  },
 
   // ========================================
   // 予約台帳

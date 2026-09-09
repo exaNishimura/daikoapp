@@ -33,8 +33,33 @@ import {
   useDeleteEmployee,
 } from '@/hooks/useEmployees'
 import { setEmployeeShiftPin, clearEmployeeShiftPin } from '@/services/employeeShiftService'
+import { TAX_TABLE_KOU, TAX_TABLE_OTSU, TAX_TABLE_LABELS } from '@/lib/payroll/withholdingTax'
 
 const LICENSE_TYPES = ['一種', '二種']
+const EMPLOYMENT_TYPE_OPTIONS = [
+  { value: 'EMPLOYED', label: '雇用' },
+  { value: 'CONTRACT', label: '業務委託' },
+]
+const TAX_TABLE_OPTIONS = [
+  { value: TAX_TABLE_OTSU, label: TAX_TABLE_LABELS[TAX_TABLE_OTSU] },
+  { value: TAX_TABLE_KOU, label: TAX_TABLE_LABELS[TAX_TABLE_KOU] },
+]
+const DEPENDENT_OPTIONS = [0, 1, 2, 3, 4, 5].map((n) => ({
+  value: String(n),
+  label: `${n}人`,
+}))
+
+const EMPTY_FORM = {
+  name: '',
+  license_type: '一種',
+  color: '#FFA500',
+  hourly_wage: 0,
+  is_active: true,
+  sort_order: 0,
+  employment_type: 'EMPLOYED',
+  tax_table_type: TAX_TABLE_OTSU,
+  dependents_count: 0,
+}
 const DEFAULT_COLORS = [
   { name: 'オレンジ', value: '#FFA500' },
   { name: '黄', value: '#FFD700' },
@@ -72,14 +97,7 @@ export function EmployeeManagement() {
   const [issuedPin, setIssuedPin] = useState(null)
   const [pinSubmitting, setPinSubmitting] = useState(false)
   const [customPin, setCustomPin] = useState('')
-  const [formData, setFormData] = useState({
-    name: '',
-    license_type: '一種',
-    color: '#FFA500',
-    hourly_wage: 0,
-    is_active: true,
-    sort_order: 0,
-  })
+  const [formData, setFormData] = useState({ ...EMPTY_FORM })
 
   const employeesQuery = useEmployees()
   const createMutation = useCreateEmployee()
@@ -105,17 +123,16 @@ export function EmployeeManagement() {
         hourly_wage: employee.hourly_wage || 0,
         is_active: employee.is_active !== false,
         sort_order: employee.sort_order || 0,
+        employment_type: employee.employment_type || 'EMPLOYED',
+        tax_table_type: employee.tax_table_type || TAX_TABLE_OTSU,
+        dependents_count: employee.dependents_count ?? 0,
       })
     } else {
       setEditingId(null)
       setOriginalName('')
       setLegacyStaffName('')
       setFormData({
-        name: '',
-        license_type: '一種',
-        color: '#FFA500',
-        hourly_wage: 0,
-        is_active: true,
+        ...EMPTY_FORM,
         sort_order: employees.length,
       })
     }
@@ -127,14 +144,7 @@ export function EmployeeManagement() {
     setEditingId(null)
     setOriginalName('')
     setLegacyStaffName('')
-    setFormData({
-      name: '',
-      license_type: '一種',
-      color: '#FFA500',
-      hourly_wage: 0,
-      is_active: true,
-      sort_order: 0,
-    })
+    setFormData({ ...EMPTY_FORM })
   }
 
   const handleSave = async () => {
@@ -158,6 +168,12 @@ export function EmployeeManagement() {
       hourly_wage: parseFloat(formData.hourly_wage) || 0,
       is_active: formData.is_active,
       sort_order: formData.sort_order || 0,
+      employment_type: formData.employment_type || 'EMPLOYED',
+      tax_table_type: formData.tax_table_type || TAX_TABLE_OTSU,
+      dependents_count:
+        formData.tax_table_type === TAX_TABLE_KOU
+          ? Math.min(5, Math.max(0, Number(formData.dependents_count) || 0))
+          : 0,
     }
 
     try {
@@ -332,6 +348,13 @@ export function EmployeeManagement() {
                     </HStack>
                     <HStack gap={2} wrap="wrap" vAlign="center">
                       <Token
+                        label={
+                          employee.employment_type === 'CONTRACT' ? '業務委託' : '雇用'
+                        }
+                        size="sm"
+                        color={employee.employment_type === 'CONTRACT' ? 'gray' : 'green'}
+                      />
+                      <Token
                         label={employee.license_type}
                         size="sm"
                         color={employee.license_type === '一種' ? 'blue' : 'purple'}
@@ -346,6 +369,14 @@ export function EmployeeManagement() {
                       <Text type="large" hasTabularNumbers>
                         ¥{Number(employee.hourly_wage || 0).toLocaleString()}
                       </Text>
+                      {employee.employment_type !== 'CONTRACT' ? (
+                        <Text color="secondary">
+                          {TAX_TABLE_LABELS[employee.tax_table_type] || '乙欄'}
+                          {employee.tax_table_type === TAX_TABLE_KOU
+                            ? ` / 扶養${employee.dependents_count ?? 0}`
+                            : ''}
+                        </Text>
+                      ) : null}
                     </HStack>
                     <Button
                       size="lg"
@@ -385,9 +416,11 @@ export function EmployeeManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHeaderCell>名前</TableHeaderCell>
+                  <TableHeaderCell>雇用形態</TableHeaderCell>
                   <TableHeaderCell>免許種別</TableHeaderCell>
                   <TableHeaderCell>色</TableHeaderCell>
                   <TableHeaderCell>時給</TableHeaderCell>
+                  <TableHeaderCell>税額表</TableHeaderCell>
                   <TableHeaderCell>状態</TableHeaderCell>
                   <TableHeaderCell>シフトPIN</TableHeaderCell>
                   <TableHeaderCell>並び順</TableHeaderCell>
@@ -399,6 +432,15 @@ export function EmployeeManagement() {
                   <TableRow key={employee.id}>
                     <TableCell>
                       <Text weight="medium">{employee.name}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <Token
+                        label={
+                          employee.employment_type === 'CONTRACT' ? '業務委託' : '雇用'
+                        }
+                        size="sm"
+                        color={employee.employment_type === 'CONTRACT' ? 'gray' : 'green'}
+                      />
                     </TableCell>
                     <TableCell>
                       <Token
@@ -418,6 +460,17 @@ export function EmployeeManagement() {
                     </TableCell>
                     <TableCell>
                       <Text>¥{Number(employee.hourly_wage || 0).toLocaleString()}</Text>
+                    </TableCell>
+                    <TableCell>
+                      <Text>
+                        {employee.employment_type === 'CONTRACT'
+                          ? '—'
+                          : `${TAX_TABLE_LABELS[employee.tax_table_type] || '乙欄'}${
+                              employee.tax_table_type === TAX_TABLE_KOU
+                                ? ` (${employee.dependents_count ?? 0})`
+                                : ''
+                            }`}
+                      </Text>
                     </TableCell>
                     <TableCell>
                       <Token
@@ -539,6 +592,55 @@ export function EmployeeManagement() {
                   size={fieldSize}
                   width="100%"
                 />
+                <Selector
+                  label="雇用形態"
+                  isRequired
+                  value={formData.employment_type}
+                  onChange={(value) => setFormData({ ...formData, employment_type: value })}
+                  isDisabled={loading}
+                  size={fieldSize}
+                  width="100%"
+                  options={EMPLOYMENT_TYPE_OPTIONS}
+                />
+                {formData.employment_type !== 'CONTRACT' ? (
+                  <>
+                    <Selector
+                      label="税額表区分"
+                      value={formData.tax_table_type}
+                      onChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          tax_table_type: value,
+                          dependents_count:
+                            value === TAX_TABLE_KOU ? formData.dependents_count : 0,
+                        })
+                      }
+                      isDisabled={loading}
+                      size={fieldSize}
+                      width="100%"
+                      options={TAX_TABLE_OPTIONS}
+                    />
+                    <Selector
+                      label="扶養親族等の数"
+                      value={String(formData.dependents_count)}
+                      onChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          dependents_count: parseInt(value, 10) || 0,
+                        })
+                      }
+                      isDisabled={loading || formData.tax_table_type !== TAX_TABLE_KOU}
+                      size={fieldSize}
+                      width="100%"
+                      options={DEPENDENT_OPTIONS}
+                      description={
+                        formData.tax_table_type === TAX_TABLE_KOU
+                          ? undefined
+                          : '甲欄のときのみ有効'
+                      }
+                    />
+                  </>
+                ) : null}
                 <TextInput
                   label="並び順"
                   value={String(formData.sort_order)}

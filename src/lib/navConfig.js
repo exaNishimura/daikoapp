@@ -29,6 +29,7 @@ export const NAV_CATEGORIES = [
     items: [
       { to: '/shift', label: 'シフト表', requiresAuth: false, end: true },
       { to: '/shift/request', label: '希望提出', requiresAuth: false },
+      { to: '/payroll', label: '給与明細', requiresAuth: false },
       { to: '/shift/requests', label: '希望一覧', requiresAuth: true },
       { to: '/shift/edit', label: 'シフト編集', requiresAuth: true },
     ],
@@ -36,12 +37,13 @@ export const NAV_CATEGORIES = [
   {
     id: 'billing',
     label: '経理',
-    description: '売上集計・売掛・請求書',
+    description: '売上集計・売掛・請求書・給与',
     icon: Wallet,
     items: [
       { to: '/admin/sales', label: '売上管理', requiresAuth: true },
       { to: '/admin/receivables', label: '売掛', requiresAuth: true },
       { to: '/admin/invoices', label: '請求書', requiresAuth: true },
+      { to: '/admin/payroll', label: '給与明細（管理）', requiresAuth: true },
     ],
   },
   {

@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 
 /** anon / authenticated 共通で安全に取得できる列（PIN ハッシュは含めない） */
 const EMPLOYEE_PUBLIC_COLUMNS =
-  'id, name, license_type, color, hourly_wage, is_active, sort_order, created_at, updated_at, shift_pin_configured'
+  'id, name, license_type, color, hourly_wage, is_active, sort_order, created_at, updated_at, shift_pin_configured, employment_type, tax_table_type, dependents_count'
 
 /**
  * スタッフ名の変更を売上関連テーブルへ反映（シフトは employee_id で連携）
