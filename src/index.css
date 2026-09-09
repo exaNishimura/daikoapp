@@ -19,3 +19,44 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+.app-nav-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.app-nav-menu-label__icon {
+  flex-shrink: 0;
+}
+
+/*
+ * スマホ用ナビドロワー: ラベルを大きく・タップ領域を 44px 以上に。
+ * Astryx StyleX の原子クラスを上書きするため !important を使う。
+ */
+.astryx-mobile-nav a:not(.astryx-button):not(.astryx-top-nav-heading),
+.astryx-mobile-nav button:not(.astryx-button) {
+  font-size: var(--text-large-size) !important;
+  line-height: 1.4 !important;
+  min-height: 44px !important;
+  height: auto !important;
+  padding-block: var(--spacing-3) !important;
+  gap: var(--spacing-3) !important;
+}
+
+.astryx-mobile-nav a:not(.astryx-button):not(.astryx-top-nav-heading) svg,
+.astryx-mobile-nav button:not(.astryx-button) svg {
+  width: 1.25em !important;
+  height: 1.25em !important;
+}
+
+.astryx-mobile-nav .app-nav-menu-label {
+  gap: var(--spacing-3);
+}
+
+.astryx-top-nav.mobile-bar button[aria-label='ナビゲーションを開く'],
+.astryx-mobile-nav button[aria-label='ナビゲーションを閉じる'] {
+  min-width: 44px;
+  min-height: 44px;
+}

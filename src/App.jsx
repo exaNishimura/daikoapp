@@ -78,6 +78,16 @@ function navItemIcon(to) {
   return <Icon size={20} aria-hidden />
 }
 
+function navCategoryLabel(category) {
+  const Icon = category.icon
+  return (
+    <span className="app-nav-menu-label">
+      {Icon ? <Icon size={20} aria-hidden className="app-nav-menu-label__icon" /> : null}
+      <span>{category.label}</span>
+    </span>
+  )
+}
+
 function AppTopNav() {
   const { isAuthenticated, logout, user } = useAuth()
   const navigate = useNavigate()
@@ -113,7 +123,7 @@ function AppTopNav() {
       startContent={categories.map((category) => (
         <TopNavMenu
           key={category.id}
-          label={category.label}
+          label={navCategoryLabel(category)}
           items={category.items.map((item) => ({
             title: item.label,
             href: item.to,
