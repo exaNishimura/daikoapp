@@ -27,27 +27,38 @@ function renderWithTheme(ui) {
 }
 
 describe('MonthPicker (smoke)', () => {
-  it('renders year and month selectors for the given value', () => {
+  it('renders the month label and nav buttons for the given value', () => {
     renderWithTheme(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" />)
     expect(screen.getByText('対象月')).toBeInTheDocument()
-    expect(screen.getByText('2026年5月')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2026年5月' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '前月' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '翌月' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: '年' })).not.toBeInTheDocument()
+  })
+
+  it('opens year/month selectors when the month label is clicked', async () => {
+    const user = userEvent.setup()
+    renderWithTheme(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" />)
+    await user.click(screen.getByRole('button', { name: '2026年5月' }))
     expect(screen.getByRole('combobox', { name: '年' })).toHaveTextContent('2026年')
     expect(screen.getByRole('combobox', { name: '月' })).toHaveTextContent('5月')
   })
 
-  it('renders an empty picker when value is null', () => {
+  it('renders an empty year/month value state after opening selectors', async () => {
+    const user = userEvent.setup()
     renderWithTheme(<MonthPicker value={null} onChange={() => {}} label="対象月" />)
+    await user.click(screen.getByRole('button', { name: /\d+年\d+月/ }))
     expect(screen.getByRole('combobox', { name: '年' })).not.toHaveTextContent('2026年')
     expect(screen.getByRole('combobox', { name: '月' })).not.toHaveTextContent('5月')
   })
 
-  it('keeps the same stacked layout when full width', () => {
+  it('keeps the stacked layout when full width and selectors are open', async () => {
+    const user = userEvent.setup()
     renderWithTheme(
       <MonthPicker value="2026-05" onChange={() => {}} label="対象月" width="100%" />
     )
     expect(screen.getByText('2026年5月')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '2026年5月' }))
     expect(screen.getByRole('combobox', { name: '年' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: '月' })).toBeInTheDocument()
   })

@@ -1,3 +1,4 @@
+import { useId, useState } from 'react'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
@@ -5,6 +6,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { fromMonthString, shiftMonth, toAstryxSize, toMonthString } from './monthUtils'
+import styles from './MonthPicker.module.css'
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -24,11 +26,14 @@ function buildYearOptions(selectedYear) {
 
 /**
  * 対象月選択の共通 UI。
- * I/O は常に 'YYYY-MM'。上段: 前月 / YYYY年M月 / 翌月、下段: 年・月セレクト。
+ * I/O は常に 'YYYY-MM'。上段: 前月 / YYYY年M月 / 翌月。
+ * 年月ラベルをタップすると年・月セレクトがアニメーションで開く。
  * size / width 未指定時はモバイルで large + 100% を自動適用。
  */
 export function MonthPicker({ value, onChange, label = '対象月', size, width }) {
   const isMobile = useIsMobile()
+  const selectorsId = useId()
+  const [selectorsOpen, setSelectorsOpen] = useState(false)
   const resolvedSize = size ?? (isMobile ? 'large' : 'small')
   const resolvedWidth = width ?? (isMobile ? '100%' : undefined)
 
@@ -60,9 +65,17 @@ export function MonthPicker({ value, onChange, label = '対象月', size, width 
             size={controlSize}
             onClick={() => onChange?.(shiftMonth(value, -1))}
           />
-          <Text weight="semibold">
-            {year}年{month}月
-          </Text>
+          <button
+            type="button"
+            className={styles.monthLabelButton}
+            aria-expanded={selectorsOpen}
+            aria-controls={selectorsId}
+            onClick={() => setSelectorsOpen((open) => !open)}
+          >
+            <Text type="large" size="xl" weight="semibold" hasTabularNumbers>
+              {year}年{month}月
+            </Text>
+          </button>
           <IconButton
             label="翌月"
             tooltip="翌月"
@@ -72,28 +85,38 @@ export function MonthPicker({ value, onChange, label = '対象月', size, width 
             onClick={() => onChange?.(shiftMonth(value, 1))}
           />
         </HStack>
-        <HStack gap={1}>
-          <Selector
-            label="年"
-            isLabelHidden
-            options={buildYearOptions(year)}
-            value={parsed ? String(year) : undefined}
-            onChange={(next) => emit(Number(next), month)}
-            size={controlSize}
-            width={isFullWidth ? '100%' : 128}
-          />
-          <Selector
-            label="月"
-            isLabelHidden
-            options={MONTH_OPTIONS}
-            value={parsed ? String(month) : undefined}
-            onChange={(next) => emit(year, Number(next))}
-            size={controlSize}
-            width={isFullWidth ? '100%' : 96}
-          />
-        </HStack>
+        <div
+          id={selectorsId}
+          className={styles.selectors}
+          data-open={selectorsOpen ? 'true' : 'false'}
+          aria-hidden={!selectorsOpen}
+        >
+          <div className={styles.selectorsInner}>
+            <HStack gap={1}>
+              <Selector
+                label="年"
+                isLabelHidden
+                options={buildYearOptions(year)}
+                value={parsed ? String(year) : undefined}
+                onChange={(next) => emit(Number(next), month)}
+                size={controlSize}
+                width={isFullWidth ? '100%' : 128}
+                isDisabled={!selectorsOpen}
+              />
+              <Selector
+                label="月"
+                isLabelHidden
+                options={MONTH_OPTIONS}
+                value={parsed ? String(month) : undefined}
+                onChange={(next) => emit(year, Number(next))}
+                size={controlSize}
+                width={isFullWidth ? '100%' : 96}
+                isDisabled={!selectorsOpen}
+              />
+            </HStack>
+          </div>
+        </div>
       </VStack>
     </VStack>
   )
 }
-
