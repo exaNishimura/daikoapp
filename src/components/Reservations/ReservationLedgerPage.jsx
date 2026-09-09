@@ -32,6 +32,7 @@ import {
   useUpdateReservation,
 } from '@/hooks/useReservations'
 import { formatDateInJst } from '@/lib/reservation/reservationWindowUtils'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { ReservationFormDialog } from './ReservationFormDialog'
 import './ReservationLedgerPage.css'
 
@@ -169,14 +170,14 @@ export function ReservationLedgerPage() {
             onChange={handleDateChange}
             hasClear
             weekStartsOn="mon"
-            size="sm"
+            size={FORM_FIELD_SIZE}
             width={isMobile ? '100%' : 200}
           />
           <TextInput
             label="氏名・電話で検索"
             value={q}
             onChange={setQ}
-            size="sm"
+            size={FORM_FIELD_SIZE}
             width={isMobile ? '100%' : 240}
           />
           {!dateParam ? (
