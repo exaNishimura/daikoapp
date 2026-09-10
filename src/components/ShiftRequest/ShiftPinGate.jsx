@@ -13,9 +13,14 @@ import {
 } from '@/lib/employeeShift/employeeShiftSession'
 
 /**
- * シフト希望提出画面用 PIN ゲート（配車 PIN とは別）
+ * 従業員シフト PIN ゲート（配車 PIN とは別）。
+ * シフト希望提出・給与明細閲覧など、同じセッションを共有する画面で使う。
  */
-export function ShiftPinGate({ children }) {
+export function ShiftPinGate({
+  children,
+  title = 'シフト希望提出',
+  subtitle = '管理者から通知された6桁のPINを入力してください。',
+}) {
   const navigate = useNavigate()
   const [session, setSession] = useState(() => getEmployeeShiftSession())
   const [pin, setPin] = useState('')
@@ -65,11 +70,7 @@ export function ShiftPinGate({ children }) {
       <Layout
         padding={4}
         header={
-          <DialogHeader
-            title="シフト希望提出"
-            subtitle="管理者から通知された6桁のPINを入力してください。"
-            onOpenChange={handleOpenChange}
-          />
+          <DialogHeader title={title} subtitle={subtitle} onOpenChange={handleOpenChange} />
         }
         content={
           <LayoutContent>
