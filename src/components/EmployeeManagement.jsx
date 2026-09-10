@@ -348,9 +348,7 @@ export function EmployeeManagement() {
                     </HStack>
                     <HStack gap={2} wrap="wrap" vAlign="center">
                       <Token
-                        label={
-                          employee.employment_type === 'CONTRACT' ? '業務委託' : '雇用'
-                        }
+                        label={employee.employment_type === 'CONTRACT' ? '業務委託' : '雇用'}
                         size="sm"
                         color={employee.employment_type === 'CONTRACT' ? 'gray' : 'green'}
                       />
@@ -383,7 +381,9 @@ export function EmployeeManagement() {
                       variant="secondary"
                       width="100%"
                       label={
-                        employee.shift_pin_configured ? 'シフトPIN（設定済）' : 'シフトPIN（未設定）'
+                        employee.shift_pin_configured
+                          ? 'シフトPIN（設定済）'
+                          : 'シフトPIN（未設定）'
                       }
                       onClick={() => handleOpenPinDialog(employee)}
                     />
@@ -435,9 +435,7 @@ export function EmployeeManagement() {
                     </TableCell>
                     <TableCell>
                       <Token
-                        label={
-                          employee.employment_type === 'CONTRACT' ? '業務委託' : '雇用'
-                        }
+                        label={employee.employment_type === 'CONTRACT' ? '業務委託' : '雇用'}
                         size="sm"
                         color={employee.employment_type === 'CONTRACT' ? 'gray' : 'green'}
                       />
@@ -526,9 +524,13 @@ export function EmployeeManagement() {
         ) : null}
       </VStack>
 
-      <Dialog isOpen={dialogOpen} onOpenChange={handleFormOpenChange} purpose="form">
+      <Dialog
+        isOpen={dialogOpen}
+        onOpenChange={handleFormOpenChange}
+        purpose="form"
+        maxHeight="90dvh"
+      >
         <Layout
-          height="auto"
           padding={4}
           header={
             <DialogHeader
@@ -611,8 +613,7 @@ export function EmployeeManagement() {
                         setFormData({
                           ...formData,
                           tax_table_type: value,
-                          dependents_count:
-                            value === TAX_TABLE_KOU ? formData.dependents_count : 0,
+                          dependents_count: value === TAX_TABLE_KOU ? formData.dependents_count : 0,
                         })
                       }
                       isDisabled={loading}
@@ -634,9 +635,7 @@ export function EmployeeManagement() {
                       width="100%"
                       options={DEPENDENT_OPTIONS}
                       description={
-                        formData.tax_table_type === TAX_TABLE_KOU
-                          ? undefined
-                          : '甲欄のときのみ有効'
+                        formData.tax_table_type === TAX_TABLE_KOU ? undefined : '甲欄のときのみ有効'
                       }
                     />
                   </>
@@ -687,7 +686,6 @@ export function EmployeeManagement() {
 
       <Dialog isOpen={pinDialogOpen} onOpenChange={handlePinOpenChange} purpose="form">
         <Layout
-          height="auto"
           padding={4}
           header={
             <DialogHeader

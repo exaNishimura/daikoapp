@@ -332,7 +332,6 @@ export function ReservationLedgerPage() {
 
         <Dialog isOpen={Boolean(deleteTarget)} onOpenChange={handleDeleteOpenChange} purpose="info">
           <Layout
-            height="auto"
             padding={4}
             header={<DialogHeader title="予約を削除" onOpenChange={handleDeleteOpenChange} />}
             content={
@@ -377,9 +376,13 @@ export function ReservationLedgerPage() {
           />
         </Dialog>
 
-        <Dialog isOpen={Boolean(detail)} onOpenChange={handleDetailOpenChange} purpose="info">
+        <Dialog
+          isOpen={Boolean(detail)}
+          onOpenChange={handleDetailOpenChange}
+          purpose="info"
+          maxHeight="90dvh"
+        >
           <Layout
-            height="auto"
             padding={4}
             header={<DialogHeader title="予約詳細" onOpenChange={handleDetailOpenChange} />}
             content={

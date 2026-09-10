@@ -45,9 +45,13 @@ export function InvoiceIssueResultDialog({ open, result, onClose, year, month })
   const failures = result?.failures ?? []
 
   return (
-    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+    <Dialog
+      isOpen={open}
+      onOpenChange={handleOpenChange}
+      purpose="info"
+      maxHeight="90dvh"
+    >
       <Layout
-        height="auto"
         padding={4}
         header={<DialogHeader title="請求書発行 結果" onOpenChange={handleOpenChange} />}
         content={

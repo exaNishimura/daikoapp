@@ -14,7 +14,6 @@ export function VehicleSelectDialog({ open, vehicles, onClose, onSelect }) {
   return (
     <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
       <Layout
-        height="auto"
         padding={4}
         header={<DialogHeader title="車両を選択してください" onOpenChange={handleOpenChange} />}
         content={

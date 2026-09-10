@@ -211,9 +211,8 @@ export function VehicleOperationStatusModal({
   }
 
   return (
-    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form" maxHeight="90dvh">
       <Layout
-        height="auto"
         padding={4}
         header={
           <DialogHeader

@@ -137,9 +137,13 @@ export function LineQueuePage() {
           </List>
         ) : null}
 
-        <Dialog isOpen={Boolean(selected)} onOpenChange={handleOpenChange} purpose="info">
+        <Dialog
+          isOpen={Boolean(selected)}
+          onOpenChange={handleOpenChange}
+          purpose="info"
+          maxHeight="90dvh"
+        >
           <Layout
-            height="auto"
             padding={4}
             header={<DialogHeader title="台詳細" onOpenChange={handleOpenChange} />}
             content={

@@ -67,7 +67,6 @@ export function ReassignVehicleDialog({
   return (
     <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
       <Layout
-        height="auto"
         padding={4}
         header={<DialogHeader title="号車変更" onOpenChange={handleOpenChange} />}
         content={

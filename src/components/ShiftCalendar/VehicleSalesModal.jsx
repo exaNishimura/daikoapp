@@ -330,6 +330,7 @@ export function VehicleSalesModal({
         onOpenChange={handleOpenChange}
         purpose="form"
         variant={isMobile ? 'fullscreen' : 'standard'}
+        maxHeight="90dvh"
       >
         <Layout
           height="fill"

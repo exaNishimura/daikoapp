@@ -231,9 +231,9 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
           if (!next) handleCloseInfoDialog()
         }}
         purpose="info"
+        maxHeight="90dvh"
       >
         <Layout
-          height="auto"
           padding={4}
           header={
             <DialogHeader

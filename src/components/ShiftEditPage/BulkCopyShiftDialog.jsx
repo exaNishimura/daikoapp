@@ -43,7 +43,6 @@ export function BulkCopyShiftDialog({
   return (
     <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
       <Layout
-        height="auto"
         padding={4}
         header={<DialogHeader title="一括コピー" onOpenChange={handleOpenChange} />}
         content={

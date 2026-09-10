@@ -105,6 +105,7 @@ export function VehicleSalesSummaryModal({
       onOpenChange={handleOpenChange}
       purpose="info"
       variant={isMobile ? 'fullscreen' : 'standard'}
+      maxHeight="90dvh"
     >
       <Layout
         height="fill"

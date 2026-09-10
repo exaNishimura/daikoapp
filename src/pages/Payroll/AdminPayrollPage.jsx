@@ -205,7 +205,8 @@ export function AdminPayrollPage() {
         />
 
         <Text color="secondary">
-          対象月のシフト稼働 × 時給で下書きを生成します。雇用の従業員のみ対象。公開後、メンバーはシフトPINで閲覧できます。
+          対象月のシフト稼働 ×
+          時給で下書きを生成します。雇用の従業員のみ対象。公開後、メンバーはシフトPINで閲覧できます。
         </Text>
 
         {error ? (
@@ -267,7 +268,9 @@ export function AdminPayrollPage() {
 
         {!slipsQuery.isLoading && slips.length === 0 ? (
           <Center padding={8}>
-            <Text color="secondary">この月の明細はありません。「シフトから計算」を実行してください。</Text>
+            <Text color="secondary">
+              この月の明細はありません。「シフトから計算」を実行してください。
+            </Text>
           </Center>
         ) : null}
 
@@ -397,9 +400,9 @@ export function AdminPayrollPage() {
           }
         }}
         purpose="form"
+        maxHeight="90dvh"
       >
         <Layout
-          height="auto"
           padding={4}
           header={
             <DialogHeader
@@ -507,7 +510,7 @@ export function AdminPayrollPage() {
                         withholding_overridden: checked,
                         withholding_tax: checked
                           ? editForm.withholding_tax
-                          : previewAmounts?.auto_withholding_tax ?? editForm.withholding_tax,
+                          : (previewAmounts?.auto_withholding_tax ?? editForm.withholding_tax),
                       })
                     }
                   />

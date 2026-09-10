@@ -43,9 +43,8 @@ export function InvoicePreviewDialog({ open, onClose, companyName, previews }) {
   }`
 
   return (
-    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info">
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info" maxHeight="90dvh">
       <Layout
-        height="auto"
         padding={4}
         header={<DialogHeader title={title} onOpenChange={handleOpenChange} />}
         content={

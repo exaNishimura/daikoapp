@@ -76,7 +76,6 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
   return (
     <Layout
       className="reservation-form-dialog"
-      height="auto"
       padding={4}
       header={
         <DialogHeader
@@ -106,7 +105,9 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
                 isRequired
                 width="100%"
                 size={FORM_FIELD_SIZE}
-                value={reservedHour === '' || reservedHour == null ? undefined : String(reservedHour)}
+                value={
+                  reservedHour === '' || reservedHour == null ? undefined : String(reservedHour)
+                }
                 onChange={(next) => setReservedHour(next === '' ? '' : Number(next))}
                 options={RESERVATION_HOURS.map((hour) => ({
                   value: String(hour),
@@ -135,9 +136,7 @@ function ReservationFormFields({ initial, onClose, onSubmit }) {
             <Text type="supporting" color="secondary">
               営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。
             </Text>
-            {reservedAtIso ? (
-              <Text>{formatReservationInstantLabel(reservedAtIso)}</Text>
-            ) : null}
+            {reservedAtIso ? <Text>{formatReservationInstantLabel(reservedAtIso)}</Text> : null}
             <CustomerNameSelect
               companies={companiesQuery.data ?? []}
               value={customerName}
@@ -207,7 +206,7 @@ export function ReservationFormDialog({ open, initial = null, onClose, onSubmit 
   }
 
   return (
-    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form">
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="form" maxHeight="90dvh">
       {open ? (
         <ReservationFormFields
           key={formKey}

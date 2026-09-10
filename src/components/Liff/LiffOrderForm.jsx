@@ -497,7 +497,6 @@ export function LiffOrderForm() {
 
       <Dialog isOpen={confirmOpen} onOpenChange={handleConfirmOpenChange} purpose="info">
         <Layout
-          height="auto"
           padding={4}
           header={<DialogHeader title="予約内容の確認" onOpenChange={handleConfirmOpenChange} />}
           content={

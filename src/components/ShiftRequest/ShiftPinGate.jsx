@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@astryxdesign/core/Button'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
-import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { HStack, Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { verifyShiftPin } from '@/services/employeeShiftService'
@@ -62,55 +62,54 @@ export function ShiftPinGate({ children }) {
 
   return (
     <Dialog isOpen onOpenChange={handleOpenChange} purpose="form">
-      <VStack as="form" onSubmit={submit} gap={0}>
-        <Layout
-          height="auto"
-          padding={4}
-          header={
-            <DialogHeader
-              title="シフト希望提出"
-              subtitle="管理者から通知された6桁のPINを入力してください。"
-              onOpenChange={handleOpenChange}
+      <Layout
+        padding={4}
+        header={
+          <DialogHeader
+            title="シフト希望提出"
+            subtitle="管理者から通知された6桁のPINを入力してください。"
+            onOpenChange={handleOpenChange}
+          />
+        }
+        content={
+          <LayoutContent>
+            <TextInput
+              label="PIN（6桁）"
+              value={pin}
+              onChange={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+              isRequired
+              hasAutoFocus
+              isDisabled={submitting}
+              htmlName="pin"
+              size={FORM_FIELD_SIZE}
+              width="100%"
+              status={error ? { type: 'error', message: error } : undefined}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && pin.length === 6 && !submitting) submit()
+              }}
             />
-          }
-          content={
-            <LayoutContent>
-              <TextInput
-                label="PIN（6桁）"
-                value={pin}
-                onChange={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
-                isRequired
-                hasAutoFocus
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              <Button
+                variant="secondary"
                 isDisabled={submitting}
-                htmlName="pin"
-                size={FORM_FIELD_SIZE}
-                width="100%"
-                status={error ? { type: 'error', message: error } : undefined}
+                label="キャンセル"
+                onClick={handleCancel}
               />
-            </LayoutContent>
-          }
-          footer={
-            <LayoutFooter>
-              <HStack gap={2} hAlign="end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  isDisabled={submitting}
-                  label="キャンセル"
-                  onClick={handleCancel}
-                />
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isDisabled={pin.length !== 6 || submitting}
-                  isLoading={submitting}
-                  label="ログイン"
-                />
-              </HStack>
-            </LayoutFooter>
-          }
-        />
-      </VStack>
+              <Button
+                variant="primary"
+                isDisabled={pin.length !== 6 || submitting}
+                isLoading={submitting}
+                label="ログイン"
+                onClick={submit}
+              />
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   )
 }
