@@ -40,7 +40,7 @@ describe('buildPayslipAmounts', () => {
     })
     expect(amounts.base_pay).toBe(150000)
     expect(amounts.gross_pay).toBe(155000)
-    expect(amounts.withholding_tax).toBe(Math.floor(155000 * 0.18378))
+    expect(amounts.withholding_tax).toBe(9200)
     expect(amounts.net_pay).toBe(amounts.taxable_base - amounts.withholding_tax)
   })
 })

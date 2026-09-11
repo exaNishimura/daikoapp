@@ -74,7 +74,7 @@ function buildDocDefinition(slip, employeeName) {
           }
         : null,
       {
-        text: '※ 源泉徴収税額は社内概算式によるものです。',
+        text: '※ 源泉徴収税額は令和8年分税額表（電算機計算）に基づきます。',
         margin: [0, 32, 0, 0],
         fontSize: 9,
         color: '#888888',
