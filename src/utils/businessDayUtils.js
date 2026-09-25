@@ -95,32 +95,16 @@ export function formatWorkDateKey(date) {
 }
 
 /**
- * 現在時刻を 15 分刻みにスナップして datetime-local 形式の文字列で返す
- * @returns {string} "YYYY-MM-DDTHH:MM"
- */
-export function getCurrentDateTimeLocal() {
-  const now = new Date()
-  const minutes = Math.round(now.getMinutes() / 15) * 15
-  const snapped = new Date(now)
-  snapped.setMinutes(minutes, 0, 0)
-
-  const yyyy = snapped.getFullYear()
-  const mm = String(snapped.getMonth() + 1).padStart(2, '0')
-  const dd = String(snapped.getDate()).padStart(2, '0')
-  const hh = String(snapped.getHours()).padStart(2, '0')
-  const mi = String(snapped.getMinutes()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
-}
-
-/**
- * datetime-local 入力の min 属性に渡す「当日 18:00」の文字列
+ * datetime-local 入力の min。営業日の開始（その夜 18:00）。
+ * 0〜5 時は「前暦日 18:00」が現在の営業夜の開始。
  * @param {Date} reference - 基準時刻（デフォルトは現在）
  * @returns {string} "YYYY-MM-DDT18:00"
  */
 export function getMinBusinessDateTime(reference = new Date()) {
-  const yyyy = reference.getFullYear()
-  const mm = String(reference.getMonth() + 1).padStart(2, '0')
-  const dd = String(reference.getDate()).padStart(2, '0')
+  const { start } = getBusinessDayBoundaries(reference)
+  const yyyy = start.getFullYear()
+  const mm = String(start.getMonth() + 1).padStart(2, '0')
+  const dd = String(start.getDate()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}T${String(BUSINESS_START_HOUR).padStart(2, '0')}:00`
 }
 

@@ -1,9 +1,6 @@
 import { useState, useCallback } from 'react'
-import {
-  getCurrentDateTimeLocal,
-  isWithinBusinessHours,
-  snapDateTimeTo15Minutes,
-} from '@/utils/businessDayUtils'
+import { defaultReservationDateTimeLocal } from '@/lib/reservation/reservationTime'
+import { isWithinBusinessHours, snapDateTimeTo15Minutes } from '@/utils/businessDayUtils'
 import { useCreateOrder, useUpdateOrder } from '@/hooks/useOrders'
 import { getVehicles } from '@/services/vehicleService'
 import { submitOrderWithRouteCalculation } from '@/lib/orderSubmission'
@@ -59,9 +56,9 @@ export function useOrderForm({ onSuccess } = {}) {
     setFormData((prev) => {
       const next = { ...prev, [name]: value }
 
-      // 「日時指定」に切り替わったとき、現在時刻をデフォルト値として埋める
+      // 「日時指定」に切り替わったとき、営業夜のデフォルト（時間外ならその夜 18:00）
       if (name === 'order_type' && value === 'SCHEDULED' && !prev.scheduled_at) {
-        next.scheduled_at = getCurrentDateTimeLocal()
+        next.scheduled_at = defaultReservationDateTimeLocal()
       }
 
       // scheduled_at 変更時は 15 分刻みにスナップ + 営業時間チェック

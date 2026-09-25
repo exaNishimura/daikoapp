@@ -250,140 +250,141 @@ export function DispatchBoard() {
   ) : null
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="dispatch-root">
-        <DispatchHeader
-          businessDayText={businessDayText}
-          earliestAvailableTime={earliestAvailableTime}
-          vehicles={vehicles}
-          conflictCount={conflictCount}
-          onOpenSettings={() => {
-            if (vehicles.length === 0) return
-            if (vehicles.length === 1) {
-              setSelectedVehicleForStatus(vehicles[0])
-              setIsOperationStatusModalOpen(true)
-            } else {
-              setIsVehicleSelectDialogOpen(true)
-            }
-          }}
-          onOpenOrderForm={() => setIsModalOpen(true)}
-        />
-
-        {vehicles.length > 0 ? <DispatchStatusLegend /> : null}
-
-        {error ? (
-          <Banner
-            status="error"
-            title={error}
-            collapsible={false}
-            endContent={
-              <Button label="再読み込み" variant="secondary" size="sm" onClick={loadData} />
-            }
+    <>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="dispatch-root">
+          <DispatchHeader
+            businessDayText={businessDayText}
+            earliestAvailableTime={earliestAvailableTime}
+            vehicles={vehicles}
+            conflictCount={conflictCount}
+            onOpenSettings={() => {
+              if (vehicles.length === 0) return
+              if (vehicles.length === 1) {
+                setSelectedVehicleForStatus(vehicles[0])
+                setIsOperationStatusModalOpen(true)
+              } else {
+                setIsVehicleSelectDialogOpen(true)
+              }
+            }}
+            onOpenOrderForm={() => setIsModalOpen(true)}
           />
-        ) : null}
 
-        <div className="dispatch-body">
-          {!isMobile && vehicles.length > 0 ? (
-            <aside className="dispatch-sidebar">
+          {vehicles.length > 0 ? <DispatchStatusLegend /> : null}
+
+          {error ? (
+            <Banner
+              status="error"
+              title={error}
+              collapsible={false}
+              endContent={
+                <Button label="再読み込み" variant="secondary" size="sm" onClick={loadData} />
+              }
+            />
+          ) : null}
+
+          <div className="dispatch-body">
+            {!isMobile && vehicles.length > 0 ? (
+              <aside className="dispatch-sidebar">
+                <OrderCardList
+                  orders={orders}
+                  onOrderSelect={handleOrderSelect}
+                  selectedOrderId={selectedOrder?.id}
+                  defaultExpanded
+                  fillHeight
+                />
+              </aside>
+            ) : null}
+
+            <main className="dispatch-main">
+              {vehicles.length === 0 ? (
+                <div className="dispatch-empty">
+                  <Text weight="semibold" color="secondary">
+                    車両データがありません
+                  </Text>
+                  <Text color="secondary">Supabaseに車両データを追加してください</Text>
+                </div>
+              ) : (
+                <TimelineGrid
+                  vehicles={vehicles}
+                  orders={orders}
+                  slots={slots}
+                  operationStatuses={operationStatuses}
+                  dragOverPosition={dragOverPosition}
+                  draggingSlotVehicleId={draggingSlotVehicleId}
+                  selectedOrderId={selectedOrder?.id}
+                  onOrderSelect={handleOrderSelect}
+                  onOrderUpdate={handleOrderUpdate}
+                  onSlotsUpdate={loadSlots}
+                />
+              )}
+            </main>
+
+            {!isMobile && selectedOrder ? (
+              <aside className="dispatch-detail-panel">{detailPanel}</aside>
+            ) : null}
+          </div>
+
+          {isMobile && vehicles.length > 0 && pendingCount > 0 ? (
+            <div className="dispatch-mobile-queue">
               <OrderCardList
                 orders={orders}
                 onOrderSelect={handleOrderSelect}
                 selectedOrderId={selectedOrder?.id}
                 defaultExpanded
-                fillHeight
               />
-            </aside>
+            </div>
           ) : null}
 
-          <main className="dispatch-main">
-            {vehicles.length === 0 ? (
-              <div className="dispatch-empty">
-                <Text weight="semibold" color="secondary">
-                  車両データがありません
-                </Text>
-                <Text color="secondary">Supabaseに車両データを追加してください</Text>
-              </div>
-            ) : (
-              <TimelineGrid
-                vehicles={vehicles}
-                orders={orders}
-                slots={slots}
-                operationStatuses={operationStatuses}
-                dragOverPosition={dragOverPosition}
-                draggingSlotVehicleId={draggingSlotVehicleId}
-                selectedOrderId={selectedOrder?.id}
-                onOrderSelect={handleOrderSelect}
-                onOrderUpdate={handleOrderUpdate}
-                onSlotsUpdate={loadSlots}
-              />
-            )}
-          </main>
-
-          {!isMobile && selectedOrder ? (
-            <aside className="dispatch-detail-panel">{detailPanel}</aside>
+          {isMobile && selectedOrder ? (
+            <Dialog
+              isOpen
+              onOpenChange={(next) => {
+                if (!next) setSelectedOrder(null)
+              }}
+              purpose="info"
+              variant="fullscreen"
+            >
+              {detailPanel}
+            </Dialog>
           ) : null}
         </div>
-
-        {isMobile && vehicles.length > 0 && pendingCount > 0 ? (
-          <div className="dispatch-mobile-queue">
-            <OrderCardList
-              orders={orders}
-              onOrderSelect={handleOrderSelect}
-              selectedOrderId={selectedOrder?.id}
-              defaultExpanded
-            />
-          </div>
-        ) : null}
-
-        {isMobile && selectedOrder ? (
-          <Dialog
-            isOpen
-            onOpenChange={(next) => {
-              if (!next) setSelectedOrder(null)
-            }}
-            purpose="info"
-            variant="fullscreen"
-          >
-            {detailPanel}
-          </Dialog>
-        ) : null}
-
-        <OrderFormModal
-          open={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onOrderCreated={handleOrderCreated}
-        />
-        <VehicleSelectDialog
-          open={isVehicleSelectDialogOpen}
-          vehicles={vehicles}
-          onClose={() => setIsVehicleSelectDialogOpen(false)}
-          onSelect={(vehicle) => {
-            setSelectedVehicleForStatus(vehicle)
-            setIsVehicleSelectDialogOpen(false)
-            setIsOperationStatusModalOpen(true)
-          }}
-        />
-        <VehicleOperationStatusModal
-          open={isOperationStatusModalOpen}
-          onClose={() => {
-            setIsOperationStatusModalOpen(false)
-            setSelectedVehicleForStatus(null)
-          }}
-          onStatusUpdated={() => {
-            if (vehicles.length > 0) {
-              loadOperationStatuses(vehicles)
-            }
-          }}
-          vehicleId={selectedVehicleForStatus?.id}
-          vehicleName={selectedVehicleForStatus?.name}
-        />
-      </div>
-    </DndContext>
+      </DndContext>
+      <OrderFormModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onOrderCreated={handleOrderCreated}
+      />
+      <VehicleSelectDialog
+        open={isVehicleSelectDialogOpen}
+        vehicles={vehicles}
+        onClose={() => setIsVehicleSelectDialogOpen(false)}
+        onSelect={(vehicle) => {
+          setSelectedVehicleForStatus(vehicle)
+          setIsVehicleSelectDialogOpen(false)
+          setIsOperationStatusModalOpen(true)
+        }}
+      />
+      <VehicleOperationStatusModal
+        open={isOperationStatusModalOpen}
+        onClose={() => {
+          setIsOperationStatusModalOpen(false)
+          setSelectedVehicleForStatus(null)
+        }}
+        onStatusUpdated={() => {
+          if (vehicles.length > 0) {
+            loadOperationStatuses(vehicles)
+          }
+        }}
+        vehicleId={selectedVehicleForStatus?.id}
+        vehicleName={selectedVehicleForStatus?.name}
+      />
+    </>
   )
 }

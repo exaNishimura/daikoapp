@@ -1,11 +1,23 @@
 import { useEffect } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
-import { getMinBusinessDateTime } from '@/utils/businessDayUtils'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import { useOrderForm } from '@/hooks/useOrderForm'
+import {
+  RESERVATION_HOURS,
+  RESERVATION_MINUTES,
+  buildReservationDateTimeLocal,
+  buildReservationIso,
+  defaultReservationDateTime,
+  formatReservationHourLabel,
+  formatReservationInstantLabel,
+  formatReservationMinuteLabel,
+  splitReservationDateTime,
+} from '@/lib/reservation/reservationTime'
+import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
+import { formatWorkDateKey, getBusinessDayBoundaries } from '@/utils/businessDayUtils'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
-import { DateTimeInput } from '@astryxdesign/core/DateTimeInput'
+import { DateInput } from '@astryxdesign/core/DateInput'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
 import { Heading } from '@astryxdesign/core/Heading'
 import { IconButton } from '@astryxdesign/core/IconButton'
@@ -18,13 +30,72 @@ import {
   VStack,
 } from '@astryxdesign/core/Layout'
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
+import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
 import { TextArea } from '@astryxdesign/core/TextArea'
 import { TextInput } from '@astryxdesign/core/TextInput'
-import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
+}
+
+function ScheduledAtFields({ scheduledAt, error, onChange }) {
+  const parts = scheduledAt ? splitReservationDateTime(scheduledAt) : defaultReservationDateTime()
+  const minDate = formatWorkDateKey(getBusinessDayBoundaries().businessDay)
+  const reservedAtError = error ? { type: 'error', message: error } : undefined
+  const reservedAtIso = buildReservationIso(parts.date, parts.hour, parts.minute)
+
+  const commit = (next) => {
+    onChange(buildReservationDateTimeLocal(next.date, next.hour, next.minute))
+  }
+
+  return (
+    <VStack gap={2}>
+      <DateInput
+        label="予約日（その夜）"
+        value={parts.date || undefined}
+        onChange={(value) => commit({ ...parts, date: value ?? '' })}
+        min={minDate}
+        isRequired
+        weekStartsOn="mon"
+        size={FORM_FIELD_SIZE}
+        width="100%"
+        status={reservedAtError}
+      />
+      <HStack gap={3}>
+        <Selector
+          label="時"
+          isRequired
+          width="100%"
+          size={FORM_FIELD_SIZE}
+          value={parts.hour === '' || parts.hour == null ? undefined : String(parts.hour)}
+          onChange={(next) => commit({ ...parts, hour: next === '' ? '' : Number(next) })}
+          options={RESERVATION_HOURS.map((hour) => ({
+            value: String(hour),
+            label: formatReservationHourLabel(hour),
+          }))}
+          status={reservedAtError}
+        />
+        <Selector
+          label="分"
+          isRequired
+          width="100%"
+          size={FORM_FIELD_SIZE}
+          value={parts.minute === '' || parts.minute == null ? undefined : String(parts.minute)}
+          onChange={(next) => commit({ ...parts, minute: next === '' ? '' : Number(next) })}
+          options={RESERVATION_MINUTES.map((minute) => ({
+            value: String(minute),
+            label: formatReservationMinuteLabel(minute),
+          }))}
+          status={reservedAtError}
+        />
+      </HStack>
+      <Text type="supporting" color="secondary">
+        営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。
+      </Text>
+      {reservedAtIso ? <Text>{formatReservationInstantLabel(reservedAtIso)}</Text> : null}
+    </VStack>
+  )
 }
 
 export function OrderFormModal({ onClose, onOrderCreated, open }) {
@@ -86,23 +157,10 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
               </RadioList>
 
               {formData.order_type === 'SCHEDULED' ? (
-                <DateTimeInput
-                  label="予約日時（15分刻み）"
-                  value={formData.scheduled_at || undefined}
+                <ScheduledAtFields
+                  scheduledAt={formData.scheduled_at}
+                  error={errors.scheduled_at}
                   onChange={namedChange(handleChange, 'scheduled_at')}
-                  description="15分刻みで選択してください（営業時間: 18:00〜翌06:00）"
-                  status={
-                    errors.scheduled_at
-                      ? { type: 'error', message: errors.scheduled_at }
-                      : undefined
-                  }
-                  min={getMinBusinessDateTime()}
-                  hourFormat="24h"
-                  timeIncrement={15}
-                  timeOptionInterval={15}
-                  isRequired
-                  size={FORM_FIELD_SIZE}
-                  width="100%"
                 />
               ) : null}
 

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   RESERVATION_HOURS,
+  buildReservationDateTimeLocal,
   buildReservationIso,
   defaultReservationDateTime,
+  defaultReservationDateTimeLocal,
   formatReservationHourLabel,
   splitReservationDateTime,
 } from './reservationTime'
@@ -67,5 +69,29 @@ describe('defaultReservationDateTime', () => {
   it('uses the previous calendar date before 06:00', () => {
     const now = new Date(2025, 5, 2, 3, 20, 0, 0)
     expect(defaultReservationDateTime(now)).toEqual({ date: '2025-06-01', hour: 3, minute: 15 })
+  })
+})
+
+describe('buildReservationDateTimeLocal', () => {
+  it('keeps 19:30 on the selected night', () => {
+    expect(buildReservationDateTimeLocal('2025-08-13', 19, 30)).toBe('2025-08-13T19:30')
+  })
+
+  it('rolls 2:15 to the next calendar morning', () => {
+    expect(buildReservationDateTimeLocal('2025-08-13', 2, 15)).toBe('2025-08-14T02:15')
+  })
+})
+
+describe('defaultReservationDateTimeLocal', () => {
+  it('uses tonight 18:00 during daytime', () => {
+    expect(defaultReservationDateTimeLocal(new Date(2025, 5, 1, 14, 20, 0, 0))).toBe(
+      '2025-06-01T18:00'
+    )
+  })
+
+  it('keeps the overnight instant on the next calendar morning', () => {
+    expect(defaultReservationDateTimeLocal(new Date(2025, 5, 2, 3, 20, 0, 0))).toBe(
+      '2025-06-02T03:15'
+    )
   })
 })

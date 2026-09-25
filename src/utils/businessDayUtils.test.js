@@ -120,8 +120,13 @@ describe('getActiveWorkDate', () => {
 })
 
 describe('getMinBusinessDateTime', () => {
-  it('returns "YYYY-MM-DDT18:00" for the reference date', () => {
+  it('returns that calendar day’s 18:00 during daytime', () => {
     const ref = new Date(2025, 5, 1, 9, 30)
+    expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T18:00')
+  })
+
+  it('uses the previous calendar day’s 18:00 after midnight', () => {
+    const ref = new Date(2025, 5, 2, 3, 0)
     expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T18:00')
   })
 })

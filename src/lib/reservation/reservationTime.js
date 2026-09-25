@@ -86,6 +86,34 @@ export function buildReservationIso(date, hour, minute) {
   return dt ? dt.toISOString() : ''
 }
 
+function formatDateTimeLocal(date) {
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  return `${formatWorkDateKey(date)}T${hh}:${mi}`
+}
+
+/**
+ * 営業日と時分を datetime-local（YYYY-MM-DDTHH:MM）にする。0〜5 時は翌朝の暦日。
+ * @param {string} date
+ * @param {number|string} hour
+ * @param {number|string} minute
+ * @returns {string}
+ */
+export function buildReservationDateTimeLocal(date, hour, minute) {
+  const dt = combineOvernightPickup(date, hour, minute)
+  return dt ? formatDateTimeLocal(dt) : ''
+}
+
+/**
+ * 新規依頼の予約日時デフォルト（datetime-local）。
+ * @param {Date} [now]
+ * @returns {string}
+ */
+export function defaultReservationDateTimeLocal(now = new Date()) {
+  const { date, hour, minute } = defaultReservationDateTime(now)
+  return buildReservationDateTimeLocal(date, hour, minute)
+}
+
 /**
  * @param {string} iso
  * @returns {string}
@@ -95,7 +123,6 @@ export function formatReservationInstantLabel(iso) {
   if (!d || Number.isNaN(d.getTime())) return ''
   const hour = d.getHours()
   const minute = d.getMinutes()
-  const time =
-    minute === 0 ? `${hour}時` : `${hour}時${String(minute).padStart(2, '0')}分`
+  const time = minute === 0 ? `${hour}時` : `${hour}時${String(minute).padStart(2, '0')}分`
   return `${d.getMonth() + 1}月${d.getDate()}日 ${time}`
 }
