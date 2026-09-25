@@ -1,23 +1,17 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { NightDateTimeFields } from '@/components/NightDateTimeFields'
 import { PlacesAutocompleteField } from '@/components/PlacesAutocompleteField'
 import { useOrderForm } from '@/hooks/useOrderForm'
 import {
-  RESERVATION_HOURS,
-  RESERVATION_MINUTES,
   buildReservationDateTimeLocal,
-  buildReservationIso,
   defaultReservationDateTime,
-  formatReservationHourLabel,
-  formatReservationInstantLabel,
-  formatReservationMinuteLabel,
   splitReservationDateTime,
 } from '@/lib/reservation/reservationTime'
 import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import { formatWorkDateKey, getBusinessDayBoundaries } from '@/utils/businessDayUtils'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
-import { DateInput } from '@astryxdesign/core/DateInput'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
 import { Heading } from '@astryxdesign/core/Heading'
 import { IconButton } from '@astryxdesign/core/IconButton'
@@ -30,72 +24,12 @@ import {
   VStack,
 } from '@astryxdesign/core/Layout'
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
-import { Selector } from '@astryxdesign/core/Selector'
 import { Text } from '@astryxdesign/core/Text'
 import { TextArea } from '@astryxdesign/core/TextArea'
 import { TextInput } from '@astryxdesign/core/TextInput'
 
 function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
-}
-
-function ScheduledAtFields({ scheduledAt, error, onChange }) {
-  const parts = scheduledAt ? splitReservationDateTime(scheduledAt) : defaultReservationDateTime()
-  const minDate = formatWorkDateKey(getBusinessDayBoundaries().businessDay)
-  const reservedAtError = error ? { type: 'error', message: error } : undefined
-  const reservedAtIso = buildReservationIso(parts.date, parts.hour, parts.minute)
-
-  const commit = (next) => {
-    onChange(buildReservationDateTimeLocal(next.date, next.hour, next.minute))
-  }
-
-  return (
-    <VStack gap={2}>
-      <DateInput
-        label="予約日（その夜）"
-        value={parts.date || undefined}
-        onChange={(value) => commit({ ...parts, date: value ?? '' })}
-        min={minDate}
-        isRequired
-        weekStartsOn="mon"
-        size={FORM_FIELD_SIZE}
-        width="100%"
-        status={reservedAtError}
-      />
-      <HStack gap={3}>
-        <Selector
-          label="時"
-          isRequired
-          width="100%"
-          size={FORM_FIELD_SIZE}
-          value={parts.hour === '' || parts.hour == null ? undefined : String(parts.hour)}
-          onChange={(next) => commit({ ...parts, hour: next === '' ? '' : Number(next) })}
-          options={RESERVATION_HOURS.map((hour) => ({
-            value: String(hour),
-            label: formatReservationHourLabel(hour),
-          }))}
-          status={reservedAtError}
-        />
-        <Selector
-          label="分"
-          isRequired
-          width="100%"
-          size={FORM_FIELD_SIZE}
-          value={parts.minute === '' || parts.minute == null ? undefined : String(parts.minute)}
-          onChange={(next) => commit({ ...parts, minute: next === '' ? '' : Number(next) })}
-          options={RESERVATION_MINUTES.map((minute) => ({
-            value: String(minute),
-            label: formatReservationMinuteLabel(minute),
-          }))}
-          status={reservedAtError}
-        />
-      </HStack>
-      <Text type="supporting" color="secondary">
-        営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。
-      </Text>
-      {reservedAtIso ? <Text>{formatReservationInstantLabel(reservedAtIso)}</Text> : null}
-    </VStack>
-  )
 }
 
 export function OrderFormModal({ onClose, onOrderCreated, open }) {
@@ -112,10 +46,16 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     handleSubmit,
     reset,
   } = useOrderForm({ onSuccess: onOrderCreated })
+  const [nightAvailability, setNightAvailability] = useState({
+    available: true,
+    isLoading: false,
+    message: '',
+  })
 
   useEffect(() => {
     if (open) {
       reset()
+      setNightAvailability({ available: true, isLoading: false, message: '' })
     }
   }, [open, reset])
 
@@ -131,6 +71,38 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
   const handleDropoffAddressChange = (address) => {
     updateField('dropoff_address', address)
     setErrors((prev) => (prev.dropoff_address ? { ...prev, dropoff_address: null } : prev))
+  }
+
+  const scheduledParts = formData.scheduled_at
+    ? splitReservationDateTime(formData.scheduled_at)
+    : defaultReservationDateTime()
+  const minDate = formatWorkDateKey(getBusinessDayBoundaries().businessDay)
+
+  const handleNightChange = useCallback(
+    ({ date, hour, minute }) => {
+      handleChange({
+        target: {
+          name: 'scheduled_at',
+          value: buildReservationDateTimeLocal(date, hour, minute),
+        },
+      })
+    },
+    [handleChange]
+  )
+
+  const scheduledBlocked =
+    formData.order_type === 'SCHEDULED' &&
+    (nightAvailability.isLoading || !nightAvailability.available)
+
+  const handleSave = () => {
+    if (formData.order_type === 'SCHEDULED' && !nightAvailability.available) {
+      setErrors((prev) => ({
+        ...prev,
+        scheduled_at: nightAvailability.message || 'その時刻は配車できません',
+      }))
+      return
+    }
+    handleSubmit()
   }
 
   return (
@@ -157,10 +129,14 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
               </RadioList>
 
               {formData.order_type === 'SCHEDULED' ? (
-                <ScheduledAtFields
-                  scheduledAt={formData.scheduled_at}
+                <NightDateTimeFields
+                  date={scheduledParts.date}
+                  hour={scheduledParts.hour}
+                  minute={scheduledParts.minute}
                   error={errors.scheduled_at}
-                  onChange={namedChange(handleChange, 'scheduled_at')}
+                  minDate={minDate}
+                  onChange={handleNightChange}
+                  onAvailabilityChange={setNightAvailability}
                 />
               ) : null}
 
@@ -309,9 +285,9 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
               <Button
                 variant="primary"
                 label={loading ? '保存中...' : '保存'}
-                isDisabled={loading}
+                isDisabled={loading || scheduledBlocked}
                 isLoading={loading}
-                onClick={handleSubmit}
+                onClick={handleSave}
               />
             </HStack>
           </LayoutFooter>
