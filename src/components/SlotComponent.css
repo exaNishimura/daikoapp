@@ -93,7 +93,7 @@
   margin-bottom: 2px;
 }
 
-.status-badge {
+.slot-component .status-badge {
   padding: 1px 6px;
   border-radius: 4px;
   font-size: 0.72rem;
@@ -105,7 +105,7 @@
   background-color: var(--slot-accent);
 }
 
-.status-badge.tentative {
+.slot-component .status-badge.tentative {
   color: #3d2c00;
 }
 

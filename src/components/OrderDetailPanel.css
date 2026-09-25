@@ -95,7 +95,7 @@
   border-color: #646cff;
 }
 
-.status-badge {
+.order-detail-panel .status-badge {
   display: inline-block;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
@@ -103,22 +103,22 @@
   font-weight: 600;
 }
 
-.status-badge.status-unassigned {
+.order-detail-panel .status-badge.status-unassigned {
   background-color: #666;
   color: #fff;
 }
 
-.status-badge.status-tentative {
+.order-detail-panel .status-badge.status-tentative {
   background-color: #ffa500;
   color: #000;
 }
 
-.status-badge.status-confirmed {
+.order-detail-panel .status-badge.status-confirmed {
   background-color: #4caf50;
   color: #fff;
 }
 
-.status-badge.status-cancelled {
+.order-detail-panel .status-badge.status-cancelled {
   background-color: #999;
   color: #fff;
 }

@@ -1,0 +1,37 @@
+.bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+}
+
+.start {
+  justify-self: start;
+  min-width: 0;
+}
+
+.center {
+  justify-self: center;
+}
+
+.end {
+  justify-self: end;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: var(--spacing-2);
+  }
+
+  .center {
+    order: -1;
+    flex: 1 0 100%;
+    display: flex;
+    justify-content: center;
+  }
+}

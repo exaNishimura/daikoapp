@@ -39,9 +39,9 @@ import { Button } from '@astryxdesign/core/Button'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { HStack } from '@astryxdesign/core/Layout'
 import { Selector } from '@astryxdesign/core/Selector'
-import { Text } from '@astryxdesign/core/Text'
-import { ChevronLeft, ChevronRight, Pencil, Search } from 'lucide-react'
+import { Pencil, Search } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
+import { MonthNavBar } from '@/components/MonthNav'
 import './ShiftCalendar.css'
 
 // ============================================
@@ -256,20 +256,6 @@ export function ShiftCalendar() {
     })
   }
 
-  const handlePrevMonth = () => {
-    const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1
-    const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear
-    setSelectedYear(prevYear)
-    setSelectedMonth(prevMonth)
-  }
-
-  const handleNextMonth = () => {
-    const nextMonth = selectedMonth === 12 ? 1 : selectedMonth + 1
-    const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear
-    setSelectedYear(nextYear)
-    setSelectedMonth(nextMonth)
-  }
-
   return (
     <PageFrame>
       <div className="shift-calendar-page">
@@ -289,38 +275,17 @@ export function ShiftCalendar() {
                 />
               ) : null}
             </div>
-            <div
+            <MonthNavBar
               className="shift-header-month-nav"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto 1fr',
-                alignItems: 'center',
-                width: '100%',
+              year={selectedYear}
+              month={selectedMonth}
+              isDisabled={loading}
+              accessibilityLevel={2}
+              onChange={({ year, month: nextMonth }) => {
+                setSelectedYear(year)
+                setSelectedMonth(nextMonth)
               }}
-            >
-              <div />
-              <HStack gap={1} vAlign="center">
-                <IconButton
-                  label="前月"
-                  tooltip="前月"
-                  variant="ghost"
-                  icon={<ChevronLeft />}
-                  onClick={handlePrevMonth}
-                  isDisabled={loading}
-                />
-                <Text weight="bold">
-                  {selectedYear}年{selectedMonth}月
-                </Text>
-                <IconButton
-                  label="次月"
-                  tooltip="次月"
-                  variant="ghost"
-                  icon={<ChevronRight />}
-                  onClick={handleNextMonth}
-                  isDisabled={loading}
-                />
-              </HStack>
-              <HStack hAlign="end">
+              end={
                 <IconButton
                   label="検索・フィルター"
                   tooltip="検索・フィルター"
@@ -329,8 +294,8 @@ export function ShiftCalendar() {
                   icon={<Search size={18} />}
                   onClick={() => setSearchExpanded(!searchExpanded)}
                 />
-              </HStack>
-            </div>
+              }
+            />
           </div>
 
           <div className="shift-header-expandable">

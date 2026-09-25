@@ -48,7 +48,7 @@
   margin-bottom: 16px;
 }
 
-.shift-header-compact h1 {
+.shift-header-title-row h1 {
   font-size: 20px;
   margin: 0;
   flex: 1;
@@ -76,7 +76,7 @@
   margin-bottom: 8px;
 }
 
-.shift-header--collapsed .shift-header-compact h1 {
+.shift-header--collapsed .shift-header-title-row h1 {
   font-size: 18px;
 }
 
@@ -100,7 +100,7 @@
     padding: 20px;
   }
 
-  .shift-header-compact h1 {
+  .shift-header-title-row h1 {
     font-size: 24px;
   }
 
@@ -112,7 +112,7 @@
     margin-bottom: 10px;
   }
 
-  .shift-header--collapsed .shift-header-compact h1 {
+  .shift-header--collapsed .shift-header-title-row h1 {
     font-size: 20px;
   }
 }

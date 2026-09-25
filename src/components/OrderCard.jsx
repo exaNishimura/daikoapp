@@ -1,5 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { shortenAddress } from '@/utils/addressUtils'
+import { getStatusLabel } from '@/utils/orderStatusUtils'
 import { Card } from '@astryxdesign/core/Card'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Text } from '@astryxdesign/core/Text'
@@ -11,18 +12,8 @@ const STATUS_TOKEN_COLOR = {
   CONFIRMED: 'green',
   ARRIVED: 'cyan',
   PICKING_UP: 'cyan',
-  IN_TRANSIT: 'blue',
+  IN_TRANSIT: 'purple',
   COMPLETED: 'green',
-}
-
-const STATUS_LABEL = {
-  UNASSIGNED: '未割当',
-  TENTATIVE: '仮配置',
-  CONFIRMED: '確定',
-  ARRIVED: '現地到着',
-  PICKING_UP: '客車引取',
-  IN_TRANSIT: '送客中',
-  COMPLETED: '送客完了',
 }
 
 function formatRouteSummary(order) {
@@ -78,7 +69,7 @@ export function OrderCard({ order, isSelected, onClick }) {
   if (order.car_plate) carInfoParts.push(order.car_plate.slice(-4))
   const carInfoText = carInfoParts.join(' ')
 
-  const statusLabel = STATUS_LABEL[order.status] || '確定'
+  const statusLabel = getStatusLabel(order.status)
   const statusColor = STATUS_TOKEN_COLOR[order.status] || 'gray'
   const routeSummary = formatRouteSummary(order)
 
@@ -90,9 +81,10 @@ export function OrderCard({ order, isSelected, onClick }) {
     <Card
       ref={setNodeRef}
       data-order-id={order.id}
+      data-status={order.status}
       className={className}
-      padding={1}
-      elevation="low"
+      padding={2}
+      elevation="none"
       variant={isSelected ? 'blue' : 'default'}
       style={{
         ...style,
@@ -105,34 +97,34 @@ export function OrderCard({ order, isSelected, onClick }) {
       {...listeners}
       onClick={handleClick}
     >
-      <VStack className="order-card-body" gap={0.5}>
-        <HStack className="order-card-header" gap={1} vAlign="center" hAlign="between">
-          <HStack gap={1} vAlign="center">
-            <Token className="status-badge" size="sm" color={statusColor} label={statusLabel} />
-            <Text className="order-type" size="2xs" weight="semibold">
+      <VStack gap={1}>
+        <HStack gap={1} vAlign="center" hAlign="between">
+          <HStack gap={1} vAlign="center" wrap="wrap">
+            <Token size="lg" color={statusColor} label={statusLabel} />
+            <Text size="base" weight="semibold" hasTabularNumbers>
               {orderTypeText}
             </Text>
-            <Text className="duration-info" size="2xs" color="secondary">
+            <Text size="base" color="secondary" hasTabularNumbers>
               {totalDuration}分
             </Text>
           </HStack>
           {order.parking_note ? (
-            <Text className="note-icon" size="2xs">
+            <Text size="base" aria-label="駐車場メモあり">
               📝
             </Text>
           ) : null}
         </HStack>
         {order.pickup_location ? (
-          <Text className="pickup" size="2xs" color="secondary" maxLines={1}>
+          <Text size="base" weight="semibold" maxLines={1}>
             {order.pickup_location}
           </Text>
         ) : null}
         {carInfoText ? (
-          <Text className="car-info" size="2xs" color="secondary" maxLines={1}>
+          <Text size="sm" color="secondary" maxLines={1}>
             {carInfoText}
           </Text>
         ) : null}
-        <Text className="route-info" size="2xs" maxLines={1}>
+        <Text size="sm" color="secondary" maxLines={1}>
           {routeSummary}
         </Text>
       </VStack>

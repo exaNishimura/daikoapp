@@ -15,7 +15,7 @@ import { Spinner } from '@astryxdesign/core/Spinner'
 import { Text } from '@astryxdesign/core/Text'
 import { TextArea } from '@astryxdesign/core/TextArea'
 import { Token } from '@astryxdesign/core/Token'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { useShiftEditPage } from '@/hooks/useShiftEditPage'
 import {
   CAR_OPTIONS,
@@ -30,6 +30,7 @@ import { CopyShiftDialog } from './ShiftEditPage/CopyShiftDialog'
 import { BulkCopyShiftDialog } from './ShiftEditPage/BulkCopyShiftDialog'
 import { DayAvailabilityTokens, RequestPicker } from './ShiftEditPage/RequestPicker'
 import { ShiftEditSummary } from './ShiftEditPage/ShiftEditSummary'
+import { MonthNavBar } from '@/components/MonthNav'
 import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 import './ShiftEditPage.css'
 
@@ -196,7 +197,6 @@ export function ShiftEditPage() {
     handleSetStatus,
   } = useShiftEditPage({ year, month })
 
-  const monthLabel = year && month ? `${year}年${month}月` : ''
   const editingCount = Object.keys(editingShifts).length
   const hasAnyRequests = requestRows.some((row) => row.has_request)
 
@@ -215,8 +215,14 @@ export function ShiftEditPage() {
       padding={4}
       header={
         <LayoutHeader hasDivider>
-          <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-            <HStack gap={2} vAlign="center" wrap="wrap">
+          <MonthNavBar
+            year={year}
+            month={month}
+            isDisabled={loading}
+            onChange={({ year: nextYear, month: nextMonth }) => {
+              navigate(`/shift/edit?year=${nextYear}&month=${nextMonth}`)
+            }}
+            start={
               <IconButton
                 label="シフト表に戻る"
                 tooltip="シフト表に戻る"
@@ -224,67 +230,42 @@ export function ShiftEditPage() {
                 icon={<ChevronLeft />}
                 onClick={() => navigate('/shift')}
               />
-              <HStack gap={1} vAlign="center">
-                <IconButton
-                  label="前月"
-                  tooltip="前月"
-                  variant="ghost"
-                  icon={<ChevronLeft />}
-                  onClick={() => {
-                    const prevMonth = month === 1 ? 12 : month - 1
-                    const prevYear = month === 1 ? year - 1 : year
-                    navigate(`/shift/edit?year=${prevYear}&month=${prevMonth}`)
-                  }}
-                  isDisabled={loading}
-                />
-                <Heading level={1}>{monthLabel}</Heading>
-                <IconButton
-                  label="次月"
-                  tooltip="次月"
-                  variant="ghost"
-                  icon={<ChevronRight />}
-                  onClick={() => {
-                    const nextMonth = month === 12 ? 1 : month + 1
-                    const nextYear = month === 12 ? year + 1 : year
-                    navigate(`/shift/edit?year=${nextYear}&month=${nextMonth}`)
-                  }}
-                  isDisabled={loading}
-                />
-              </HStack>
-            </HStack>
-            <HStack gap={2} vAlign="center" wrap="wrap">
-              <HStack gap={1} vAlign="center">
+            }
+            end={
+              <HStack gap={2} vAlign="center" wrap="wrap">
+                <HStack gap={1} vAlign="center">
+                  <Button
+                    label="一括保存"
+                    variant="primary"
+                    onClick={onSaveAll}
+                    isDisabled={loading}
+                  />
+                  {editingCount > 0 ? (
+                    <Token size="sm" color="blue" label={`${editingCount}件編集中`} />
+                  ) : null}
+                </HStack>
                 <Button
-                  label="一括保存"
-                  variant="primary"
-                  onClick={onSaveAll}
+                  label="再読み込み"
+                  variant="secondary"
+                  onClick={() => refetchShifts()}
                   isDisabled={loading}
                 />
-                {editingCount > 0 ? (
-                  <Token size="sm" color="blue" label={`${editingCount}件編集中`} />
-                ) : null}
+                <Button
+                  label={
+                    selectedCopyDestCount > 0
+                      ? `一括コピー（${selectedCopyDestCount}日）`
+                      : '一括コピー'
+                  }
+                  variant="secondary"
+                  onClick={() => {
+                    setBulkCopySourceDate('')
+                    setBulkCopyDialogOpen(true)
+                  }}
+                  isDisabled={loading || selectedCopyDestCount === 0}
+                />
               </HStack>
-              <Button
-                label="再読み込み"
-                variant="secondary"
-                onClick={() => refetchShifts()}
-                isDisabled={loading}
-              />
-              <Button
-                label={
-                  selectedCopyDestCount > 0
-                    ? `一括コピー（${selectedCopyDestCount}日）`
-                    : '一括コピー'
-                }
-                variant="secondary"
-                onClick={() => {
-                  setBulkCopySourceDate('')
-                  setBulkCopyDialogOpen(true)
-                }}
-                isDisabled={loading || selectedCopyDestCount === 0}
-              />
-            </HStack>
-          </HStack>
+            }
+          />
         </LayoutHeader>
       }
     >
