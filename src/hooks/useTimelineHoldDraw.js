@@ -9,6 +9,7 @@ import {
 import { parseWorkDateKey } from '@/utils/businessDayUtils'
 import {
   DRAW_SLOP_PX,
+  LONG_PRESS_MS,
   assessHoldRange,
   formatHoldRangeLabel,
   resolveDrawRange,
@@ -20,8 +21,8 @@ function contentY(scroller, clientY) {
 }
 
 /**
- * 車両列の空きをタップまたは縦ドラッグして仮枠を作る。
- * 数px動いたらスクロール位置を固定し、プレビューを出す。
+ * 車両列の空きを長押しして仮枠を作る。
+ * 長押し前の移動はスクロールのまま。長押し後は縦ドラッグで長さを変える。
  * 既存スロット上の pointerdown は呼び出し側で無視する。
  */
 export function useTimelineHoldDraw({
@@ -55,9 +56,11 @@ export function useTimelineHoldDraw({
   const clearGesture = useCallback(() => {
     const gesture = gestureRef.current
     if (!gesture) return
+    window.clearTimeout(gesture.timer)
     window.removeEventListener('pointermove', gesture.onMove)
     window.removeEventListener('pointerup', gesture.onUp)
     window.removeEventListener('pointercancel', gesture.onUp)
+    gesture.column?.removeEventListener('contextmenu', gesture.onContextMenu)
     if (gesture.scroller && gesture.onTouchMove) {
       gesture.scroller.removeEventListener('touchmove', gesture.onTouchMove)
     }
@@ -103,8 +106,6 @@ export function useTimelineHoldDraw({
     if (event.button != null && event.button !== 0) return
     const scroller = scrollerRef.current
     if (!scroller) return
-    if (event.pointerType === 'mouse') event.preventDefault()
-
     const anchorRow = pixelsToRowIndex(contentY(scroller, event.clientY))
     const gesture = {
       pointerId: event.pointerId,
@@ -113,16 +114,37 @@ export function useTimelineHoldDraw({
       startClientX: event.clientX,
       startClientY: event.clientY,
       startScrollTop: scroller.scrollTop,
-      drawing: false,
+      armed: false,
+      resized: false,
+      timer: 0,
       column: event.currentTarget,
       scroller,
       onMove: null,
       onUp: null,
       onTouchMove: null,
+      onContextMenu: null,
     }
 
+    const armDraw = () => {
+      const current = gestureRef.current
+      if (!current || current.armed || current.pointerId !== gesture.pointerId) return
+      current.armed = true
+      current.scroller.scrollTop = current.startScrollTop
+      current.scroller.classList.add('is-range-drawing')
+      try {
+        current.column?.setPointerCapture?.(current.pointerId)
+      } catch {
+        // この指ではキャプチャできない
+      }
+      current.scroller.addEventListener('touchmove', current.onTouchMove, { passive: false })
+      setPreview(previewFor(current.vehicleId, current.anchorRow, current.anchorRow, false))
+    }
+
+    gesture.onContextMenu = (menuEvent) => {
+      menuEvent.preventDefault()
+    }
     gesture.onTouchMove = (touchEvent) => {
-      if (gestureRef.current?.drawing) touchEvent.preventDefault()
+      if (gestureRef.current?.armed) touchEvent.preventDefault()
     }
     gesture.onMove = (moveEvent) => {
       const current = gestureRef.current
@@ -134,17 +156,15 @@ export function useTimelineHoldDraw({
       }
       const dx = moveEvent.clientX - current.startClientX
       const dy = moveEvent.clientY - current.startClientY
-      if (!current.drawing && Math.hypot(dx, dy) < DRAW_SLOP_PX) return
-      if (!current.drawing) {
-        current.drawing = true
-        current.scroller.scrollTop = current.startScrollTop
-        current.scroller.classList.add('is-range-drawing')
-        try {
-          current.column?.setPointerCapture?.(moveEvent.pointerId)
-        } catch {
-          // この指ではキャプチャできない
-        }
+      const moved = Math.hypot(dx, dy) >= DRAW_SLOP_PX
+      if (!current.armed) {
+        if (!moved) return
+        clearGesture()
+        setPreview(null)
+        return
       }
+      if (!moved) return
+      current.resized = true
       current.scroller.scrollTop = current.startScrollTop
       const row = pixelsToRowIndex(contentY(current.scroller, moveEvent.clientY))
       setPreview(previewFor(current.vehicleId, current.anchorRow, row, true))
@@ -152,18 +172,15 @@ export function useTimelineHoldDraw({
     gesture.onUp = (upEvent) => {
       const current = gestureRef.current
       if (!current || upEvent.pointerId !== current.pointerId) return
-      const drawing = current.drawing
+      const armed = current.armed
+      const resized = current.resized
       const row = pixelsToRowIndex(contentY(current.scroller, upEvent.clientY))
-      const next = previewFor(
-        current.vehicleId,
-        current.anchorRow,
-        drawing ? row : current.anchorRow,
-        drawing
-      )
-      const vehicleId = current.vehicleId
+      const heldVehicleId = current.vehicleId
+      const anchor = current.anchorRow
       clearGesture()
       setPreview(null)
-      if (upEvent.type === 'pointercancel') return
+      if (!armed || upEvent.type === 'pointercancel') return
+      const next = previewFor(heldVehicleId, anchor, resized ? row : anchor, resized)
       if (!next) {
         onHoldRejectRef.current?.('この日付には枠を作れません')
         return
@@ -175,7 +192,7 @@ export function useTimelineHoldDraw({
       creatingRef.current = true
       Promise.resolve(
         onHoldRangeRef.current?.({
-          vehicleId,
+          vehicleId: heldVehicleId,
           startAt: next.assessment.startAt,
           endAt: next.assessment.endAt,
         })
@@ -184,11 +201,12 @@ export function useTimelineHoldDraw({
       })
     }
 
+    gesture.timer = window.setTimeout(armDraw, LONG_PRESS_MS)
     gestureRef.current = gesture
+    gesture.column?.addEventListener('contextmenu', gesture.onContextMenu)
     window.addEventListener('pointermove', gesture.onMove)
     window.addEventListener('pointerup', gesture.onUp)
     window.addEventListener('pointercancel', gesture.onUp)
-    scroller.addEventListener('touchmove', gesture.onTouchMove, { passive: false })
   }
 
   return { preview, beginPointerDown }

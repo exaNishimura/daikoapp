@@ -4,8 +4,11 @@ import { rowIndexToDate } from '@/utils/rowUtils'
 /** 電話中に先に押さえる枠の出発地・目的地。この文字のままでは確定できない。 */
 export const HOLD_ADDRESS = '未入力'
 
-/** この移動量を超えたらスクロールを止めて範囲描画に切り替える。 */
+/** 長押し前にこの移動量を超えたらスクロールとみなして枠作成をやめる。長押し後は範囲変更。 */
 export const DRAW_SLOP_PX = 8
+
+/** この時間押し続けたら配車枠の作成を始める。 */
+export const LONG_PRESS_MS = 500
 
 /** タップ（ほとんど動かさず離す）で作る枠。15分×2 = 30分。 */
 export const TAP_HOLD_ROWS = 2
