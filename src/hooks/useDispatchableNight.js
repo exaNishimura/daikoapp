@@ -8,21 +8,11 @@ import { useShiftsByDate } from '@/hooks/useShifts'
 import { useSlotsInRange } from '@/hooks/useDispatchSlots'
 import { useVehicleOperationStatuses } from '@/hooks/useVehicleOperations'
 import { useVehicles } from '@/hooks/useVehicles'
-import { formatWorkDateKey, getBusinessDayBoundaries } from '@/utils/businessDayUtils'
+import { formatWorkDateKey, getBusinessDayBoundaries, getNightRangeFromWorkDateKey } from '@/utils/businessDayUtils'
 
 const EMPTY_VEHICLES = []
 const EMPTY_MAP = {}
 const EMPTY_SLOTS = []
-
-function nightRange(nightDate) {
-  if (!nightDate) return { start: null, end: null }
-  const [year, month, day] = nightDate.split('-').map(Number)
-  if (!year || !month || !day) return { start: null, end: null }
-  return {
-    start: new Date(year, month - 1, day, 18, 0, 0, 0),
-    end: new Date(year, month - 1, day + 1, 6, 0, 0, 0),
-  }
-}
 
 /**
  * 指定した営業夜の配車可能 15 分枠。
@@ -44,7 +34,7 @@ export function useDispatchableNight(nightDate, options = {}) {
 
   const statusesQuery = useVehicleOperationStatuses(vehicleIds, nightDate)
   const shiftsQuery = useShiftsByDate(nightDate)
-  const { start, end } = nightRange(nightDate)
+  const { start, end } = getNightRangeFromWorkDateKey(nightDate)
   const occupancyQuery = useSlotsInRange(start, end, { enabled: Boolean(nightDate) })
 
   const isLoading =

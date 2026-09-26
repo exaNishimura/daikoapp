@@ -8,7 +8,8 @@
  * の 3 つに分けてここに切り出した。
  */
 
-import { dateToRowIndex, rowIndexToDate } from '@/utils/rowUtils'
+import { getOperatingHours, isHourInWindow } from '@/lib/operatingHours'
+import { dateToRowIndex, getLastRowIndex, rowIndexToDate } from '@/utils/rowUtils'
 import {
   findEarliestAvailableSlotAcrossVehicles,
   findExactAvailableVehicle,
@@ -21,7 +22,7 @@ import { calculateBuffer } from '@/services/routeService'
  */
 function getBusinessDayStartDate(reference = new Date()) {
   const day = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate())
-  if (reference.getHours() < 6) day.setDate(day.getDate() - 1)
+  if (reference.getHours() < getOperatingHours().businessEndHour) day.setDate(day.getDate() - 1)
   return day
 }
 
@@ -33,20 +34,19 @@ function getBusinessDayStartDate(reference = new Date()) {
  * @returns {Date}
  */
 export function computeDesiredStartTime(order, now = new Date()) {
+  const { businessStartHour, businessEndHour } = getOperatingHours()
   const hours = now.getHours()
-  const isBusinessHour = hours >= 18 || hours < 6
+  const isBusinessHour = isHourInWindow(hours, businessStartHour, businessEndHour)
 
   if (order.order_type === 'NOW') {
     if (isBusinessHour) {
-      // 現在の行を翌行にスナップ (15 分後)
       const currentRowIndex = dateToRowIndex(now)
-      const nextRowIndex = Math.min(47, currentRowIndex + 1)
+      const nextRowIndex = Math.min(getLastRowIndex(), Math.max(0, currentRowIndex) + 1)
       return rowIndexToDate(nextRowIndex, getBusinessDayStartDate(now))
     }
-    // 営業時間外 → 次の 18:00
     const next = new Date(now)
-    next.setHours(18, 0, 0, 0)
-    if (hours >= 18) next.setDate(next.getDate() + 1)
+    next.setHours(businessStartHour, 0, 0, 0)
+    if (hours >= businessStartHour) next.setDate(next.getDate() + 1)
     return next
   }
 
@@ -54,10 +54,10 @@ export function computeDesiredStartTime(order, now = new Date()) {
     return new Date(order.scheduled_at)
   }
 
-  // フォールバック: 営業時間内ならそのまま、外なら 18:00 (今日)
+  // フォールバック: 営業時間内ならそのまま、外なら営業開始（今日）
   if (isBusinessHour) return new Date(now)
   const fallback = new Date(now)
-  fallback.setHours(18, 0, 0, 0)
+  fallback.setHours(businessStartHour, 0, 0, 0)
   return fallback
 }
 

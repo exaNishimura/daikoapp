@@ -10,6 +10,7 @@
  * テストはモックを差し込めば書ける。
  */
 
+import { getOperatingHours } from '@/lib/operatingHours'
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { getRevertStatus } from '@/utils/orderStatusUtils'
 
@@ -238,15 +239,15 @@ export async function confirmOrder({ order, vehicles, slots, deps }) {
     const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
     const totalDuration = baseDuration + buffer
 
-    // 開始時刻：営業時間内なら今、そうでなければ次の 18:00
     const now = new Date()
     const hours = now.getHours()
+    const { businessStartHour, businessEndHour } = getOperatingHours()
     let orderStartTime
-    if (hours >= 18 || hours < 6) {
+    if (hours >= businessStartHour || hours < businessEndHour) {
       orderStartTime = new Date(now)
     } else {
       orderStartTime = new Date(now)
-      orderStartTime.setHours(18, 0, 0, 0)
+      orderStartTime.setHours(businessStartHour, 0, 0, 0)
     }
 
     const availableSlot = findEarliestAvailableSlotAcrossVehicles(

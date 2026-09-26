@@ -74,14 +74,14 @@ describe('buildTimelinePlacementBands', () => {
     ])
 
     expect(bands.shiftStartTime).toBe('20:00')
-    expect(bands.blockedBands).toEqual([{ startRow: 0, endRow: 8 }])
-    expect(bands.placementBands).toEqual([{ startRow: 8, endRow: 48 }])
+    expect(bands.blockedBands).toEqual([{ startRow: 0, endRow: 4 }])
+    expect(bands.placementBands).toEqual([{ startRow: 4, endRow: 44 }])
   })
 })
 
 describe('buildOperationalWindowsFromStatuses', () => {
   it('DEFAULTのみなら終日稼働', () => {
     const windows = buildOperationalWindowsFromStatuses([{ type: 'DEFAULT', time: null }])
-    expect(windows).toEqual([{ startRow: 0, endRow: 48 }])
+    expect(windows).toEqual([{ startRow: 0, endRow: 44 }])
   })
 })

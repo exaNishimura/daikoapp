@@ -2,14 +2,11 @@
  * 可否判定エンジン（純関数・Maps/DB 依存は呼び出し側）
  */
 
+import { BUSINESS_END_HOUR, resolveOperatingHours } from '../operatingHours.js'
 import { totalDurationWithBuffer } from './buffer.js'
 import { evaluateOccupancy, resolveCapacityForDay } from './capacity.js'
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
-const PHONE_INTAKE_HOUR = 19
-const BUSINESS_END_HOUR = 6
-/** LIFF 顧客が選べる最初の時（20:00 JST） */
-const LIFF_PICKUP_START_HOUR = 20
 
 /**
  * @param {Date} date
@@ -47,9 +44,10 @@ export function getLineBusinessDayKey(at) {
  * @param {Date} now
  * @returns {boolean} 電話受付時間内（>=19 or <6）
  */
-export function isPhoneIntakeOpen(now) {
+export function isPhoneIntakeOpen(now, operatingHours) {
+  const { reservationStartHour, businessEndHour } = resolveOperatingHours(operatingHours)
   const { hour } = jstParts(now)
-  return hour >= PHONE_INTAKE_HOUR || hour < BUSINESS_END_HOUR
+  return hour >= reservationStartHour || hour < businessEndHour
 }
 
 /**
@@ -57,18 +55,19 @@ export function isPhoneIntakeOpen(now) {
  * @param {Date} now
  * @returns {Date}
  */
-export function nextLiffPickupAt(now) {
+export function nextLiffPickupAt(now, operatingHours) {
+  const { businessStartHour } = resolveOperatingHours(operatingHours)
   const p = jstParts(now)
   let y = p.y
   let month = p.month
   let d = p.d
-  if (p.hour >= LIFF_PICKUP_START_HOUR) {
+  if (p.hour >= businessStartHour) {
     const next = new Date(Date.UTC(y, month - 1, d + 1))
     y = next.getUTCFullYear()
     month = next.getUTCMonth() + 1
     d = next.getUTCDate()
   }
-  return new Date(Date.UTC(y, month - 1, d, LIFF_PICKUP_START_HOUR - 9, 0, 0, 0))
+  return new Date(Date.UTC(y, month - 1, d, businessStartHour - 9, 0, 0, 0))
 }
 
 /**
@@ -122,10 +121,10 @@ export function checkAvailability(input) {
   const unitCount = Math.max(1, Number(input.unitCount) || 1)
   const totalDurationMin = totalDurationWithBuffer(input.baseDurationMin)
 
-  const nowOutsideHours = input.orderType === 'NOW' && !isPhoneIntakeOpen(now)
+  const nowOutsideHours = input.orderType === 'NOW' && !isPhoneIntakeOpen(now, input.operatingHours)
 
   const pickupAt = nowOutsideHours
-    ? nextLiffPickupAt(now)
+    ? nextLiffPickupAt(now, input.operatingHours)
     : input.orderType === 'NOW' || !input.desiredPickupAt
       ? now
       : input.desiredPickupAt instanceof Date

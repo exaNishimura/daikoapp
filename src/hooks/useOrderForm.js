@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react'
 import { defaultReservationDateTimeLocal } from '@/lib/reservation/reservationTime'
+import { formatHourClock, getOperatingHours } from '@/lib/operatingHours'
 import {
   isFutureBusinessNight,
-  isWithinBusinessHours,
+  isWithinReservationHours,
   snapDateTimeTo15Minutes,
 } from '@/utils/businessDayUtils'
 import { useCreateOrder, useUpdateOrder } from '@/hooks/useOrders'
@@ -29,7 +30,10 @@ const INITIAL_FORM_DATA = {
   parking_note: '',
 }
 
-const SCHEDULED_OUT_OF_HOURS = '営業時間（18:00〜翌06:00）内で選択してください'
+function scheduledOutOfHoursMessage() {
+  const { reservationStartHour, businessEndHour } = getOperatingHours()
+  return `予約時間（${formatHourClock(reservationStartHour)}〜翌${formatHourClock(businessEndHour)}）内で選択してください`
+}
 
 /**
  * 新規依頼フォームの状態管理 + 送信フローをまとめた hook。
@@ -71,7 +75,7 @@ export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
     setFormData((prev) => {
       const next = { ...prev, [name]: value }
 
-      // 「日時指定」に切り替わったとき、営業夜のデフォルト（時間外ならその夜 18:00）
+      // 「日時指定」に切り替わったとき、営業夜のデフォルト（時間外ならその夜の予約開始）
       if (name === 'order_type' && value === 'SCHEDULED' && !prev.scheduled_at) {
         next.scheduled_at = defaultReservationDateTimeLocal()
       }
@@ -82,8 +86,8 @@ export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
         next.scheduled_at = snapped
         setErrors((prevErrors) => {
           const cleared = { ...prevErrors }
-          if (!isWithinBusinessHours(snapped)) {
-            cleared.scheduled_at = SCHEDULED_OUT_OF_HOURS
+          if (!isWithinReservationHours(snapped)) {
+            cleared.scheduled_at = scheduledOutOfHoursMessage()
           } else {
             cleared.scheduled_at = null
           }
@@ -107,8 +111,8 @@ export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
     if (snapped !== value) {
       setFormData((prev) => ({ ...prev, scheduled_at: snapped }))
     }
-    if (!isWithinBusinessHours(snapped)) {
-      setErrors((prev) => ({ ...prev, scheduled_at: SCHEDULED_OUT_OF_HOURS }))
+    if (!isWithinReservationHours(snapped)) {
+      setErrors((prev) => ({ ...prev, scheduled_at: scheduledOutOfHoursMessage() }))
     }
   }, [])
 
@@ -143,8 +147,8 @@ export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
     if (formData.order_type === 'SCHEDULED') {
       if (!formData.scheduled_at) {
         newErrors.scheduled_at = '予約日時を入力してください'
-      } else if (!isWithinBusinessHours(formData.scheduled_at)) {
-        newErrors.scheduled_at = SCHEDULED_OUT_OF_HOURS
+      } else if (!isWithinReservationHours(formData.scheduled_at)) {
+        newErrors.scheduled_at = scheduledOutOfHoursMessage()
       } else if (isFutureBusinessNight(formData.scheduled_at) && !formData.contact_phone.trim()) {
         newErrors.contact_phone = '予約台帳に保存するため電話番号を入力してください'
       }

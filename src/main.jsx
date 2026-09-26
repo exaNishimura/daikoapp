@@ -7,6 +7,7 @@ import { LinkProvider } from '@astryxdesign/core/Link'
 import { InternationalizationProvider } from '@astryxdesign/core/i18n'
 import jaJP from '@astryxdesign/core/locales/ja-JP.json'
 import App from './App.jsx'
+import { OperatingHoursProvider } from './contexts/OperatingHoursProvider'
 import { ToastProvider } from './contexts/ToastContext'
 import { queryClient } from './lib/queryClient'
 import { stoneTheme } from './theme/astryx/stoneTheme'
@@ -67,7 +68,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <InternationalizationProvider locale="ja-JP" messages={{ 'ja-JP': jaJP }}>
           <LinkProvider component={AstryxRouterLink}>
             <ToastProvider>
-              <App />
+              <OperatingHoursProvider>
+                <App />
+              </OperatingHoursProvider>
             </ToastProvider>
           </LinkProvider>
         </InternationalizationProvider>

@@ -12,6 +12,8 @@ const validForm = {
   postal_code: '513-0801',
   address: '三重県鈴鹿市算所1-2-3',
   invoice_number: 'T1234567890123',
+  reservation_start_hour: 19,
+  business_start_hour: 20,
   bank: '百五銀行',
   bank_branch: '鈴鹿支店',
   bank_account_type: '普通',
@@ -26,12 +28,14 @@ describe('BANK_ACCOUNT_TYPES', () => {
 })
 
 describe('COMPANY_PROFILE_FIELDS and EMPTY_COMPANY_PROFILE', () => {
-  it('covers all 9 fields required by design.md', () => {
+  it('covers profile fields including operating hours', () => {
     expect(COMPANY_PROFILE_FIELDS).toEqual([
       'name',
       'postal_code',
       'address',
       'invoice_number',
+      'reservation_start_hour',
+      'business_start_hour',
       'bank',
       'bank_branch',
       'bank_account_type',
@@ -45,6 +49,8 @@ describe('COMPANY_PROFILE_FIELDS and EMPTY_COMPANY_PROFILE', () => {
       expect(EMPTY_COMPANY_PROFILE).toHaveProperty(field)
     }
     expect(EMPTY_COMPANY_PROFILE.bank_account_type).toBe('普通')
+    expect(EMPTY_COMPANY_PROFILE.reservation_start_hour).toBe(19)
+    expect(EMPTY_COMPANY_PROFILE.business_start_hour).toBe(20)
   })
 })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  RESERVATION_HOURS,
+  getReservationHours,
   buildReservationDateTimeLocal,
   buildReservationIso,
   defaultReservationDateTime,
@@ -9,9 +9,9 @@ import {
   splitReservationDateTime,
 } from './reservationTime'
 
-describe('RESERVATION_HOURS', () => {
-  it('runs 18 through next 5, skipping daytime', () => {
-    expect(RESERVATION_HOURS).toEqual([18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5])
+describe('getReservationHours', () => {
+  it('runs 19 through next 5, skipping daytime', () => {
+    expect(getReservationHours()).toEqual([19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5])
   })
 })
 
@@ -56,9 +56,9 @@ describe('splitReservationDateTime', () => {
 })
 
 describe('defaultReservationDateTime', () => {
-  it('uses 18:00 on the upcoming night when now is daytime', () => {
+  it('uses 19:00 on the upcoming night when now is daytime', () => {
     const now = new Date(2025, 5, 1, 14, 20, 0, 0)
-    expect(defaultReservationDateTime(now)).toEqual({ date: '2025-06-01', hour: 18, minute: 0 })
+    expect(defaultReservationDateTime(now)).toEqual({ date: '2025-06-01', hour: 19, minute: 0 })
   })
 
   it('snaps to 15 minutes during evening hours', () => {
@@ -83,9 +83,9 @@ describe('buildReservationDateTimeLocal', () => {
 })
 
 describe('defaultReservationDateTimeLocal', () => {
-  it('uses tonight 18:00 during daytime', () => {
+  it('uses tonight 19:00 during daytime', () => {
     expect(defaultReservationDateTimeLocal(new Date(2025, 5, 1, 14, 20, 0, 0))).toBe(
-      '2025-06-01T18:00'
+      '2025-06-01T19:00'
     )
   })
 

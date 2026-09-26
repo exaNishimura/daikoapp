@@ -2,6 +2,7 @@
  * 時間計算ユーティリティ
  */
 
+import { getOperatingHours, getTimelineStartHour, isHourInWindow } from '@/lib/operatingHours'
 import { TIMELINE_ROW_HEIGHT_PX } from './rowUtils'
 
 /**
@@ -12,7 +13,7 @@ export function snapTo15Minutes(minutes) {
 }
 
 /**
- * 時間を分に変換（18:00 = 1080分）
+ * 時刻を深夜0時からの分に変換する
  */
 export function timeToMinutes(hours, minutes = 0) {
   return hours * 60 + minutes
@@ -28,61 +29,56 @@ export function minutesToTime(totalMinutes) {
 }
 
 /**
- * Dateオブジェクトから分に変換（営業日基準: 18:00 = 0分）
+ * Date をタイムライン開始からの分に変換する。開始前の早朝は +1440。
  */
 export function dateToBusinessMinutes(date) {
+  const startMinutes = getTimelineStartHour() * 60
   const hours = date.getHours()
   const minutes = date.getMinutes()
   const totalMinutes = hours * 60 + minutes
 
-  // 18:00以降はそのまま、18:00以前は翌日の時間として扱う
-  if (totalMinutes < 1080) {
-    return totalMinutes + 1440 // 24時間 = 1440分を加算
+  if (totalMinutes < startMinutes) {
+    return totalMinutes + 1440
   }
-  return totalMinutes - 1080 // 18:00 = 1080分を引く
+  return totalMinutes - startMinutes
 }
 
 /**
  * 営業日分からDateオブジェクトに変換
- * businessMinutesが負の値の場合、18:00より前の時間を表現
- * businessMinutesが360分（00:00）を超える場合、前日の18:00から数える
+ * タイムライン開始からの分を Date に戻す。
  */
 export function businessMinutesToDate(businessMinutes, baseDate) {
   // baseDateが指定されていない場合、現在の日付を使用
   const date = baseDate ? new Date(baseDate) : new Date()
 
-  // 営業日の開始時刻（18:00）に設定
+  // タイムライン開始時刻に合わせる
   // 06:00未満の場合は前日の営業日として扱う
   const localHours = date.getHours()
   let businessDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
-  if (localHours < 6) {
-    // 06:00未満の場合は前日の営業日として扱う
+  const { businessEndHour } = getOperatingHours()
+  const startHour = getTimelineStartHour()
+  if (localHours < businessEndHour) {
     businessDay.setDate(businessDay.getDate() - 1)
   }
 
-  // businessMinutesが360分（00:00）を超える場合、前日の18:00から数える
   if (businessMinutes > 360) {
-    // 前日の18:00から数える
     businessDay.setDate(businessDay.getDate() - 1)
   }
 
-  // 営業日の18:00に設定
-  businessDay.setHours(18, 0, 0, 0)
+  businessDay.setHours(startHour, 0, 0, 0)
 
   // businessMinutesを時間と分に変換
-  // businessMinutesが360分を超える場合、前日の18:00から数えるので、そのまま使用
   const hours = Math.floor(businessMinutes / 60)
   const minutes = businessMinutes % 60
 
   // 日付を設定
   const resultDate = new Date(businessDay)
-  resultDate.setHours(18 + hours, minutes, 0, 0)
+  resultDate.setHours(startHour + hours, minutes, 0, 0)
 
-  // 24時を超えた場合は翌日
-  if (18 + hours >= 24) {
+  if (startHour + hours >= 24) {
     resultDate.setDate(resultDate.getDate() + 1)
-    resultDate.setHours((18 + hours) % 24, minutes, 0, 0)
+    resultDate.setHours((startHour + hours) % 24, minutes, 0, 0)
   }
 
   return resultDate
@@ -107,29 +103,24 @@ export function pixelsToMinutes(pixels) {
  */
 export function exceedsBusinessHours(endAt) {
   const endDate = new Date(endAt)
+  const { businessEndHour } = getOperatingHours()
+  const startHour = getTimelineStartHour()
   const endHour = endDate.getHours()
-  const startDate = new Date(endAt)
-  startDate.setHours(18, 0, 0, 0) // 18:00に設定
-
-  // 18:00以降で開始し、翌06:00を超える場合
-  if (endHour > 6 && endDate.getDate() > startDate.getDate()) {
-    return true
-  }
-
-  return false
+  const endMinutes = endDate.getMinutes()
+  if (endHour === businessEndHour && endMinutes > 0) return true
+  return endHour > businessEndHour && endHour < startHour
 }
 
 /**
  * 営業日文字列を生成（例: "2025年12月23日(月)"）
- * 日またぎ営業（18:00〜翌06:00）に対応
+ * 日またぎ営業（タイムライン開始〜翌06:00）に対応
  * 06:00未満の場合は前日の日付を返す
  */
 export function formatBusinessDay(date) {
   const now = new Date(date)
   const hours = now.getHours()
 
-  // 06:00未満の場合は前日の日付として扱う
-  if (hours < 6) {
+  if (hours < getOperatingHours().businessEndHour) {
     now.setDate(now.getDate() - 1)
   }
 
@@ -142,21 +133,18 @@ export function formatBusinessDay(date) {
 
 /**
  * 依頼を受けられる最短時間を取得
- * @returns {string} 最短時間の文字列（例: "今すぐ" または "18:00から"）
+ * @returns {string} 最短時間の文字列（例: "今すぐ" または "20:00から"）
  */
 export function getEarliestAvailableTime() {
   const now = new Date()
   const hours = now.getHours()
-  const minutes = now.getMinutes()
-
-  // 営業時間内（18:00以降、翌06:00以前）
-  if (hours >= 18 || hours < 6) {
+  const { businessStartHour, businessEndHour } = getOperatingHours()
+  if (isHourInWindow(hours, businessStartHour, businessEndHour)) {
     return '今すぐ'
   }
 
-  // 営業時間外の場合、次の18:00を表示
   const nextBusinessStart = new Date(now)
-  nextBusinessStart.setHours(18, 0, 0, 0)
+  nextBusinessStart.setHours(businessStartHour, 0, 0, 0)
 
   const hoursStr = String(nextBusinessStart.getHours()).padStart(2, '0')
   const minutesStr = String(nextBusinessStart.getMinutes()).padStart(2, '0')

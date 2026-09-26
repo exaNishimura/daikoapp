@@ -4,6 +4,7 @@ import {
   getReceptionNightWindow,
 } from '../../../shared/reservation/windowUtils.js'
 import { buildReservationLineMessage } from '../../../shared/reservation/buildLineMessage.js'
+import { resolveOperatingHours } from '../../../shared/operatingHours.js'
 
 const LINE_PUSH_URL = 'https://api.line.me/v2/bot/message/push'
 const RESEND_URL = 'https://api.resend.com/emails'
@@ -136,7 +137,13 @@ Deno.serve(async (req) => {
     })
   }
 
-  const { startIso, endIso } = getReceptionNightWindow(notifyDate)
+  const { data: profile } = await supabase
+    .from('company_profile')
+    .select('reservation_start_hour')
+    .eq('id', 1)
+    .maybeSingle()
+  const { reservationStartHour } = resolveOperatingHours(profile)
+  const { startIso, endIso } = getReceptionNightWindow(notifyDate, reservationStartHour)
   const { data: rows, error: listError } = await supabase
     .from('reservations')
     .select('id, reserved_at, customer_name, phone, memo')

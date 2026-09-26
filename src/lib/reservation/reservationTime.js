@@ -1,14 +1,16 @@
+import { buildOvernightHours, getOperatingHours } from '@/lib/operatingHours'
 import {
-  BUSINESS_END_HOUR,
-  BUSINESS_START_HOUR,
   formatWorkDateKey,
   getBusinessDayBoundaries,
-  isWithinBusinessHours,
+  isWithinReservationHours,
 } from '@/utils/businessDayUtils'
 import { combineOvernightPickup } from '@/utils/liffPickupTime'
 
-/** 営業夜の時（18:00 → 翌 05 時台） */
-export const RESERVATION_HOURS = [18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5]
+/** 予約開始から翌 05 時台まで */
+export function getReservationHours() {
+  const { reservationStartHour, businessEndHour } = getOperatingHours()
+  return buildOvernightHours(reservationStartHour, businessEndHour)
+}
 
 export const RESERVATION_MINUTES = [0, 15, 30, 45]
 
@@ -18,7 +20,7 @@ export const RESERVATION_MINUTES = [0, 15, 30, 45]
  */
 export function formatReservationHourLabel(hour) {
   if (hour === 0) return '0時（深夜）'
-  if (hour >= 1 && hour < BUSINESS_END_HOUR) return `${hour}時（翌朝）`
+  if (hour >= 1 && hour < getOperatingHours().businessEndHour) return `${hour}時（翌朝）`
   return `${hour}時`
 }
 
@@ -38,23 +40,24 @@ function snapHourMinute(date) {
     hour += 1
   }
   if (hour === 24) hour = 0
-  if (hour === BUSINESS_END_HOUR && minute === 0) {
-    hour = BUSINESS_END_HOUR - 1
+  const endHour = getOperatingHours().businessEndHour
+  if (hour === endHour && minute === 0) {
+    hour = endHour - 1
     minute = 45
   }
   return { hour, minute }
 }
 
 /**
- * 新規登録の初期値。営業時間内なら今を 15 分刻み、外ならその営業夜の 18:00。
+ * 新規登録の初期値。予約時間内なら今を 15 分刻み、外ならその夜の予約開始。
  * @param {Date} [now]
  * @returns {{ date: string, hour: number, minute: number }}
  */
 export function defaultReservationDateTime(now = new Date()) {
   const { businessDay } = getBusinessDayBoundaries(now)
   const date = formatWorkDateKey(businessDay)
-  if (!isWithinBusinessHours(now)) {
-    return { date, hour: BUSINESS_START_HOUR, minute: 0 }
+  if (!isWithinReservationHours(now)) {
+    return { date, hour: getOperatingHours().reservationStartHour, minute: 0 }
   }
   const { hour, minute } = snapHourMinute(now)
   return { date, hour, minute }

@@ -1,8 +1,8 @@
 /**
  * 営業日・営業時間の計算ユーティリティ
  *
- * 本サービスは深夜帯営業（18:00 〜 翌 06:00）。営業日は
- * 「その日 18:00 〜 翌日 06:00」という単位で扱う。
+ * 深夜帯営業。初期値は予約開始 19:00、営業開始 20:00、終了は翌 06:00。
+ * 実際の時刻は自社情報（getOperatingHours）を見る。
  * 例: 2025-06-01 23:00 → 営業日 2025-06-01
  *     2025-06-02 03:00 → 営業日 2025-06-01（前日扱い）
  *     2025-06-02 12:00 → 営業時間外（昼）
@@ -12,22 +12,50 @@
  *     2025-06-02 08:00 → 営業当日 2025-06-02
  */
 
-export const BUSINESS_START_HOUR = 18
-export const BUSINESS_END_HOUR = 6
+import {
+  BUSINESS_END_HOUR,
+  DEFAULT_BUSINESS_START_HOUR,
+  getOperatingHours,
+  getTimelineStartHour,
+  isHourInWindow,
+} from '@/lib/operatingHours'
+
+export { BUSINESS_END_HOUR }
+/** 初期値。実行時の営業開始は getOperatingHours().businessStartHour */
+export const BUSINESS_START_HOUR = DEFAULT_BUSINESS_START_HOUR
 /** 日次締め時刻。これ未満はシフト表の営業当日を前日扱いにする */
 export const SALES_CLOSE_HOUR = 8
 
+function asDate(dateLike) {
+  if (!dateLike) return null
+  const date = dateLike instanceof Date ? dateLike : new Date(dateLike)
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
 /**
- * 指定時刻が営業時間内（18:00 以降または 06:00 未満）かを判定
- * @param {string|Date} dateLike - 判定対象の日時
+ * 指定時刻が営業時間内（営業開始以降、または翌 06:00 未満）かを判定。
+ * 今すぐ配車に使う。予約の受付開始は isWithinReservationHours。
+ * @param {string|Date} dateLike
  * @returns {boolean}
  */
 export function isWithinBusinessHours(dateLike) {
-  if (!dateLike) return false
-  const date = dateLike instanceof Date ? dateLike : new Date(dateLike)
-  if (Number.isNaN(date.getTime())) return false
-  const hours = date.getHours()
-  return hours >= BUSINESS_START_HOUR || hours < BUSINESS_END_HOUR
+  const date = asDate(dateLike)
+  if (!date) return false
+  const { businessStartHour, businessEndHour } = getOperatingHours()
+  return isHourInWindow(date.getHours(), businessStartHour, businessEndHour)
+}
+
+/**
+ * 指定時刻が予約受付の時間内か（予約開始以降、または翌 06:00 未満）。
+ * @param {string|Date} dateLike
+ * @returns {boolean}
+ */
+export function isWithinReservationHours(dateLike) {
+  const date = asDate(dateLike)
+  if (!date) return false
+  const { reservationStartHour, businessEndHour } = getOperatingHours()
+  return isHourInWindow(date.getHours(), reservationStartHour, businessEndHour)
 }
 
 /**
@@ -35,14 +63,15 @@ export function isWithinBusinessHours(dateLike) {
  * @param {Date} reference - 基準時刻（デフォルトは現在）
  * @returns {{ start: Date, end: Date, businessDay: Date }}
  *  - businessDay: 営業日の 00:00（年月日のみ意味あり）
- *  - start: businessDay の 18:00
+ *  - start: businessDay の営業開始
  *  - end: businessDay の翌日 06:00
  */
 export function getBusinessDayBoundaries(reference = new Date()) {
+  const { businessStartHour, businessEndHour } = getOperatingHours()
   const localDate = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate())
 
   const businessDay = new Date(localDate)
-  if (reference.getHours() < BUSINESS_END_HOUR) {
+  if (reference.getHours() < businessEndHour) {
     businessDay.setDate(businessDay.getDate() - 1)
   }
 
@@ -50,7 +79,7 @@ export function getBusinessDayBoundaries(reference = new Date()) {
     businessDay.getFullYear(),
     businessDay.getMonth(),
     businessDay.getDate(),
-    BUSINESS_START_HOUR,
+    businessStartHour,
     0,
     0,
     0
@@ -59,7 +88,7 @@ export function getBusinessDayBoundaries(reference = new Date()) {
     businessDay.getFullYear(),
     businessDay.getMonth(),
     businessDay.getDate() + 1,
-    BUSINESS_END_HOUR,
+    businessEndHour,
     0,
     0,
     0
@@ -120,16 +149,17 @@ export function addDaysToWorkDateKey(dateStr, days) {
 }
 
 /**
- * 営業夜 D の 18:00〜翌 06:00。
+ * 営業夜 D のタイムライン範囲。予約開始と営業開始の早い方〜翌 06:00。
  */
 export function getNightRangeFromWorkDateKey(dateStr) {
   const date = parseWorkDateKey(dateStr)
   if (!date) return { start: null, end: null, businessDay: null }
+  const { businessEndHour } = getOperatingHours()
   const start = new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate(),
-    BUSINESS_START_HOUR,
+    getTimelineStartHour(),
     0,
     0,
     0
@@ -138,7 +168,7 @@ export function getNightRangeFromWorkDateKey(dateStr) {
     date.getFullYear(),
     date.getMonth(),
     date.getDate() + 1,
-    BUSINESS_END_HOUR,
+    businessEndHour,
     0,
     0,
     0
@@ -158,7 +188,7 @@ export function resolveDispatchNightKey(param, now = new Date()) {
 }
 
 /**
- * 指定時刻が属する営業夜の YYYY-MM-DD（18:00 開始のその日）。
+ * 指定時刻が属する営業夜の YYYY-MM-DD（営業開始のその日）。
  * @param {string|Date} dateLike
  * @returns {string}
  */
@@ -185,17 +215,17 @@ export function isFutureBusinessNight(dateLike, now = new Date()) {
 }
 
 /**
- * datetime-local 入力の min。営業日の開始（その夜 18:00）。
- * 0〜5 時は「前暦日 18:00」が現在の営業夜の開始。
- * @param {Date} reference - 基準時刻（デフォルトは現在）
- * @returns {string} "YYYY-MM-DDT18:00"
+ * datetime-local 入力の min。その営業夜の営業開始。
+ * @param {Date} reference
+ * @returns {string} "YYYY-MM-DDTHH:00"
  */
 export function getMinBusinessDateTime(reference = new Date()) {
   const { start } = getBusinessDayBoundaries(reference)
   const yyyy = start.getFullYear()
   const mm = String(start.getMonth() + 1).padStart(2, '0')
   const dd = String(start.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}T${String(BUSINESS_START_HOUR).padStart(2, '0')}:00`
+  const hh = String(start.getHours()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}T${hh}:00`
 }
 
 /**

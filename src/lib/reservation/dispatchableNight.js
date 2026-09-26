@@ -3,7 +3,7 @@ import { getOperationalVehicles } from '@/utils/operationStatusUtils'
 import { findExactAvailableVehicle } from '@/utils/slotUtils'
 import { buildOperationStatusesFromShifts } from '@/utils/shiftOperationUtils'
 import {
-  RESERVATION_HOURS,
+  getReservationHours,
   RESERVATION_MINUTES,
   formatReservationHourLabel,
   formatReservationMinuteLabel,
@@ -83,7 +83,7 @@ export function buildDispatchableSlots({
   if (!nightDate) return []
 
   const slots = []
-  for (const hour of RESERVATION_HOURS) {
+  for (const hour of getReservationHours()) {
     for (const minute of RESERVATION_MINUTES) {
       const at = combineOvernightPickup(nightDate, hour, minute)
       if (!at) continue

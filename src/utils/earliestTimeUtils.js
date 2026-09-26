@@ -2,6 +2,7 @@
  * 直近依頼をとれる時間を計算するユーティリティ
  */
 
+import { getOperatingHours } from '@/lib/operatingHours'
 import { findEarliestAvailableSlotAcrossVehicles } from './slotUtils'
 import { calculateBuffer } from '@/services/routeService'
 
@@ -26,12 +27,11 @@ export function getEarliestAvailableTimeWithSlots(
   const now = new Date()
   const hours = now.getHours()
 
-  // 営業時間外の場合、次の18:00以降の空き時間を検索
+  const { businessStartHour, businessEndHour } = getOperatingHours()
   let searchStartTime = now
-  if (hours >= 6 && hours < 18) {
-    // 営業時間外の場合、次の18:00を検索開始時刻とする
+  if (hours >= businessEndHour && hours < businessStartHour) {
     searchStartTime = new Date(now)
-    searchStartTime.setHours(18, 0, 0, 0)
+    searchStartTime.setHours(businessStartHour, 0, 0, 0)
   }
 
   // スロットの状況を確認
@@ -62,7 +62,7 @@ export function getEarliestAvailableTimeWithSlots(
   const timeDiffMinutes = Math.round((startTime - nowTime) / (1000 * 60))
 
   // 15分以内の場合は「今すぐ」と表示（営業時間内の場合のみ）
-  // 営業時間外の場合は、次の18:00以降なので「今すぐ」は表示しない
+  // 営業時間外は次の営業開始まで「今すぐ」を出さない
   if (hours < 6 || hours >= 18) {
     if (timeDiffMinutes <= 15) {
       return '今すぐ'

@@ -19,7 +19,9 @@ import {
   saveShiftAvailabilityRequest,
 } from '@/services/employeeShiftService'
 import { getShifts } from '@/services/shiftService'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
 import { clearEmployeeShiftSession } from '@/lib/employeeShift/employeeShiftSession'
+import { formatHourClock, getOperatingHours } from '@/lib/operatingHours'
 import {
   formatShiftRequestDate,
   indexDayStatusByDate,
@@ -27,8 +29,13 @@ import {
   sanitizeShiftRequestPayload,
 } from '@/lib/shiftDayStatus'
 
-const DEFAULT_START = '20:00'
-const DEFAULT_END = '06:00'
+function defaultShiftStart() {
+  return formatHourClock(getOperatingHours().businessStartHour)
+}
+
+function defaultShiftEnd() {
+  return formatHourClock(getOperatingHours().businessEndHour)
+}
 
 const NATIVE_INPUT_STYLE = {
   width: '100%',
@@ -71,7 +78,7 @@ function daysInMonth(month) {
   return days
 }
 
-function emptyPayload(defaultStart = DEFAULT_START, defaultEnd = DEFAULT_END) {
+function emptyPayload(defaultStart = defaultShiftStart(), defaultEnd = defaultShiftEnd()) {
   return {
     days: {},
     notes: '',
@@ -80,7 +87,7 @@ function emptyPayload(defaultStart = DEFAULT_START, defaultEnd = DEFAULT_END) {
   }
 }
 
-function resolveBaseHours(payload, fallbackStart = DEFAULT_START, fallbackEnd = DEFAULT_END) {
+function resolveBaseHours(payload, fallbackStart = defaultShiftStart(), fallbackEnd = defaultShiftEnd()) {
   return {
     start: isValidTime(payload?.default_start) ? payload.default_start : fallbackStart,
     end: isValidTime(payload?.default_end) ? payload.default_end : fallbackEnd,
@@ -88,6 +95,7 @@ function resolveBaseHours(payload, fallbackStart = DEFAULT_START, fallbackEnd = 
 }
 
 function ShiftRequestForm({ employee, onLogout }) {
+  useOperatingHours()
   const [month, setMonth] = useState(() => dayjs().add(1, 'month').format('YYYY-MM'))
   const [payload, setPayload] = useState(() => emptyPayload())
   const [dayStatusByDate, setDayStatusByDate] = useState({})
@@ -97,8 +105,8 @@ function ShiftRequestForm({ employee, onLogout }) {
   const [success, setSuccess] = useState(null)
 
   const dates = useMemo(() => daysInMonth(month), [month])
-  const defaultStart = isValidTime(payload.default_start) ? payload.default_start : DEFAULT_START
-  const defaultEnd = isValidTime(payload.default_end) ? payload.default_end : DEFAULT_END
+  const defaultStart = isValidTime(payload.default_start) ? payload.default_start : defaultShiftStart()
+  const defaultEnd = isValidTime(payload.default_end) ? payload.default_end : defaultShiftEnd()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -162,8 +170,8 @@ function ShiftRequestForm({ employee, onLogout }) {
   const setDay = (date, patch) => {
     if (isRegularClosedDay(dayStatusByDate[date])) return
     setPayload((prev) => {
-      const baseStart = isValidTime(prev.default_start) ? prev.default_start : DEFAULT_START
-      const baseEnd = isValidTime(prev.default_end) ? prev.default_end : DEFAULT_END
+      const baseStart = isValidTime(prev.default_start) ? prev.default_start : defaultShiftStart()
+      const baseEnd = isValidTime(prev.default_end) ? prev.default_end : defaultShiftEnd()
       const days = { ...(prev.days || {}) }
       const current = days[date] || { available: false, start: baseStart, end: baseEnd }
       const next = { ...current, ...patch }

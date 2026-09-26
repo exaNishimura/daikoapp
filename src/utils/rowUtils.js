@@ -1,54 +1,67 @@
 /**
- * 行数ベースのタイムライン管理ユーティリティ
- * タイムラインは48行（18:00〜翌06:00、15分刻み）
- * 各行は0〜47のインデックスで管理
+ * 行数ベースのタイムライン管理ユーティリティ。
+ * 行 0 はタイムライン開始（予約開始と営業開始の早い方）。15分刻み。
  */
+
+import { getOperatingHours, getTimelineStartHour, timelineRowCount } from '@/lib/operatingHours'
 
 /** 15分1行の高さ（px）。約3時間=12行が1画面に収まるスケール */
 export const TIMELINE_ROW_HEIGHT_PX = 48
 
-/** 全営業時間（12時間・48行）のタイムライン高さ */
-export const TIMELINE_TOTAL_HEIGHT_PX = 48 * TIMELINE_ROW_HEIGHT_PX
+export function getTimelineRowCount() {
+  const { businessEndHour } = getOperatingHours()
+  return timelineRowCount(getTimelineStartHour(), businessEndHour)
+}
+
+export function getLastRowIndex() {
+  return getTimelineRowCount() - 1
+}
+
+export function getTimelineTotalHeightPx() {
+  return getTimelineRowCount() * TIMELINE_ROW_HEIGHT_PX
+}
 
 /**
- * 時刻を行番号に変換
- * @param {number} hour - 時間（0-23）
- * @param {number} minute - 分（0-59）
- * @returns {number} 行番号（0-47）
+ * 時刻を行番号に変換。タイムライン開始より前の夕方は行 0（開始時点で稼働済み）。
+ * @param {number} hour
+ * @param {number} minute
+ * @returns {number}
  */
 export function timeToRowIndex(hour, minute) {
-  // 18:00 = 0行、翌06:00 = 47行
-  if (hour >= 18) {
-    // 18:00以降（当日）
-    // 例: 20:00 = (20 - 18) * 4 + 0 = 8行
-    return (hour - 18) * 4 + Math.floor(minute / 15)
-  } else {
-    // 06:00未満（前日の18:00から数える）
-    // 例: 02:00 = (24 - 18) * 4 + (0 + 2) * 4 + 0 = 24 + 8 = 32行
-    return (24 - 18) * 4 + hour * 4 + Math.floor(minute / 15)
+  const start = getTimelineStartHour()
+  const { businessEndHour } = getOperatingHours()
+  if (hour >= start) {
+    return (hour - start) * 4 + Math.floor(minute / 15)
   }
+  if (hour < businessEndHour) {
+    return (24 - start) * 4 + hour * 4 + Math.floor(minute / 15)
+  }
+  return 0
 }
 
 /**
  * 行番号を時刻に変換
- * @param {number} rowIndex - 行番号（0-47）
- * @returns {{hour: number, minute: number}} 時刻オブジェクト
+ * @param {number} rowIndex
+ * @returns {{hour: number, minute: number}}
  */
 export function rowIndexToTime(rowIndex) {
-  if (rowIndex < 0 || rowIndex > 47) {
-    throw new Error(`Invalid row index: ${rowIndex}. Must be between 0 and 47.`)
+  const start = getTimelineStartHour()
+  const last = getLastRowIndex()
+  if (rowIndex < 0 || rowIndex > last) {
+    throw new Error(`Invalid row index: ${rowIndex}. Must be between 0 and ${last}.`)
   }
 
-  if (rowIndex < 24) {
-    // 18:00〜23:45（当日）
-    const hour = 18 + Math.floor(rowIndex / 4)
-    const minute = (rowIndex % 4) * 15
-    return { hour, minute }
-  } else {
-    // 00:00〜06:00（翌日）
-    const hour = Math.floor((rowIndex - 24) / 4)
-    const minute = ((rowIndex - 24) % 4) * 15
-    return { hour, minute }
+  const eveningRows = (24 - start) * 4
+  if (rowIndex < eveningRows) {
+    return {
+      hour: start + Math.floor(rowIndex / 4),
+      minute: (rowIndex % 4) * 15,
+    }
+  }
+  const afterMidnight = rowIndex - eveningRows
+  return {
+    hour: Math.floor(afterMidnight / 4),
+    minute: (afterMidnight % 4) * 15,
   }
 }
 
@@ -84,7 +97,7 @@ export function dateToEndRowIndex(date) {
   } else {
     // 行の途中にある場合、次の行番号を返す
     const currentRow = timeToRowIndex(hour, minute)
-    return Math.min(47, currentRow + 1)
+    return Math.min(getLastRowIndex(), currentRow + 1)
   }
 }
 
@@ -98,8 +111,7 @@ export function rowIndexToDate(rowIndex, baseDate) {
   const { hour, minute } = rowIndexToTime(rowIndex)
   const date = new Date(baseDate)
 
-  if (hour >= 18) {
-    // 18:00以降（当日）
+  if (hour >= getTimelineStartHour()) {
     date.setHours(hour, minute, 0, 0)
   } else {
     // 06:00未満（翌日）
@@ -152,5 +164,5 @@ export function rowsToMinutes(rows) {
  * @returns {number} スナップ後の行番号（0-47）
  */
 export function snapToRowIndex(rowIndex) {
-  return Math.max(0, Math.min(47, Math.round(rowIndex)))
+  return Math.max(0, Math.min(getLastRowIndex(), Math.round(rowIndex)))
 }

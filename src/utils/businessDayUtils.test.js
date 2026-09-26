@@ -21,8 +21,8 @@ import {
 } from './businessDayUtils'
 
 describe('constants', () => {
-  it('uses 18:00 - 06:00 as the business window', () => {
-    expect(BUSINESS_START_HOUR).toBe(18)
+  it('uses 20:00 - 06:00 as the default business window', () => {
+    expect(BUSINESS_START_HOUR).toBe(20)
     expect(BUSINESS_END_HOUR).toBe(6)
   })
 
@@ -32,8 +32,12 @@ describe('constants', () => {
 })
 
 describe('isWithinBusinessHours', () => {
-  it('returns true at 18:00', () => {
-    expect(isWithinBusinessHours(new Date('2025-06-01T18:00:00'))).toBe(true)
+  it('returns false at 19:00 (before business start)', () => {
+    expect(isWithinBusinessHours(new Date('2025-06-01T19:00:00'))).toBe(false)
+  })
+
+  it('returns true at 20:00', () => {
+    expect(isWithinBusinessHours(new Date('2025-06-01T20:00:00'))).toBe(true)
   })
 
   it('returns true at 23:30', () => {
@@ -63,11 +67,11 @@ describe('isWithinBusinessHours', () => {
 })
 
 describe('getBusinessDayBoundaries', () => {
-  it('20:00 belongs to today’s business day (start=today 18:00, end=tomorrow 06:00)', () => {
+  it('20:00 belongs to today’s business day (start=today 20:00, end=tomorrow 06:00)', () => {
     const ref = new Date(2025, 5, 1, 20, 0) // 2025-06-01 20:00 local
     const { start, end, businessDay } = getBusinessDayBoundaries(ref)
     expect(businessDay.getDate()).toBe(1)
-    expect(start.getHours()).toBe(18)
+    expect(start.getHours()).toBe(20)
     expect(start.getDate()).toBe(1)
     expect(end.getHours()).toBe(6)
     expect(end.getDate()).toBe(2)
@@ -87,11 +91,11 @@ describe('getBusinessDayBoundaries', () => {
     expect(businessDay.getDate()).toBe(2)
   })
 
-  it('12:00 (off-hours) treats today as business day so the next 18:00 starts the window', () => {
+  it('12:00 (off-hours) treats today as business day so the next 20:00 starts the window', () => {
     const ref = new Date(2025, 5, 2, 12, 0)
     const { start, businessDay } = getBusinessDayBoundaries(ref)
     expect(businessDay.getDate()).toBe(2)
-    expect(start.getHours()).toBe(18)
+    expect(start.getHours()).toBe(20)
     expect(start.getDate()).toBe(2)
   })
 })
@@ -127,14 +131,14 @@ describe('getActiveWorkDate', () => {
 })
 
 describe('getMinBusinessDateTime', () => {
-  it('returns that calendar day’s 18:00 during daytime', () => {
+  it('returns that calendar day’s 20:00 during daytime', () => {
     const ref = new Date(2025, 5, 1, 9, 30)
-    expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T18:00')
+    expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T20:00')
   })
 
-  it('uses the previous calendar day’s 18:00 after midnight', () => {
+  it('uses the previous calendar day’s 20:00 after midnight', () => {
     const ref = new Date(2025, 5, 2, 3, 0)
-    expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T18:00')
+    expect(getMinBusinessDateTime(ref)).toBe('2025-06-01T20:00')
   })
 })
 
@@ -230,9 +234,9 @@ describe('work date key helpers', () => {
     expect(addDaysToWorkDateKey('2026-09-26', -1)).toBe('2026-09-25')
   })
 
-  it('builds the 18:00-06:00 range', () => {
+  it('builds the 19:00-06:00 range from the earlier start hour', () => {
     const { start, end } = getNightRangeFromWorkDateKey('2026-09-25')
-    expect(start.getHours()).toBe(18)
+    expect(start.getHours()).toBe(19)
     expect(end.getHours()).toBe(6)
     expect(end.getDate()).toBe(26)
   })

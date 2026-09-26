@@ -1,3 +1,4 @@
+import { getOperatingHours } from '@/lib/operatingHours'
 import {
   getReceptionNightWindow,
   parseJstDateString,
@@ -36,7 +37,10 @@ export function getTonightListFilters(workDateStr) {
  */
 export function filterReservationsInReceptionNight(reservations, workDateStr) {
   if (!workDateStr) return []
-  const { start, end } = getReceptionNightWindow(workDateStr)
+  const { start, end } = getReceptionNightWindow(
+    workDateStr,
+    getOperatingHours().reservationStartHour
+  )
   const startMs = start.getTime()
   const endMs = end.getTime()
   return [...(reservations ?? [])]

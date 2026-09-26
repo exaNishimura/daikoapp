@@ -18,6 +18,8 @@ import {
   BANK_ACCOUNT_TYPES,
   COMPANY_PROFILE_FIELDS,
   EMPTY_COMPANY_PROFILE,
+  OPERATING_HOUR_FIELDS,
+  START_HOUR_OPTIONS,
   normalizePostalCode,
   validateCompanyProfileForm,
 } from '@/lib/billing/companyProfileForm'
@@ -67,7 +69,8 @@ function ProfileForm({ initial, onSave, isSaving }) {
     setSuccess(null)
     const payload = COMPANY_PROFILE_FIELDS.reduce((acc, f) => {
       const v = form[f]
-      acc[f] = typeof v === 'string' ? v.trim() : v
+      if (OPERATING_HOUR_FIELDS.includes(f)) acc[f] = Number(v)
+      else acc[f] = typeof v === 'string' ? v.trim() : v
       return acc
     }, {})
     payload.postal_code = normalizePostalCode(payload.postal_code)
@@ -156,6 +159,49 @@ function ProfileForm({ initial, onSave, isSaving }) {
                 isDisabled={isSaving}
               />
             </GridSpan>
+          </Grid>
+
+          <Divider label="営業時間" />
+
+          <Grid columns={gridColumns} gap={2}>
+            <Selector
+              label="予約開始"
+              options={START_HOUR_OPTIONS.map((hour) => ({
+                value: String(hour),
+                label: `${hour}時`,
+              }))}
+              value={String(form.reservation_start_hour)}
+              onChange={(value) => handleChange('reservation_start_hour')(Number(value))}
+              status={fieldStatus(errors.reservation_start_hour)}
+              description={
+                errors.reservation_start_hour
+                  ? undefined
+                  : '予約の受付開始。配車表は、予約開始と営業開始の早い方から描きます'
+              }
+              isRequired
+              size={fieldSize}
+              width="100%"
+              isDisabled={isSaving}
+            />
+            <Selector
+              label="営業開始"
+              options={START_HOUR_OPTIONS.map((hour) => ({
+                value: String(hour),
+                label: `${hour}時`,
+              }))}
+              value={String(form.business_start_hour)}
+              onChange={(value) => handleChange('business_start_hour')(Number(value))}
+              status={fieldStatus(errors.business_start_hour)}
+              description={
+                errors.business_start_hour
+                  ? undefined
+                  : '今すぐ配車を始める時刻。時間外の依頼はこの時刻に合わせます。終了は翌6時です'
+              }
+              isRequired
+              size={fieldSize}
+              width="100%"
+              isDisabled={isSaving}
+            />
           </Grid>
 
           <Divider label="振込先" />

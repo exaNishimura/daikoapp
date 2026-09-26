@@ -3,6 +3,8 @@
  * タイムゾーンは Asia/Tokyo（UTC+9、DST なし）固定。
  */
 
+import { BUSINESS_END_HOUR, DEFAULT_RESERVATION_START_HOUR } from '../operatingHours.js'
+
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 
@@ -45,20 +47,21 @@ export function jstWallToUtcDate(y, month, d, hour, minute = 0, second = 0, ms =
 }
 
 /**
- * 受付開始付き営業夜ウィンドウ [D 19:00, (D+1) 06:00) Asia/Tokyo
+ * 予約開始付き営業夜ウィンドウ [D reservationStart, (D+1) 06:00) Asia/Tokyo
  * @param {string} dateStr YYYY-MM-DD
+ * @param {number} [startHour]
  * @returns {{ start: Date, end: Date, startIso: string, endIso: string }}
  */
-export function getReceptionNightWindow(dateStr) {
+export function getReceptionNightWindow(dateStr, startHour = DEFAULT_RESERVATION_START_HOUR) {
   const { y, month, d } = parseJstDateString(dateStr)
-  const start = jstWallToUtcDate(y, month, d, 19, 0, 0, 0)
+  const start = jstWallToUtcDate(y, month, d, startHour, 0, 0, 0)
   // 翌日は Date.UTC 正規化で月/年跨ぎを吸収
   const next = new Date(Date.UTC(y, month - 1, d + 1))
   const end = jstWallToUtcDate(
     next.getUTCFullYear(),
     next.getUTCMonth() + 1,
     next.getUTCDate(),
-    6,
+    BUSINESS_END_HOUR,
     0,
     0,
     0

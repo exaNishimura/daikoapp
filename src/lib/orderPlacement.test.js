@@ -23,21 +23,18 @@ describe('computeDesiredStartTime', () => {
     expect(t.getMinutes()).toBe(15)
   })
 
-  it('"NOW" outside business hours -> today 18:00', () => {
+  it('"NOW" outside business hours -> today 20:00', () => {
     const now = new Date(2025, 5, 1, 10, 0)
     const t = computeDesiredStartTime({ order_type: 'NOW' }, now)
-    expect(t.getHours()).toBe(18)
+    expect(t.getHours()).toBe(20)
     expect(t.getMinutes()).toBe(0)
     expect(t.getDate()).toBe(1)
   })
 
-  it('"NOW" after 18:00 outside the 06-18 gap rolls to next day 18:00', () => {
-    // 18:30 は isBusinessHour=true 扱いだが、isBusinessHour 中の NOW は次行スナップになる。
-    // 「営業時間外で 18:00 を過ぎた」分岐は時刻 6-17 のとき動く分岐ではないので、
-    // ここでは 17:30 のテストにしておく。
+  it('"NOW" before business start stays on today at 20:00', () => {
     const now = new Date(2025, 5, 1, 17, 30)
     const t = computeDesiredStartTime({ order_type: 'NOW' }, now)
-    expect(t.getHours()).toBe(18)
+    expect(t.getHours()).toBe(20)
     expect(t.getDate()).toBe(1)
   })
 

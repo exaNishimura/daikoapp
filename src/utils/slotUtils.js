@@ -6,6 +6,7 @@ import { exceedsBusinessHours } from './timeUtils'
 import {
   dateToRowIndex,
   dateToEndRowIndex,
+  getLastRowIndex,
   rowIndexToDate,
   minutesToRows,
   snapToRowIndex,
@@ -80,11 +81,8 @@ export function findEarliestAvailableSlot(
   // 必要な行数を計算
   const requiredRows = minutesToRows(duration)
 
-  // 営業日の開始行（18:00 = 0行）
   const businessStartRow = 0
-
-  // 営業日の終了行（翌06:00 = 47行）
-  const businessEndRow = 47
+  const businessEndRow = getLastRowIndex()
 
   // スロットがない場合、希望開始時刻から配置
   if (!slots || slots.length === 0) {
@@ -145,7 +143,7 @@ export function findEarliestAvailableSlot(
   }
 
   // candidateRowが範囲外の場合はnullを返す
-  if (candidateRow < 0 || candidateRow > 47) {
+  if (candidateRow < 0 || candidateRow > businessEndRow) {
     return null
   }
 
@@ -229,15 +227,16 @@ export function findEarliestAvailableSlotAcrossVehicles(
 
 /**
  * 指定開始〜所要時間の半開区間 [start, start+duration) が、その車両の既存スロットと重ならないか。
- * 営業時間（18:00〜翌06:00 = 48 行）を超える場合も空きなし。
+ * 営業時間の行範囲を超える場合も空きなし。
  */
 export function isExactTimeFreeOnVehicle(slots, startAt, duration) {
   if (!startAt || !duration) return false
 
+  const lastRow = getLastRowIndex()
   const startRow = dateToRowIndex(startAt)
   const requiredRows = minutesToRows(duration)
-  if (startRow < 0 || startRow > 47) return false
-  if (startRow + requiredRows - 1 > 47) return false
+  if (startRow < 0 || startRow > lastRow) return false
+  if (startRow + requiredRows - 1 > lastRow) return false
 
   const start = startAt.getTime()
   const end = start + duration * 60 * 1000

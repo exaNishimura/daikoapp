@@ -1,11 +1,11 @@
+import { buildOvernightHours, getOperatingHours } from '@/lib/operatingHours'
 import { formatWorkDateKey, getBusinessDayBoundaries } from '@/utils/businessDayUtils'
 
-/** 顧客向けお迎え時刻（20:00 〜 翌 05 時台） */
-export const LIFF_PICKUP_HOURS = [20, 21, 22, 23, 0, 1, 2, 3, 4, 5]
-
-/** 「今すぐ」を出せる時間帯（電話受付と同じ 19:00〜翌06:00） */
-export const LIFF_NOW_START_HOUR = 19
-export const LIFF_NOW_END_HOUR = 6
+/** 顧客向けお迎え時刻（営業開始 〜 翌 05 時台） */
+export function getLiffPickupHours() {
+  const { businessStartHour, businessEndHour } = getOperatingHours()
+  return buildOvernightHours(businessStartHour, businessEndHour)
+}
 
 /**
  * 「今すぐ」が受付可能か（19:00〜翌06:00）
@@ -13,8 +13,9 @@ export const LIFF_NOW_END_HOUR = 6
  * @returns {boolean}
  */
 export function isLiffNowAvailable(now = new Date()) {
+  const { reservationStartHour, businessEndHour } = getOperatingHours()
   const hour = now.getHours()
-  return hour >= LIFF_NOW_START_HOUR || hour < LIFF_NOW_END_HOUR
+  return hour >= reservationStartHour || hour < businessEndHour
 }
 
 /** 配車グリッドに合わせた 15 分刻み */
@@ -132,8 +133,9 @@ export function formatLiffPickupConfirmMessage(pickupAt, options = {}) {
  * @returns {Date}
  */
 export function nextLiffPickupAt(now = new Date()) {
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0, 0)
-  if (now.getHours() >= 20) next.setDate(next.getDate() + 1)
+  const { businessStartHour } = getOperatingHours()
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), businessStartHour, 0, 0, 0)
+  if (now.getHours() >= businessStartHour) next.setDate(next.getDate() + 1)
   return next
 }
 

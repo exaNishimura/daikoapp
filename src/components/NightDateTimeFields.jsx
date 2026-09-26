@@ -13,11 +13,13 @@ import {
   isSlotDispatchable,
 } from '@/lib/reservation/dispatchableNight'
 import {
-  RESERVATION_HOURS,
+  getReservationHours,
   RESERVATION_MINUTES,
   formatReservationInstantLabel,
   buildReservationIso,
 } from '@/lib/reservation/reservationTime'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
+import { formatHourClock } from '@/lib/operatingHours'
 import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 const NONE_AVAILABLE = 'この夜は稼働している号車がありません'
@@ -35,14 +37,14 @@ function unavailableMessage(slots, hour, minute) {
   return OUT_OF_WINDOW
 }
 
-function supportingText({ isLoading, isFutureNight, windowLabel }) {
+function supportingText({ isLoading, isFutureNight, windowLabel, reservationHint }) {
   if (isLoading) return '稼働状況を確認しています…'
   if (isFutureNight) {
     return windowLabel
       ? `${windowLabel}。翌日以降は予約台帳に保存します。`
       : '翌日以降は予約台帳に保存します。'
   }
-  return windowLabel || '営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。'
+  return windowLabel || reservationHint
 }
 
 /**
@@ -59,6 +61,9 @@ export function NightDateTimeFields({
   allowSlot = null,
   onAvailabilityChange,
 }) {
+  const operatingHours = useOperatingHours()
+  const reservationHours = getReservationHours()
+  const reservationHint = `予約は ${formatHourClock(operatingHours.reservationStartHour)}〜翌${formatHourClock(operatingHours.businessEndHour)}。0時〜${operatingHours.businessEndHour - 1}時は翌朝です。`
   const { slots, isLoading, isCurrentNight, isFutureNight } = useDispatchableNight(date, {
     allowSlot,
   })
@@ -72,7 +77,7 @@ export function NightDateTimeFields({
   const currentOk = isSlotDispatchable(slots, hour, minute)
   const hasAny = slots.some((slot) => slot.available)
   const windowLabel = formatDispatchableWindowLabel(slots, { isCurrentNight })
-  const helper = supportingText({ isLoading, isFutureNight, windowLabel })
+  const helper = supportingText({ isLoading, isFutureNight, windowLabel, reservationHint })
 
   useEffect(() => {
     if (isLoading) {
@@ -134,7 +139,7 @@ export function NightDateTimeFields({
           isLoading={isLoading}
           value={hour === '' || hour == null ? undefined : String(hour)}
           onChange={(next) => onChange({ date, hour: next === '' ? '' : Number(next), minute })}
-          options={RESERVATION_HOURS.map((optionHour) => ({
+          options={reservationHours.map((optionHour) => ({
             value: String(optionHour),
             label: formatDispatchableHourLabel(optionHour, slots),
             disabled: !hourHasDispatchable(slots, optionHour),

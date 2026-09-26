@@ -25,7 +25,7 @@ import {
   occupiedFromSources,
 } from '@/utils/liffNightSlots'
 import {
-  LIFF_PICKUP_HOURS,
+  getLiffPickupHours,
   LIFF_PICKUP_MINUTES,
   combineOvernightPickup,
   formatLiffPickupConfirmMessage,
@@ -34,6 +34,7 @@ import {
   isLiffNowAvailable,
   nextLiffPickupAt,
 } from '@/utils/liffPickupTime'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
 import { snapshotDiscount } from '@/lib/lineIntake/discount'
 import './LiffOrderForm.css'
 
@@ -101,6 +102,7 @@ function resultBannerStatus(type) {
 }
 
 export function LiffOrderForm() {
+  useOperatingHours()
   const [userId, setUserId] = useState(null)
   const nowAvailable = isLiffNowAvailable()
   const [orderType, setOrderType] = useState(() => (isLiffNowAvailable() ? 'NOW' : 'SCHEDULED'))
@@ -410,7 +412,7 @@ export function LiffOrderForm() {
                     : String(unit.pickup_hour)
                 }
                 onChange={(next) => updateUnitHour(next === '' ? '' : Number(next))}
-                options={LIFF_PICKUP_HOURS.map((hour) => ({
+                options={getLiffPickupHours().map((hour) => ({
                   value: String(hour),
                   label: formatLiffHourOptionLabel(hour, nightSlots),
                   disabled: !hourHasAvailable(nightSlots, hour),

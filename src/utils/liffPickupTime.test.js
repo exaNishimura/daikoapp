@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  LIFF_PICKUP_HOURS,
+  getLiffPickupHours,
   LIFF_PICKUP_MINUTES,
   combineOvernightPickup,
   formatLiffHourLabel,
@@ -168,8 +168,8 @@ describe('formatLiffPickupPreview', () => {
 
 describe('constants', () => {
   it('covers 20:00 through 05:00 in 15-minute steps', () => {
-    expect(LIFF_PICKUP_HOURS[0]).toBe(20)
-    expect(LIFF_PICKUP_HOURS.at(-1)).toBe(5)
+    expect(getLiffPickupHours()[0]).toBe(20)
+    expect(getLiffPickupHours().at(-1)).toBe(5)
     expect(LIFF_PICKUP_MINUTES).toEqual([0, 15, 30, 45])
   })
 })

@@ -18,6 +18,7 @@ import {
 import { calculateLineBuffer } from '../../../shared/lineIntake/buffer.js'
 import { snapshotDiscount } from '../../../shared/lineIntake/discount.js'
 import { computeHoldUntil } from '../../../shared/lineIntake/holdDeadline.js'
+import { resolveOperatingHours } from '../../../shared/operatingHours.js'
 import { fetchDirectionsDurationMinutes } from '../../../shared/lineIntake/mapsDirections.js'
 import {
   buildConfirmedCustomerMessage,
@@ -366,6 +367,15 @@ async function syncBookingStatus(supabase, bookingId) {
   await supabase.from('line_bookings').update({ status: next }).eq('id', bookingId)
 }
 
+async function loadOperatingHours(supabase) {
+  const { data } = await supabase
+    .from('company_profile')
+    .select('reservation_start_hour, business_start_hour')
+    .eq('id', 1)
+    .maybeSingle()
+  return resolveOperatingHours(data)
+}
+
 async function handleCheck(supabase, body) {
   const settings = await loadSettings(supabase)
   const waitingLocationAddress = await loadWaitingLocation(supabase)
@@ -374,10 +384,11 @@ async function handleCheck(supabase, body) {
     waitingLocationAddress,
   })
   const now = new Date()
+  const operatingHours = await loadOperatingHours(supabase)
   const orderType = body.order_type || 'SCHEDULED'
   let pickupAt = body.pickup_at ? new Date(body.pickup_at) : now
-  if (orderType === 'NOW' && !isPhoneIntakeOpen(now)) {
-    pickupAt = nextLiffPickupAt(now)
+  if (orderType === 'NOW' && !isPhoneIntakeOpen(now, operatingHours)) {
+    pickupAt = nextLiffPickupAt(now, operatingHours)
   }
   const durationMin = (baseDuration || 20) + calculateLineBuffer(baseDuration)
   const occupiedIntervals = await loadOccupiedIntervals(supabase, pickupAt, durationMin)
@@ -386,6 +397,7 @@ async function handleCheck(supabase, body) {
     now,
     desiredPickupAt: pickupAt,
     orderType,
+    operatingHours,
     unitCount: 1,
     baseDurationMin: baseDuration,
     occupiedIntervals,
@@ -419,6 +431,7 @@ async function handleSubmit(supabase, body) {
   }
 
   const settings = await loadSettings(supabase)
+  const operatingHours = await loadOperatingHours(supabase)
   const discount = snapshotDiscount(settings.discount_config)
   const orderType = body.order_type || 'SCHEDULED'
   const now = new Date()
@@ -439,6 +452,7 @@ async function handleSubmit(supabase, body) {
     now,
     desiredPickupAt: pickupAt,
     orderType,
+    operatingHours,
     unitCount: 1,
     baseDurationMin: unitBase,
     occupiedIntervals,
@@ -450,7 +464,7 @@ async function handleSubmit(supabase, body) {
   }
   const usesExtraCapacity = Boolean(availability.usesExtraCapacity)
 
-  const holdUntil = computeHoldUntil(now)
+  const holdUntil = computeHoldUntil(now, operatingHours)
   const holdUntilIso = holdUntil.toISOString()
 
   const { data: booking, error: bookingError } = await supabase

@@ -4,10 +4,10 @@
  * それ以外 → 次の 19:00
  */
 
+import { resolveOperatingHours } from '../operatingHours.js'
+
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 const HOLD_MINUTES_IN_HOURS = 15
-const PHONE_INTAKE_HOUR = 19
-const BUSINESS_END_HOUR = 6
 
 /**
  * @param {Date} date
@@ -37,36 +37,36 @@ function jstWallToUtc(y, month, d, hour, minute = 0, second = 0, ms = 0) {
  * @param {Date} createdAt
  * @returns {boolean}
  */
-export function isWithinPhoneIntakeHours(createdAt) {
+export function isWithinPhoneIntakeHours(createdAt, operatingHours) {
+  const { reservationStartHour, businessEndHour } = resolveOperatingHours(operatingHours)
   const { hour } = toJstParts(createdAt)
-  return hour >= PHONE_INTAKE_HOUR || hour < BUSINESS_END_HOUR
+  return hour >= reservationStartHour || hour < businessEndHour
 }
 
 /**
  * @param {Date|string|number} createdAt
  * @returns {Date}
  */
-export function computeHoldUntil(createdAt) {
+export function computeHoldUntil(createdAt, operatingHours) {
   const created = createdAt instanceof Date ? createdAt : new Date(createdAt)
   if (Number.isNaN(created.getTime())) {
     throw new Error('Invalid createdAt')
   }
 
-  if (isWithinPhoneIntakeHours(created)) {
+  const { reservationStartHour } = resolveOperatingHours(operatingHours)
+  if (isWithinPhoneIntakeHours(created, operatingHours)) {
     return new Date(created.getTime() + HOLD_MINUTES_IN_HOURS * 60 * 1000)
   }
 
   const parts = toJstParts(created)
-  // 当日 19:00（まだ来ていなければ）。hour >= 6 かつ < 19 のときだけここに来る
   let y = parts.y
   let month = parts.month
   let d = parts.d
-  if (parts.hour >= PHONE_INTAKE_HOUR) {
-    // 理論上到達しないが安全側
+  if (parts.hour >= reservationStartHour) {
     const next = new Date(Date.UTC(y, month - 1, d + 1))
     y = next.getUTCFullYear()
     month = next.getUTCMonth() + 1
     d = next.getUTCDate()
   }
-  return jstWallToUtc(y, month, d, PHONE_INTAKE_HOUR, 0, 0, 0)
+  return jstWallToUtc(y, month, d, reservationStartHour, 0, 0, 0)
 }

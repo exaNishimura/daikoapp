@@ -94,7 +94,7 @@ describe('buildDispatchableSlots', () => {
     )
   })
 
-  it('keeps 18:00 when another vehicle is already on', () => {
+  it('keeps 19:00 when another vehicle started before reservation open', () => {
     const statusesMap = resolveNightOperationStatuses({
       vehicles: [V1, V2],
       shiftsByCar: {
@@ -109,7 +109,7 @@ describe('buildDispatchableSlots', () => {
       statusesMap,
       now,
     })
-    expect(isSlotDispatchable(slots, 18, 0)).toBe(true)
+    expect(isSlotDispatchable(slots, 19, 0)).toBe(true)
     expect(isSlotDispatchable(slots, 20, 0)).toBe(true)
   })
 

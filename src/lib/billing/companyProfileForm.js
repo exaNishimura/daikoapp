@@ -3,13 +3,29 @@
  * シングルトン (id=1) なので、フォーム単位の純関数だけで充分。
  */
 
+import {
+  DEFAULT_BUSINESS_START_HOUR,
+  DEFAULT_RESERVATION_START_HOUR,
+  MAX_START_HOUR,
+  MIN_START_HOUR,
+} from '../../../shared/operatingHours.js'
+
 export const BANK_ACCOUNT_TYPES = ['普通', '当座', '貯蓄']
+
+export const OPERATING_HOUR_FIELDS = ['reservation_start_hour', 'business_start_hour']
+
+export const START_HOUR_OPTIONS = Array.from(
+  { length: MAX_START_HOUR - MIN_START_HOUR + 1 },
+  (_, index) => MIN_START_HOUR + index
+)
 
 export const COMPANY_PROFILE_FIELDS = [
   'name',
   'postal_code',
   'address',
   'invoice_number',
+  'reservation_start_hour',
+  'business_start_hour',
   'bank',
   'bank_branch',
   'bank_account_type',
@@ -22,6 +38,8 @@ const FIELD_LABELS = {
   postal_code: '郵便番号',
   address: '住所',
   invoice_number: 'インボイス番号',
+  reservation_start_hour: '予約開始',
+  business_start_hour: '営業開始',
   bank: '銀行名',
   bank_branch: '支店名',
   bank_account_type: '口座種別',
@@ -29,10 +47,17 @@ const FIELD_LABELS = {
   bank_account_holder: '口座名義',
 }
 
-export const EMPTY_COMPANY_PROFILE = COMPANY_PROFILE_FIELDS.reduce(
-  (acc, key) => ({ ...acc, [key]: key === 'bank_account_type' ? '普通' : '' }),
-  {}
-)
+const HOUR_DEFAULTS = {
+  reservation_start_hour: DEFAULT_RESERVATION_START_HOUR,
+  business_start_hour: DEFAULT_BUSINESS_START_HOUR,
+}
+
+export const EMPTY_COMPANY_PROFILE = COMPANY_PROFILE_FIELDS.reduce((acc, key) => {
+  if (key === 'bank_account_type') acc[key] = '普通'
+  else if (key in HOUR_DEFAULTS) acc[key] = HOUR_DEFAULTS[key]
+  else acc[key] = ''
+  return acc
+}, {})
 
 const POSTAL_RE_NORMALIZED = /^\d{3}-\d{4}$/
 
@@ -66,10 +91,18 @@ export function validateCompanyProfileForm(form = {}) {
   const errors = {}
 
   for (const field of COMPANY_PROFILE_FIELDS) {
+    if (OPERATING_HOUR_FIELDS.includes(field)) continue
     const value = form[field]
     const trimmed = typeof value === 'string' ? value.trim() : value
     if (trimmed == null || trimmed === '') {
       errors[field] = `${FIELD_LABELS[field]}は必須です`
+    }
+  }
+
+  for (const field of OPERATING_HOUR_FIELDS) {
+    const hour = Number(form[field])
+    if (!Number.isInteger(hour) || hour < MIN_START_HOUR || hour > MAX_START_HOUR) {
+      errors[field] = `${FIELD_LABELS[field]}は ${MIN_START_HOUR}時から ${MAX_START_HOUR}時で指定してください`
     }
   }
 

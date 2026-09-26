@@ -1,4 +1,5 @@
 import { calcShiftWorkHours, normalizeTimeForInput } from '@/lib/billing/shiftStaffHours'
+import { formatHourClock, getOperatingHours } from '@/lib/operatingHours'
 import { getPlannedShiftTimes } from '@/lib/billing/shiftTargetAmount'
 import { CAR_OPTIONS, timeToMinutes } from '@/lib/shiftEditUtils'
 import { resolveShiftEmployee } from '@/lib/staffFromEmployees'
@@ -6,13 +7,18 @@ import { resolveShiftEmployee } from '@/lib/staffFromEmployees'
 export const LICENSE_TYPE1 = '一種'
 export const LICENSE_TYPE2 = '二種'
 
-const DEFAULT_START = '20:00'
-const DEFAULT_END = '06:00'
+function defaultShiftStart() {
+  return formatHourClock(getOperatingHours().businessStartHour)
+}
+
+function defaultShiftEnd() {
+  return formatHourClock(getOperatingHours().businessEndHour)
+}
 const MAX_PER_CAR = 2
 
 export function formatTimeRange(start, end) {
-  const s = normalizeTimeForInput(start) || start || DEFAULT_START
-  const e = normalizeTimeForInput(end) || end || DEFAULT_END
+  const s = normalizeTimeForInput(start) || start || defaultShiftStart()
+  const e = normalizeTimeForInput(end) || end || defaultShiftEnd()
   return `${s}〜${e}`
 }
 
@@ -46,8 +52,8 @@ export function buildRequestsByDate(requestRows) {
         employeeId: row.employee_id,
         name: row.employee_name,
         licenseType: row.license_type,
-        start: normalizeTimeForInput(day.start) || DEFAULT_START,
-        end: normalizeTimeForInput(day.end) || DEFAULT_END,
+        start: normalizeTimeForInput(day.start) || defaultShiftStart(),
+        end: normalizeTimeForInput(day.end) || defaultShiftEnd(),
         notes: row.payload?.notes || '',
       })
     }

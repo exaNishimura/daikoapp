@@ -1,5 +1,5 @@
 import {
-  LIFF_PICKUP_HOURS,
+  getLiffPickupHours,
   LIFF_PICKUP_MINUTES,
   combineOvernightPickup,
   formatLiffHourLabel,
@@ -94,7 +94,7 @@ export function buildLiffNightSlots({
   }))
 
   const slots = []
-  for (const hour of LIFF_PICKUP_HOURS) {
+  for (const hour of getLiffPickupHours()) {
     for (const minute of LIFF_PICKUP_MINUTES) {
       const pickupAt = combineOvernightPickup(nightDate, hour, minute)
       if (!pickupAt) continue

@@ -42,15 +42,24 @@ import { Selector } from '@astryxdesign/core/Selector'
 import { Pencil, Search } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
 import { MonthNavBar } from '@/components/MonthNav'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
+import { getOperatingHours, getTimelineStartHour } from '@/lib/operatingHours'
 import './ShiftCalendar.css'
 
-// ============================================
-// 設定（時間軸の範囲）
-// ============================================
-const TIMELINE_START = 19 // 19:00から表示
-const TIMELINE_END = 6 // 06:00まで表示（翌日）
-const TIMELINE_WIDTH = 960 // 時間軸の幅（px）
-const PIXELS_PER_HOUR = TIMELINE_WIDTH / 12 // 12時間 = 960px
+const TIMELINE_WIDTH = 960
+
+function timelineStart() {
+  return getTimelineStartHour()
+}
+
+function timelineEnd() {
+  return getOperatingHours().businessEndHour
+}
+
+function pixelsPerHour() {
+  const span = 24 - timelineStart() + timelineEnd()
+  return TIMELINE_WIDTH / span
+}
 
 // ============================================
 // ユーティリティ関数
@@ -59,18 +68,15 @@ const PIXELS_PER_HOUR = TIMELINE_WIDTH / 12 // 12時間 = 960px
 // 時間文字列（HH:MM）を分に変換（19:00基準）
 function timeToMinutes(timeStr) {
   const [hours, minutes] = timeStr.split(':').map(Number)
-  // 19:00 = 0分、20:00 = 60分、...、23:00 = 240分、00:00 = 300分、...、06:00 = 660分
-  if (hours >= TIMELINE_START) {
-    return (hours - TIMELINE_START) * 60 + minutes
-  } else {
-    // 翌日の時間（00:00〜06:00）
-    return (24 - TIMELINE_START + hours) * 60 + minutes
+  const start = timelineStart()
+  if (hours >= start) {
+    return (hours - start) * 60 + minutes
   }
+  return (24 - start + hours) * 60 + minutes
 }
 
-// 分をピクセル位置に変換
 function minutesToPixels(minutes) {
-  return (minutes / 60) * PIXELS_PER_HOUR
+  return (minutes / 60) * pixelsPerHour()
 }
 
 // 日付をグループ化
@@ -93,6 +99,7 @@ function groupByDate(data) {
 }
 
 export function ShiftCalendar() {
+  useOperatingHours()
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const { showToast } = useToast()
@@ -537,40 +544,42 @@ function DayBlock({
 }
 
 function TimeAxis() {
+  useOperatingHours()
   const markers = []
+  const startHour = timelineStart()
+  const endHour = timelineEnd()
 
   // ピーク帯（23:00〜02:00）の背景
   const peakStart = minutesToPixels(timeToMinutes('23:00'))
   const peakEnd = minutesToPixels(timeToMinutes('02:00'))
 
   // 1時間刻みのマーカー
-  for (let hour = TIMELINE_START; hour <= 23; hour++) {
+  for (let hour = startHour; hour <= 23; hour++) {
     markers.push({
       type: 'major',
-      left: minutesToPixels((hour - TIMELINE_START) * 60),
+      left: minutesToPixels((hour - startHour) * 60),
       label: String(hour).padStart(2, '0') + ':00',
     })
   }
-  for (let hour = 0; hour <= TIMELINE_END; hour++) {
+  for (let hour = 0; hour <= endHour; hour++) {
     markers.push({
       type: 'major',
-      left: minutesToPixels((24 - TIMELINE_START + hour) * 60),
+      left: minutesToPixels((24 - startHour + hour) * 60),
       label: String(hour).padStart(2, '0') + ':00',
     })
   }
 
-  // 30分補助線
-  for (let hour = TIMELINE_START; hour <= 23; hour++) {
+  for (let hour = startHour; hour <= 23; hour++) {
     markers.push({
       type: 'minor',
-      left: minutesToPixels((hour - TIMELINE_START) * 60 + 30),
+      left: minutesToPixels((hour - startHour) * 60 + 30),
       label: '',
     })
   }
-  for (let hour = 0; hour <= TIMELINE_END; hour++) {
+  for (let hour = 0; hour <= endHour; hour++) {
     markers.push({
       type: 'minor',
-      left: minutesToPixels((24 - TIMELINE_START + hour) * 60 + 30),
+      left: minutesToPixels((24 - startHour + hour) * 60 + 30),
       label: '',
     })
   }

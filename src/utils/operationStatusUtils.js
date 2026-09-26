@@ -2,7 +2,7 @@
  * 随伴車の稼働状況を判定するユーティリティ
  */
 
-import { dateToRowIndex, rowIndexToDate, timeToRowIndex } from './rowUtils'
+import { dateToRowIndex, getTimelineRowCount, rowIndexToDate, timeToRowIndex } from './rowUtils'
 
 function timeStringToRowIndex(timeStr) {
   const [hour, minute] = timeStr.split(':').map(Number)
@@ -47,7 +47,7 @@ export function buildOperationalWindowsFromStatuses(dayStatuses) {
   const hasDayOff = dayStatuses.some((status) => status.type === 'DAY_OFF')
 
   if (hasDefault && !hasDayOff) {
-    return [{ startRow: 0, endRow: 48 }]
+    return [{ startRow: 0, endRow: getTimelineRowCount() }]
   }
 
   const events = dayStatuses
@@ -79,19 +79,21 @@ export function buildOperationalWindowsFromStatuses(dayStatuses) {
   }
 
   if (active && windowStart !== null) {
-    windows.push({ startRow: windowStart, endRow: 48 })
+    windows.push({ startRow: windowStart, endRow: getTimelineRowCount() })
   }
 
   return windows
 }
 
-const TIMELINE_ROW_COUNT = 48
+function timelineRowCount() {
+  return getTimelineRowCount()
+}
 
 /**
  * タイムライン上の配置可/不可帯を構築する
  * @returns {{ placementBands: Array<{ startRow: number, endRow: number }>, blockedBands: Array<{ startRow: number, endRow: number }>, shiftStartTime: string|null }}
  */
-export function buildTimelinePlacementBands(dayStatuses, totalRows = TIMELINE_ROW_COUNT) {
+export function buildTimelinePlacementBands(dayStatuses, totalRows = timelineRowCount()) {
   const hasDayOff = dayStatuses?.some((status) => status.type === 'DAY_OFF')
   const placementBands = buildOperationalWindowsFromStatuses(dayStatuses || [])
   const shiftStartTime =

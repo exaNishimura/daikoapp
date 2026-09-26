@@ -6,13 +6,11 @@ import {
   snapToRowIndex,
   minutesToRows,
   TIMELINE_ROW_HEIGHT_PX,
-  TIMELINE_TOTAL_HEIGHT_PX,
+  getTimelineTotalHeightPx,
 } from '@/utils/rowUtils'
 
 /** スナップ判定のしきい値（px） */
 export const SLOT_SNAP_THRESHOLD_PX = 16
-
-const TIMELINE_HEIGHT_PX = TIMELINE_TOTAL_HEIGHT_PX
 
 /**
  * 依頼のタイムライン上の高さ（px）を返す。
@@ -68,7 +66,7 @@ export function resolveSlotDropPreview({
   let bestDistance = snapThresholdPx + 1
 
   const tryCandidate = (candidateTop, snapGuide, distance) => {
-    const clampedTop = Math.max(0, Math.min(TIMELINE_HEIGHT_PX - height, candidateTop))
+    const clampedTop = Math.max(0, Math.min(getTimelineTotalHeightPx() - height, candidateTop))
     if (distance <= snapThresholdPx && distance < bestDistance) {
       bestDistance = distance
       bestTop = clampedTop
@@ -88,7 +86,7 @@ export function resolveSlotDropPreview({
   }
 
   if (bestSnap === null) {
-    bestTop = Math.max(0, Math.min(TIMELINE_HEIGHT_PX - height, rowSnappedTop))
+    bestTop = Math.max(0, Math.min(getTimelineTotalHeightPx() - height, rowSnappedTop))
   }
 
   return {

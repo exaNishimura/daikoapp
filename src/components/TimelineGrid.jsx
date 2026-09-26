@@ -7,6 +7,8 @@ import {
   getOperationalVehicles,
 } from '@/utils/operationStatusUtils'
 import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUtils'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
+import { getTimelineStartHour } from '@/lib/operatingHours'
 import { TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { Maximize2, Minimize2 } from 'lucide-react'
@@ -27,6 +29,9 @@ export function TimelineGrid({
   referenceTime = null,
   showNowLine = true,
 }) {
+  const operatingHours = useOperatingHours()
+  const timelineStart = getTimelineStartHour()
+  const businessEndHour = operatingHours.businessEndHour
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
   const [focusedVehicleId, setFocusedVehicleId] = useState(null)
@@ -131,27 +136,20 @@ export function TimelineGrid({
     [vehicles, focusedVehicleId]
   )
 
-  // 時間軸の生成（18:00〜翌06:00、15分刻み）
-  // 営業時間は18:00〜翌06:00なので、06:00は含まない（06:00は営業時間外）
-  const generateTimeSlots = () => {
+  const timeSlots = useMemo(() => {
     const slots = []
-    // 18:00〜23:45（24個）
-    for (let hour = 18; hour < 24; hour++) {
+    for (let hour = timelineStart; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
         slots.push({ hour, minute })
       }
     }
-    // 00:00〜05:45（24個）
-    for (let hour = 0; hour < 6; hour++) {
+    for (let hour = 0; hour < businessEndHour; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
         slots.push({ hour, minute })
       }
     }
-    // 合計48個（0-47）
     return slots
-  }
-
-  const timeSlots = generateTimeSlots()
+  }, [timelineStart, businessEndHour])
   const totalHeight = timeSlots.length * TIMELINE_ROW_HEIGHT_PX
 
   // 現在時刻の位置を計算（営業時間内の場合のみ、1分単位で正確に計算）
@@ -162,25 +160,19 @@ export function TimelineGrid({
     const seconds = now.getSeconds()
     const totalMinutes = hours * 60 + minutes
 
-    // 営業時間は18:00〜翌06:00
-    // 18:00 = 1080分、06:00 = 360分
-    // 営業時間外: 06:00 < 時刻 < 18:00
-    if (totalMinutes > 360 && totalMinutes < 1080) {
+    const endMinutes = businessEndHour * 60
+    const startMinutes = timelineStart * 60
+    if (totalMinutes > endMinutes && totalMinutes < startMinutes) {
       return null
     }
 
-    // 営業時間内の場合、18:00を基準に1分単位で正確な位置を計算
     try {
       let minutesFromStart = 0
 
-      if (hours >= 18) {
-        // 18:00以降（当日）
-        // 例: 20:30 = (20-18)*60 + 30 = 150分
-        minutesFromStart = (hours - 18) * 60 + minutes
+      if (hours >= timelineStart) {
+        minutesFromStart = (hours - timelineStart) * 60 + minutes
       } else {
-        // 06:00未満（翌日）
-        // 例: 02:30 = (24-18)*60 + 2*60 + 30 = 360 + 120 + 30 = 510分
-        minutesFromStart = (24 - 18) * 60 + hours * 60 + minutes
+        minutesFromStart = (24 - timelineStart) * 60 + hours * 60 + minutes
       }
 
       // 秒も考慮（1分 = 20/15 = 4/3 px、1秒 = (4/3)/60 px）
