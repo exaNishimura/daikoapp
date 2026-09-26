@@ -102,6 +102,7 @@ export async function createReservation(input) {
       phone: String(input.phone).trim(),
       memo: input.memo != null ? String(input.memo) : '',
     }
+    if (input.order_id) row.order_id = input.order_id
     const { data, error } = await supabase.from('reservations').insert(row).select().single()
     if (error) throw error
     return { data, error: null }
@@ -113,7 +114,7 @@ export async function createReservation(input) {
 
 /**
  * @param {string} id
- * @param {Partial<{ reserved_at: string, customer_name: string, phone: string, memo: string }>} patch
+ * @param {Partial<{ reserved_at: string, customer_name: string, phone: string, memo: string, order_id: string | null }>} patch
  */
 export async function updateReservation(id, patch) {
   if (!supabase) return NOT_INITIALIZED()
@@ -137,6 +138,9 @@ export async function updateReservation(id, patch) {
     if (merged.customer_name != null) row.customer_name = String(merged.customer_name).trim()
     if (merged.phone != null) row.phone = String(merged.phone).trim()
     if (merged.memo != null) row.memo = String(merged.memo)
+    if (Object.prototype.hasOwnProperty.call(patch, 'order_id')) {
+      row.order_id = patch.order_id || null
+    }
 
     const { data, error } = await supabase
       .from('reservations')
@@ -148,6 +152,23 @@ export async function updateReservation(id, patch) {
     return { data, error: null }
   } catch (error) {
     console.error('Error updating reservation:', error)
+    return { data: null, error }
+  }
+}
+
+export async function getReservationByOrderId(orderId) {
+  if (!supabase) return NOT_INITIALIZED()
+  if (!orderId) return { data: null, error: null }
+  try {
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('*')
+      .eq('order_id', orderId)
+      .maybeSingle()
+    if (error) throw error
+    return { data: data || null, error: null }
+  } catch (error) {
+    console.error('Error fetching reservation by order:', error)
     return { data: null, error }
   }
 }

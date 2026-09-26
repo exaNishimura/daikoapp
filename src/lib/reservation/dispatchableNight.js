@@ -1,5 +1,6 @@
 import { combineOvernightPickup } from '@/utils/liffPickupTime'
 import { getOperationalVehicles } from '@/utils/operationStatusUtils'
+import { findExactAvailableVehicle } from '@/utils/slotUtils'
 import { buildOperationStatusesFromShifts } from '@/utils/shiftOperationUtils'
 import {
   RESERVATION_HOURS,
@@ -61,9 +62,13 @@ function isGrandfathered(allowSlot, nightDate, hour, minute) {
   return Number(allowSlot.hour) === Number(hour) && Number(allowSlot.minute) === Number(minute)
 }
 
+/** 空き判定に使う所要時間（ルート未計算時のデフォルトと揃える） */
+export const OCCUPANCY_DURATION_MIN = 30
+
 /**
  * その夜の 15 分枠が配車可能か。
- * @returns {Array<{ hour: number, minute: number, available: boolean, past: boolean, operational: boolean }>}
+ * checkOccupancy が true のときは、指定開始ちょうどに載せられる車両が1台でもある枠だけ available。
+ * @returns {Array<{ hour: number, minute: number, available: boolean, past: boolean, operational: boolean, booked: boolean }>}
  */
 export function buildDispatchableSlots({
   nightDate,
@@ -71,6 +76,9 @@ export function buildDispatchableSlots({
   statusesMap = {},
   now = new Date(),
   allowSlot = null,
+  existingSlots = [],
+  durationMin = OCCUPANCY_DURATION_MIN,
+  checkOccupancy = false,
 } = {}) {
   if (!nightDate) return []
 
@@ -81,13 +89,18 @@ export function buildDispatchableSlots({
       if (!at) continue
       const past = at.getTime() <= now.getTime()
       const operational = getOperationalVehicles(vehicles, at, statusesMap).length > 0
+      const booked =
+        checkOccupancy &&
+        operational &&
+        !findExactAvailableVehicle(vehicles, existingSlots, at, durationMin, statusesMap)
       const grandfathered = isGrandfathered(allowSlot, nightDate, hour, minute)
       slots.push({
         hour,
         minute,
         past,
         operational,
-        available: grandfathered || (!past && operational),
+        booked: Boolean(booked),
+        available: grandfathered || (!past && operational && !booked),
       })
     }
   }
@@ -114,6 +127,8 @@ export function formatDispatchableHourLabel(hour, slots) {
   if (!mins.length) return base
   if (mins.some((slot) => slot.available)) return base
   if (mins.every((slot) => slot.past)) return `${base}（終了）`
+  if (mins.every((slot) => !slot.operational)) return `${base}（稼働時間外）`
+  if (mins.some((slot) => slot.booked)) return `${base}（空きなし）`
   return `${base}（稼働時間外）`
 }
 
@@ -121,12 +136,14 @@ export function formatDispatchableMinuteLabel(slot) {
   const base = formatReservationMinuteLabel(slot.minute)
   if (slot.available) return base
   if (slot.past) return `${base}（終了）`
+  if (slot.booked) return `${base}（空きなし）`
   return `${base}（稼働時間外）`
 }
 
-export function formatDispatchableWindowLabel(slots) {
+export function formatDispatchableWindowLabel(slots, { isCurrentNight = false } = {}) {
   const open = (slots || []).filter((slot) => slot.available)
   if (!open.length) return ''
   const fmt = (slot) => `${slot.hour}:${String(slot.minute).padStart(2, '0')}`
-  return `この夜の配車可能: ${fmt(open[0])}〜${fmt(open[open.length - 1])}`
+  const range = `この夜の配車可能: ${fmt(open[0])}〜${fmt(open[open.length - 1])}`
+  return isCurrentNight ? `${range}（空き枠のみ）` : range
 }

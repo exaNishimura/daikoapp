@@ -159,6 +159,63 @@ describe('buildDispatchableSlots', () => {
     expect(isSlotDispatchable(slots, 20, 0)).toBe(true)
     expect(isSlotDispatchable(slots, 20, 15)).toBe(false)
   })
+
+  it('disables occupied exact times when checkOccupancy is on', () => {
+    const statusesMap = resolveNightOperationStatuses({
+      vehicles: [V1],
+      shiftsByCar: { 1: [{ car: '1', start: '18:00' }] },
+      dateStr: nightDate,
+    })
+    const start = new Date(2026, 8, 25, 20, 0, 0, 0)
+    const end = new Date(2026, 8, 25, 20, 30, 0, 0)
+    const slots = buildDispatchableSlots({
+      nightDate,
+      vehicles: [V1],
+      statusesMap,
+      now,
+      checkOccupancy: true,
+      durationMin: 30,
+      existingSlots: [
+        {
+          vehicle_id: 'v1',
+          start_at: start.toISOString(),
+          end_at: end.toISOString(),
+        },
+      ],
+    })
+    expect(isSlotDispatchable(slots, 20, 0)).toBe(false)
+    expect(slots.find((slot) => slot.hour === 20 && slot.minute === 0).booked).toBe(true)
+    expect(isSlotDispatchable(slots, 20, 30)).toBe(true)
+  })
+
+  it('keeps a time selectable when another vehicle is free', () => {
+    const statusesMap = resolveNightOperationStatuses({
+      vehicles: [V1, V2],
+      shiftsByCar: {
+        1: [{ car: '1', start: '18:00' }],
+        2: [{ car: '2', start: '18:00' }],
+      },
+      dateStr: nightDate,
+    })
+    const start = new Date(2026, 8, 25, 20, 0, 0, 0)
+    const end = new Date(2026, 8, 25, 20, 30, 0, 0)
+    const slots = buildDispatchableSlots({
+      nightDate,
+      vehicles: [V1, V2],
+      statusesMap,
+      now,
+      checkOccupancy: true,
+      durationMin: 30,
+      existingSlots: [
+        {
+          vehicle_id: 'v1',
+          start_at: start.toISOString(),
+          end_at: end.toISOString(),
+        },
+      ],
+    })
+    expect(isSlotDispatchable(slots, 20, 0)).toBe(true)
+  })
 })
 
 describe('formatDispatchableHourLabel', () => {
@@ -169,5 +226,14 @@ describe('formatDispatchableHourLabel', () => {
         { hour: 18, minute: 15, available: false, past: false },
       ])
     ).toBe('18時（稼働時間外）')
+  })
+
+  it('annotates hours that are operational but fully booked', () => {
+    expect(
+      formatDispatchableHourLabel(20, [
+        { hour: 20, minute: 0, available: false, past: false, operational: true, booked: true },
+        { hour: 20, minute: 15, available: false, past: false, operational: true, booked: true },
+      ])
+    ).toBe('20時（空きなし）')
   })
 })

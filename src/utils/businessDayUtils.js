@@ -94,6 +94,96 @@ export function formatWorkDateKey(date) {
   return `${yyyy}-${mm}-${dd}`
 }
 
+const WORK_DATE_KEY = /^(\d{4})-(\d{2})-(\d{2})$/
+
+/**
+ * YYYY-MM-DD をローカル Date（00:00）にする。不正なら null。
+ */
+export function parseWorkDateKey(dateStr) {
+  const match = String(dateStr || '').match(WORK_DATE_KEY)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null
+  }
+  return date
+}
+
+export function addDaysToWorkDateKey(dateStr, days) {
+  const date = parseWorkDateKey(dateStr)
+  if (!date) return ''
+  date.setDate(date.getDate() + Number(days) || 0)
+  return formatWorkDateKey(date)
+}
+
+/**
+ * 営業夜 D の 18:00〜翌 06:00。
+ */
+export function getNightRangeFromWorkDateKey(dateStr) {
+  const date = parseWorkDateKey(dateStr)
+  if (!date) return { start: null, end: null, businessDay: null }
+  const start = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    BUSINESS_START_HOUR,
+    0,
+    0,
+    0
+  )
+  const end = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate() + 1,
+    BUSINESS_END_HOUR,
+    0,
+    0,
+    0
+  )
+  return { start, end, businessDay: date }
+}
+
+/**
+ * 配車画面の date クエリ。当日より前は当営業夜に丸める。
+ */
+export function resolveDispatchNightKey(param, now = new Date()) {
+  const current = formatWorkDateKey(getBusinessDayBoundaries(now).businessDay)
+  const parsed = parseWorkDateKey(param)
+  if (!parsed) return current
+  const key = formatWorkDateKey(parsed)
+  return key < current ? current : key
+}
+
+/**
+ * 指定時刻が属する営業夜の YYYY-MM-DD（18:00 開始のその日）。
+ * @param {string|Date} dateLike
+ * @returns {string}
+ */
+export function getBusinessDayKey(dateLike = new Date()) {
+  const date = dateLike instanceof Date ? dateLike : new Date(dateLike)
+  if (Number.isNaN(date.getTime())) return ''
+  return formatWorkDateKey(getBusinessDayBoundaries(date).businessDay)
+}
+
+/**
+ * scheduled_at がその時点の配車画面（当営業夜）か。
+ */
+export function isCurrentBusinessNight(dateLike, now = new Date()) {
+  const night = getBusinessDayKey(dateLike)
+  return Boolean(night) && night === getBusinessDayKey(now)
+}
+
+/**
+ * scheduled_at が現在の営業夜より後か（予約台帳行き）。
+ */
+export function isFutureBusinessNight(dateLike, now = new Date()) {
+  const night = getBusinessDayKey(dateLike)
+  return Boolean(night) && night > getBusinessDayKey(now)
+}
+
 /**
  * datetime-local 入力の min。営業日の開始（その夜 18:00）。
  * 0〜5 時は「前暦日 18:00」が現在の営業夜の開始。

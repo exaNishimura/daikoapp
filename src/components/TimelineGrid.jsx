@@ -23,6 +23,9 @@ export function TimelineGrid({
   onOrderUpdate,
   onSlotsUpdate,
   operationStatuses = {},
+  nightDate = '',
+  referenceTime = null,
+  showNowLine = true,
 }) {
   const [conflicts, setConflicts] = useState(new Set())
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -96,8 +99,8 @@ export function TimelineGrid({
   const defaultVehicleColumnWidth = 'min(40vw, 300px)'
 
   const operationalVehicles = useMemo(
-    () => getOperationalVehicles(vehicles, currentTime, operationStatuses),
-    [vehicles, currentTime, operationStatuses]
+    () => getOperationalVehicles(vehicles, referenceTime || currentTime, operationStatuses),
+    [vehicles, currentTime, referenceTime, operationStatuses]
   )
 
   const soleOperationalVehicleId =
@@ -197,7 +200,11 @@ export function TimelineGrid({
     }
   }
 
-  const currentTimePosition = getCurrentTimePosition()
+  const currentTimePosition = showNowLine ? getCurrentTimePosition() : null
+
+  useEffect(() => {
+    hasAutoScrolledRef.current = false
+  }, [nightDate])
 
   // 現在時刻の位置まで自動スクロール（初回表示時のみ）
   useEffect(() => {
@@ -242,7 +249,8 @@ export function TimelineGrid({
               // 稼働状況を判定（現在時刻で判定）
               const statuses = operationStatuses[vehicle.id] || []
               const now = new Date()
-              const isOperational = isVehicleOperational(vehicle.id, now, statuses)
+              const probeTime = referenceTime || now
+              const isOperational = isVehicleOperational(vehicle.id, probeTime, statuses)
               const isFocused = focusedVehicleId === vehicle.id
 
               return (

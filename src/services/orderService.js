@@ -64,6 +64,33 @@ export async function getOrderById(id) {
 }
 
 /**
+ * parking_note の [RESERVATION:uuid] マークから依頼を探す。
+ * reservations.order_id カラム未適用時の紐付けフォールバック。
+ */
+export async function findOrderByReservationMark(reservationId) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+  if (!reservationId) return { data: null, error: null }
+
+  try {
+    const mark = `[RESERVATION:${reservationId}]`
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .ilike('parking_note', `%${mark}%`)
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw error
+    return { data: data || null, error: null }
+  } catch (error) {
+    console.error('Error finding order by reservation mark:', error)
+    return { data: null, error }
+  }
+}
+
+/**
  * 依頼更新
  */
 export async function updateOrder(id, updates) {

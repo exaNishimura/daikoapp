@@ -5,6 +5,7 @@ import {
   confirmSlot,
   deleteSlot,
   getSlotsByVehicleAndDate,
+  getSlotsInRange,
 } from '@/services/slotService'
 import { queryKeys } from '@/lib/queryClient'
 
@@ -31,6 +32,23 @@ export function useSlotsByVehicleAndDate(vehicleId, startDate, endDate) {
     ],
     queryFn: () => unwrap(getSlotsByVehicleAndDate(vehicleId, startDate, endDate)),
     enabled: Boolean(vehicleId && startDate && endDate),
+  })
+}
+
+/**
+ * 日付範囲と重なる全車両のスロット
+ */
+export function useSlotsInRange(startDate, endDate, options = {}) {
+  const { enabled = true } = options
+  return useQuery({
+    queryKey: [
+      'dispatchSlots',
+      'inRange',
+      startDate?.toISOString() ?? null,
+      endDate?.toISOString() ?? null,
+    ],
+    queryFn: () => unwrap(getSlotsInRange(startDate, endDate)),
+    enabled: Boolean(enabled && startDate && endDate),
   })
 }
 

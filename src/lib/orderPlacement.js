@@ -9,7 +9,10 @@
  */
 
 import { dateToRowIndex, rowIndexToDate } from '@/utils/rowUtils'
-import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
+import {
+  findEarliestAvailableSlotAcrossVehicles,
+  findExactAvailableVehicle,
+} from '@/utils/slotUtils'
 import { calculateBuffer } from '@/services/routeService'
 
 /**
@@ -76,15 +79,25 @@ export function findAutoPlacementSlot({
   const totalDuration = baseDuration + buffer
 
   const orderStartTime = computeDesiredStartTime(order, now)
-  // 日時指定の場合のみ「ピッタリこの時刻」を優先したい
   const preferExactTime = order.order_type === 'SCHEDULED' && Boolean(order.scheduled_at)
+
+  if (preferExactTime) {
+    const availableSlot = findExactAvailableVehicle(
+      vehicles,
+      slots,
+      orderStartTime,
+      totalDuration,
+      operationStatuses
+    )
+    return { availableSlot, totalDuration }
+  }
 
   const availableSlot = findEarliestAvailableSlotAcrossVehicles(
     vehicles,
     slots,
     orderStartTime,
     totalDuration,
-    preferExactTime,
+    false,
     operationStatuses
   )
 

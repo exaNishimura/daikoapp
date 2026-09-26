@@ -1,9 +1,19 @@
 import { useState, useCallback } from 'react'
 import { defaultReservationDateTimeLocal } from '@/lib/reservation/reservationTime'
-import { isWithinBusinessHours, snapDateTimeTo15Minutes } from '@/utils/businessDayUtils'
+import {
+  isFutureBusinessNight,
+  isWithinBusinessHours,
+  snapDateTimeTo15Minutes,
+} from '@/utils/businessDayUtils'
 import { useCreateOrder, useUpdateOrder } from '@/hooks/useOrders'
+import { useCreateReservation } from '@/hooks/useReservations'
+import { updateReservation } from '@/services/reservationService'
 import { getVehicles } from '@/services/vehicleService'
-import { submitOrderWithRouteCalculation } from '@/lib/orderSubmission'
+import { withReservationMark } from '@/lib/reservation/reservationLink'
+import {
+  buildReservationPayloadFromOrderForm,
+  submitOrderWithRouteCalculation,
+} from '@/lib/orderSubmission'
 
 const INITIAL_FORM_DATA = {
   order_type: 'NOW',
@@ -31,15 +41,20 @@ const SCHEDULED_OUT_OF_HOURS = '営業時間（18:00〜翌06:00）内で選択�
  *
  * @param {Object} options
  * @param {(order: Object) => void} [options.onSuccess]
+ * @param {(reservation: Object) => void} [options.onReservationSaved]
  * @returns {Object}
  */
-export function useOrderForm({ onSuccess } = {}) {
+export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [errors, setErrors] = useState({})
 
   const createOrderMutation = useCreateOrder()
   const updateOrderMutation = useUpdateOrder()
-  const loading = createOrderMutation.isPending || updateOrderMutation.isPending
+  const createReservationMutation = useCreateReservation()
+  const loading =
+    createOrderMutation.isPending ||
+    updateOrderMutation.isPending ||
+    createReservationMutation.isPending
 
   const reset = useCallback(() => {
     setFormData(INITIAL_FORM_DATA)
@@ -130,6 +145,8 @@ export function useOrderForm({ onSuccess } = {}) {
         newErrors.scheduled_at = '予約日時を入力してください'
       } else if (!isWithinBusinessHours(formData.scheduled_at)) {
         newErrors.scheduled_at = SCHEDULED_OUT_OF_HOURS
+      } else if (isFutureBusinessNight(formData.scheduled_at) && !formData.contact_phone.trim()) {
+        newErrors.contact_phone = '予約台帳に保存するため電話番号を入力してください'
       }
     }
 
@@ -143,6 +160,37 @@ export function useOrderForm({ onSuccess } = {}) {
       if (!validate()) return
 
       try {
+        if (
+          formData.order_type === 'SCHEDULED' &&
+          isFutureBusinessNight(formData.scheduled_at)
+        ) {
+          const reservation = await createReservationMutation.mutateAsync(
+            buildReservationPayloadFromOrderForm(formData)
+          )
+          if (!reservation) throw new Error('予約の保存に失敗しました')
+          const order = await submitOrderWithRouteCalculation({
+            formData: {
+              ...formData,
+              parking_note: withReservationMark(formData.parking_note, reservation.id),
+            },
+            createOrder: (payload) => createOrderMutation.mutateAsync(payload),
+            updateOrder: (args) => updateOrderMutation.mutateAsync(args),
+            fetchVehicles: async () => {
+              const { data, error } = await getVehicles()
+              if (error) throw error
+              return data || []
+            },
+          })
+          try {
+            await updateReservation(reservation.id, { order_id: order.id })
+          } catch {
+            // order_id 未適用でも parking_note で紐付く
+          }
+          onSuccess?.(order)
+          onReservationSaved?.({ ...reservation, order_id: order.id })
+          return
+        }
+
         const order = await submitOrderWithRouteCalculation({
           formData,
           createOrder: (payload) => createOrderMutation.mutateAsync(payload),
@@ -159,7 +207,15 @@ export function useOrderForm({ onSuccess } = {}) {
         setErrors({ submit: '依頼の作成に失敗しました。もう一度お試しください。' })
       }
     },
-    [formData, validate, createOrderMutation, updateOrderMutation, onSuccess]
+    [
+      formData,
+      validate,
+      createOrderMutation,
+      updateOrderMutation,
+      createReservationMutation,
+      onSuccess,
+      onReservationSaved,
+    ]
   )
 
   return {

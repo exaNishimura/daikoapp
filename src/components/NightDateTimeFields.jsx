@@ -21,10 +21,33 @@ import {
 import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
 
 const NONE_AVAILABLE = 'この夜は稼働している号車がありません'
+const NONE_FREE = '指定できる空き枠がありません'
 const OUT_OF_WINDOW = 'その時刻は配車できません。稼働時間内を選んでください'
+const BOOKED = 'その時刻は空きがありません。別の時刻を選んでください'
+
+function unavailableMessage(slots, hour, minute) {
+  const anyOperational = slots.some((slot) => slot.operational && !slot.past)
+  if (!slots.some((slot) => slot.available)) {
+    return anyOperational ? NONE_FREE : NONE_AVAILABLE
+  }
+  const slot = slots.find((row) => row.hour === hour && row.minute === minute)
+  if (slot?.booked) return BOOKED
+  return OUT_OF_WINDOW
+}
+
+function supportingText({ isLoading, isFutureNight, windowLabel }) {
+  if (isLoading) return '稼働状況を確認しています…'
+  if (isFutureNight) {
+    return windowLabel
+      ? `${windowLabel}。翌日以降は予約台帳に保存します。`
+      : '翌日以降は予約台帳に保存します。'
+  }
+  return windowLabel || '営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。'
+}
 
 /**
  * 営業夜の日付 + 時分。その日の稼働状況で選択可否を制御する。
+ * 当営業夜は配車画面の空きも見る。
  */
 export function NightDateTimeFields({
   date,
@@ -36,7 +59,9 @@ export function NightDateTimeFields({
   allowSlot = null,
   onAvailabilityChange,
 }) {
-  const { slots, isLoading } = useDispatchableNight(date, { allowSlot })
+  const { slots, isLoading, isCurrentNight, isFutureNight } = useDispatchableNight(date, {
+    allowSlot,
+  })
   const onChangeRef = useRef(onChange)
   const onAvailabilityChangeRef = useRef(onAvailabilityChange)
   onChangeRef.current = onChange
@@ -46,7 +71,8 @@ export function NightDateTimeFields({
   const reservedAtIso = buildReservationIso(date, hour, minute)
   const currentOk = isSlotDispatchable(slots, hour, minute)
   const hasAny = slots.some((slot) => slot.available)
-  const windowLabel = formatDispatchableWindowLabel(slots)
+  const windowLabel = formatDispatchableWindowLabel(slots, { isCurrentNight })
+  const helper = supportingText({ isLoading, isFutureNight, windowLabel })
 
   useEffect(() => {
     if (isLoading) {
@@ -61,16 +87,16 @@ export function NightDateTimeFields({
       onAvailabilityChangeRef.current?.({
         available: false,
         isLoading: false,
-        message: NONE_AVAILABLE,
+        message: unavailableMessage(slots, hour, minute),
       })
       return
     }
     onAvailabilityChangeRef.current?.({
       available: currentOk,
       isLoading: false,
-      message: currentOk ? '' : OUT_OF_WINDOW,
+      message: currentOk ? '' : unavailableMessage(slots, hour, minute),
     })
-  }, [date, currentOk, hasAny, isLoading])
+  }, [date, hour, minute, currentOk, hasAny, isLoading, slots])
 
   useEffect(() => {
     if (isLoading || !date || !hasAny) return
@@ -82,7 +108,9 @@ export function NightDateTimeFields({
   }, [date, hour, minute, currentOk, hasAny, isLoading, slots])
 
   const status =
-    !isLoading && date && !hasAny ? { type: 'error', message: NONE_AVAILABLE } : reservedAtError
+    !isLoading && date && !hasAny
+      ? { type: 'error', message: unavailableMessage(slots, hour, minute) }
+      : reservedAtError
 
   return (
     <VStack gap={2}>
@@ -126,6 +154,7 @@ export function NightDateTimeFields({
               minute: optionMinute,
               available: true,
               past: false,
+              booked: false,
             }
             return {
               value: String(optionMinute),
@@ -137,7 +166,7 @@ export function NightDateTimeFields({
         />
       </HStack>
       <Text type="supporting" color="secondary">
-        {windowLabel || '営業時間は 18:00〜翌06:00。0時〜5時は翌朝です。'}
+        {helper}
       </Text>
       {reservedAtIso ? <Text>{formatReservationInstantLabel(reservedAtIso)}</Text> : null}
     </VStack>

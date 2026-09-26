@@ -5,6 +5,7 @@ import { Card } from '@astryxdesign/core/Card'
 import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
+import { visibleParkingNote } from '@/lib/reservation/reservationLink'
 
 const STATUS_TOKEN_COLOR = {
   UNASSIGNED: 'gray',
@@ -108,7 +109,7 @@ export function OrderCard({ order, isSelected, onClick }) {
               {totalDuration}分
             </Text>
           </HStack>
-          {order.parking_note ? (
+          {visibleParkingNote(order.parking_note) ? (
             <Text size="base" aria-label="駐車場メモあり">
               📝
             </Text>

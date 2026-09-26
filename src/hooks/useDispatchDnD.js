@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { getOrderById } from '@/services/orderService'
+import { getOrderById, updateOrder } from '@/services/orderService'
 import { createSlot, updateSlot } from '@/services/slotService'
+import { getReservationByOrderId, updateReservation } from '@/services/reservationService'
+import { reservationIdFromOrder } from '@/lib/reservation/reservationLink'
 import { calculateBuffer } from '@/services/routeService'
 import { exceedsBusinessHours } from '@/utils/timeUtils'
 import { useToast } from '@/contexts/ToastContext'
@@ -33,6 +35,12 @@ function calculateTimelineY(clientY) {
   return clientY - rect.top + timelineBody.scrollTop
 }
 
+function resolveDropDate(snappedRowIndex, businessDay) {
+  const base = businessDay instanceof Date ? businessDay : new Date()
+  const start = new Date(base.getFullYear(), base.getMonth(), base.getDate())
+  return rowIndexToDate(snappedRowIndex, start)
+}
+
 function getClientYFromEvent(event) {
   if (!event) return null
   if (event.touches && event.touches.length > 0) return event.touches[0].clientY
@@ -47,6 +55,8 @@ export function useDispatchDnD({
   operationStatuses,
   setSlots,
   setOrders,
+  businessDay,
+  onReservationDrop,
 }) {
   const { showToast } = useToast()
   const [dragOverPosition, setDragOverPosition] = useState(null)
@@ -57,12 +67,14 @@ export function useDispatchDnD({
   const slotsRef = useRef(slots)
   const ordersRef = useRef(orders)
   const operationStatusesRef = useRef(operationStatuses)
+  const businessDayRef = useRef(businessDay)
 
   useEffect(() => {
     slotsRef.current = slots
     ordersRef.current = orders
     operationStatusesRef.current = operationStatuses
-  }, [slots, orders, operationStatuses])
+    businessDayRef.current = businessDay
+  }, [slots, orders, operationStatuses, businessDay])
 
   const buildDragPreview = (vehicleId, rawTopPx) => {
     const ctx = dragContextRef.current
@@ -87,10 +99,7 @@ export function useDispatchDnD({
     })
 
     const snappedRowIndex = snapToRowIndex(pixelsToRowIndex(preview.top))
-    const now = new Date()
-    let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    if (now.getHours() < 6) businessDay.setDate(businessDay.getDate() - 1)
-    const dropStart = rowIndexToDate(snappedRowIndex, businessDay)
+    const dropStart = resolveDropDate(snappedRowIndex, businessDayRef.current)
     const statuses = operationStatusesRef.current[vehicleId] || []
     const isPlacementAllowed = isVehicleOperational(vehicleId, dropStart, statuses)
 
@@ -150,6 +159,16 @@ export function useDispatchDnD({
         type: 'order',
         excludeSlotId: null,
         heightPx: getOrderDurationPixels(data.order),
+      }
+      setDraggingSlotVehicleId(null)
+      return
+    }
+
+    if (data?.type === 'reservation' && data.reservation) {
+      dragContextRef.current = {
+        type: 'reservation',
+        excludeSlotId: null,
+        heightPx: getOrderDurationPixels({}),
       }
       setDraggingSlotVehicleId(null)
       return
@@ -215,10 +234,7 @@ export function useDispatchDnD({
       currentDragOverPosition.top != null
     ) {
       const snappedRowIndex = snapToRowIndex(pixelsToRowIndex(currentDragOverPosition.top))
-      const now = new Date()
-      let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      if (now.getHours() < 6) businessDay.setDate(businessDay.getDate() - 1)
-      return rowIndexToDate(snappedRowIndex, businessDay)
+      return resolveDropDate(snappedRowIndex, businessDayRef.current)
     }
 
     let dropY = null
@@ -245,11 +261,7 @@ export function useDispatchDnD({
     }
 
     const snappedRowIndex = snapToRowIndex(pixelsToRowIndex(dropY))
-    const now = new Date()
-    let businessDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    if (now.getHours() < 6) businessDay.setDate(businessDay.getDate() - 1)
-
-    return rowIndexToDate(snappedRowIndex, businessDay)
+    return resolveDropDate(snappedRowIndex, businessDayRef.current)
   }
 
   const handleDragEnd = async (event) => {
@@ -332,6 +344,53 @@ export function useDispatchDnD({
       }
       if (updatedSlot) {
         setSlots((prev) => prev.map((s) => (s.id === slot.id ? updatedSlot : s)))
+        const scheduledAt = startAt.toISOString()
+        await updateOrder(order.id, { scheduled_at: scheduledAt })
+        setOrders((prev) =>
+          prev.map((row) => (row.id === order.id ? { ...row, scheduled_at: scheduledAt } : row))
+        )
+        const reservationId =
+          reservationIdFromOrder(latestOrder) || reservationIdFromOrder(order)
+        if (reservationId) {
+          await updateReservation(reservationId, { reserved_at: scheduledAt })
+        } else {
+          const { data: reservation } = await getReservationByOrderId(order.id)
+          if (reservation) {
+            await updateReservation(reservation.id, { reserved_at: scheduledAt })
+          }
+        }
+      }
+      return
+    }
+
+    if (active.data.current?.type === 'reservation' && over.data.current?.vehicleId) {
+      const reservation = active.data.current.reservation
+      const targetVehicleId = over.data.current.vehicleId
+      const newStartAt = calcTimeFromDropPosition({
+        targetVehicleId,
+        ...dropContext,
+      })
+      clearDragContext()
+      if (!reservation || !newStartAt) {
+        showToast('ドロップ位置から時刻を計算できませんでした', 'error')
+        return
+      }
+      const statuses = operationStatuses[targetVehicleId] || []
+      if (!isVehicleOperational(targetVehicleId, newStartAt, statuses)) {
+        showToast(getOperationalPlacementMessage(statuses, newStartAt), 'warning')
+        return
+      }
+      const baseDuration = 30
+      const buffer = calculateBuffer(baseDuration)
+      const endAt = new Date(newStartAt)
+      endAt.setMinutes(endAt.getMinutes() + baseDuration + buffer)
+      if (exceedsBusinessHours(endAt)) {
+        showToast('06:00を超えるため配置できません。開始時刻を前にずらしてください。', 'warning')
+        return
+      }
+      const placed = await onReservationDrop?.(reservation, targetVehicleId, newStartAt)
+      if (placed) {
+        showToast('予約をタイムラインに仮配置しました', 'success')
       }
       return
     }

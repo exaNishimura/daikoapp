@@ -32,7 +32,7 @@ function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
 }
 
-export function OrderFormModal({ onClose, onOrderCreated, open }) {
+export function OrderFormModal({ onClose, onOrderCreated, onReservationSaved, open }) {
   const {
     formData,
     errors,
@@ -45,7 +45,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     removeWaypoint,
     handleSubmit,
     reset,
-  } = useOrderForm({ onSuccess: onOrderCreated })
+  } = useOrderForm({ onSuccess: onOrderCreated, onReservationSaved })
   const [nightAvailability, setNightAvailability] = useState({
     available: true,
     isLoading: false,
@@ -77,6 +77,7 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
     ? splitReservationDateTime(formData.scheduled_at)
     : defaultReservationDateTime()
   const minDate = formatWorkDateKey(getBusinessDayBoundaries().businessDay)
+  const isFutureNight = scheduledParts.date > minDate
 
   const handleNightChange = useCallback(
     ({ date, hour, minute }) => {
@@ -216,8 +217,14 @@ export function OrderFormModal({ onClose, onOrderCreated, open }) {
                 value={formData.contact_phone}
                 onChange={namedChange(handleChange, 'contact_phone')}
                 placeholder="例: 090-1234-5678"
+                isRequired={isFutureNight}
                 size={FORM_FIELD_SIZE}
                 width="100%"
+                status={
+                  errors.contact_phone
+                    ? { type: 'error', message: errors.contact_phone }
+                    : undefined
+                }
               />
 
               <VStack gap={2}>

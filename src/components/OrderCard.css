@@ -1,6 +1,8 @@
-.order-card {
+.order-card,
+.astryx-card.order-card {
   --order-accent: var(--dsp-border-strong);
   position: relative;
+  border-radius: var(--radius-none);
 }
 
 .order-card::before {
@@ -35,6 +37,10 @@
 
 .order-card[data-status='IN_TRANSIT'] {
   --order-accent: var(--dsp-transit);
+}
+
+.order-card[data-status='RESERVED'] {
+  --order-accent: var(--dsp-primary);
 }
 
 .order-card.selected {

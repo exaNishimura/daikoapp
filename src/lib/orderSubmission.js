@@ -33,6 +33,36 @@ export function buildOrderPayload(formData) {
   return { payload, waypoints }
 }
 
+function trimmedWaypoints(formData) {
+  return (formData.waypoints || [])
+    .map((wp) => (typeof wp === 'string' ? wp.trim() : ''))
+    .filter((wp) => wp.length > 0)
+}
+
+/**
+ * 翌日以降の日時指定を予約台帳向け payload に変換する。
+ */
+export function buildReservationPayloadFromOrderForm(formData) {
+  const waypoints = trimmedWaypoints(formData)
+  const lines = []
+  if (formData.pickup_address?.trim()) lines.push(`出発: ${formData.pickup_address.trim()}`)
+  if (formData.dropoff_address?.trim()) lines.push(`目的: ${formData.dropoff_address.trim()}`)
+  if (waypoints.length) lines.push(`経由: ${waypoints.join(' → ')}`)
+  const car = [formData.car_model, formData.car_color, formData.car_plate]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(' ')
+  if (car) lines.push(`車: ${car}`)
+  if (formData.parking_note?.trim()) lines.push(`駐車: ${formData.parking_note.trim()}`)
+
+  return {
+    reserved_at: new Date(formData.scheduled_at).toISOString(),
+    customer_name: formData.pickup_location?.trim() || '電話依頼',
+    phone: formData.contact_phone?.trim() || '未入力',
+    memo: lines.join('\n'),
+  }
+}
+
 const DEFAULT_DURATION_MIN = 30
 
 /**

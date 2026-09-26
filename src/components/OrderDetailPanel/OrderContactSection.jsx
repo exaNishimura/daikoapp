@@ -5,6 +5,7 @@ import { TextArea } from '@astryxdesign/core/TextArea'
 import { TextInput } from '@astryxdesign/core/TextInput'
 import { VStack } from '@astryxdesign/core/Layout'
 import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
+import { visibleParkingNote } from '@/lib/reservation/reservationLink'
 
 function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
@@ -89,12 +90,12 @@ function ContactViewFields({ order }) {
         </Text>
         <Text>{order.car_color || '未設定'}</Text>
       </VStack>
-      {order.parking_note ? (
+      {visibleParkingNote(order.parking_note) ? (
         <VStack gap={0.5}>
           <Text size="xsm" color="secondary">
             駐車位置メモ
           </Text>
-          <Text>{order.parking_note}</Text>
+          <Text>{visibleParkingNote(order.parking_note)}</Text>
         </VStack>
       ) : null}
     </>

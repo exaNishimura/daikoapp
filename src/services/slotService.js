@@ -171,3 +171,27 @@ export async function getSlotsByVehicleAndDate(vehicleId, startDate, endDate) {
     return { data: null, error }
   }
 }
+
+/**
+ * 日付範囲と重なる全車両のスロット
+ */
+export async function getSlotsInRange(startDate, endDate) {
+  if (!supabase) {
+    return { data: null, error: new Error('Supabase client not initialized') }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('dispatch_slots')
+      .select('*')
+      .lt('start_at', endDate.toISOString())
+      .gt('end_at', startDate.toISOString())
+      .order('start_at', { ascending: true })
+
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (error) {
+    console.error('Error fetching slots in range:', error)
+    return { data: null, error }
+  }
+}

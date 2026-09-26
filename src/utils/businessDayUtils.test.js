@@ -7,6 +7,13 @@ import {
   getBusinessDayBoundaries,
   getActiveWorkDate,
   formatWorkDateKey,
+  parseWorkDateKey,
+  addDaysToWorkDateKey,
+  getNightRangeFromWorkDateKey,
+  resolveDispatchNightKey,
+  getBusinessDayKey,
+  isCurrentBusinessNight,
+  isFutureBusinessNight,
   getMinBusinessDateTime,
   snapDateTimeTo15Minutes,
   normalizeTimeInput,
@@ -195,5 +202,45 @@ describe('combineDateAndTime', () => {
   it('returns empty when either part is missing', () => {
     expect(combineDateAndTime('', '19:30')).toBe('')
     expect(combineDateAndTime('2025-06-01', '')).toBe('')
+  })
+})
+
+describe('business night comparison', () => {
+  it('treats 03:00 as the previous calendar day night', () => {
+    expect(getBusinessDayKey(new Date(2026, 8, 26, 3, 0, 0, 0))).toBe('2026-09-25')
+  })
+
+  it('detects the current night vs a later night', () => {
+    const now = new Date(2026, 8, 25, 21, 0, 0, 0)
+    expect(isCurrentBusinessNight(new Date(2026, 8, 25, 22, 0, 0, 0), now)).toBe(true)
+    expect(isFutureBusinessNight(new Date(2026, 8, 26, 20, 0, 0, 0), now)).toBe(true)
+    expect(isFutureBusinessNight(new Date(2026, 8, 25, 22, 0, 0, 0), now)).toBe(false)
+  })
+})
+
+describe('work date key helpers', () => {
+  it('parses and rejects invalid keys', () => {
+    expect(parseWorkDateKey('2026-09-26')?.getDate()).toBe(26)
+    expect(parseWorkDateKey('2026-13-01')).toBeNull()
+    expect(parseWorkDateKey('nope')).toBeNull()
+  })
+
+  it('adds calendar days', () => {
+    expect(addDaysToWorkDateKey('2026-09-30', 1)).toBe('2026-10-01')
+    expect(addDaysToWorkDateKey('2026-09-26', -1)).toBe('2026-09-25')
+  })
+
+  it('builds the 18:00-06:00 range', () => {
+    const { start, end } = getNightRangeFromWorkDateKey('2026-09-25')
+    expect(start.getHours()).toBe(18)
+    expect(end.getHours()).toBe(6)
+    expect(end.getDate()).toBe(26)
+  })
+
+  it('clamps dispatch night to the current business night', () => {
+    const now = new Date(2026, 8, 25, 21, 0, 0, 0)
+    expect(resolveDispatchNightKey(null, now)).toBe('2026-09-25')
+    expect(resolveDispatchNightKey('2026-09-24', now)).toBe('2026-09-25')
+    expect(resolveDispatchNightKey('2026-09-26', now)).toBe('2026-09-26')
   })
 })

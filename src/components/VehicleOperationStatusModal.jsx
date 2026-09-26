@@ -19,6 +19,7 @@ import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList'
 import { Text } from '@astryxdesign/core/Text'
 import { TimeInput } from '@astryxdesign/core/TimeInput'
 import { Token } from '@astryxdesign/core/Token'
+import { formatWorkDateKey, getBusinessDayBoundaries } from '@/utils/businessDayUtils'
 
 export function VehicleOperationStatusModal({
   open,
@@ -26,6 +27,7 @@ export function VehicleOperationStatusModal({
   vehicleId,
   vehicleName,
   onStatusUpdated,
+  date,
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -39,10 +41,12 @@ export function VehicleOperationStatusModal({
 
   useEffect(() => {
     if (open && vehicleId) {
+      const dateStr = date || formatWorkDateKey(getBusinessDayBoundaries().businessDay)
+      setFormData((prev) => ({ ...prev, date: dateStr }))
       loadStatuses()
       loadVehicle()
     }
-  }, [open, vehicleId])
+  }, [open, vehicleId, date])
 
   const handleOpenChange = (isOpen) => {
     if (!isOpen) onClose()
@@ -55,10 +59,9 @@ export function VehicleOperationStatusModal({
     setError(null)
 
     try {
-      const today = new Date()
-      const todayStr = today.toISOString().split('T')[0]
+      const dateStr = date || formatWorkDateKey(getBusinessDayBoundaries().businessDay)
 
-      const { data, error: fetchError } = await getVehicleOperationStatus(vehicleId, todayStr)
+      const { data, error: fetchError } = await getVehicleOperationStatus(vehicleId, dateStr)
 
       if (fetchError) {
         setError(`稼働状況の取得に失敗: ${fetchError.message}`)
@@ -206,8 +209,7 @@ export function VehicleOperationStatusModal({
   }
 
   const getTodayDateString = () => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
+    return formatWorkDateKey(getBusinessDayBoundaries().businessDay)
   }
 
   return (

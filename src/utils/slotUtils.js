@@ -226,3 +226,56 @@ export function findEarliestAvailableSlotAcrossVehicles(
 
   return earliestSlot
 }
+
+/**
+ * 指定開始〜所要時間の半開区間 [start, start+duration) が、その車両の既存スロットと重ならないか。
+ * 営業時間（18:00〜翌06:00 = 48 行）を超える場合も空きなし。
+ */
+export function isExactTimeFreeOnVehicle(slots, startAt, duration) {
+  if (!startAt || !duration) return false
+
+  const startRow = dateToRowIndex(startAt)
+  const requiredRows = minutesToRows(duration)
+  if (startRow < 0 || startRow > 47) return false
+  if (startRow + requiredRows - 1 > 47) return false
+
+  const start = startAt.getTime()
+  const end = start + duration * 60 * 1000
+  for (const slot of slots || []) {
+    const slotStart = new Date(slot.start_at).getTime()
+    const slotEnd = new Date(slot.end_at).getTime()
+    if (start < slotEnd && end > slotStart) return false
+  }
+  return true
+}
+
+/**
+ * 指定時刻ちょうどに載せられる稼働中の車両を探す。見つからなければ null。
+ * 「最短の空き」ではなく、開始時刻が startAt と一致する場合のみ返す。
+ */
+export function findExactAvailableVehicle(
+  vehicles,
+  allSlots,
+  startAt,
+  duration,
+  operationStatusesMap = {}
+) {
+  if (!vehicles?.length || !startAt || !duration) return null
+
+  const slotsByVehicle = new Map()
+  for (const slot of allSlots || []) {
+    const id = slot.vehicle_id
+    if (!slotsByVehicle.has(id)) slotsByVehicle.set(id, [])
+    slotsByVehicle.get(id).push(slot)
+  }
+
+  for (const vehicle of vehicles) {
+    const statuses = operationStatusesMap[vehicle.id] || []
+    if (!isVehicleOperational(vehicle.id, startAt, statuses)) continue
+    const vehicleSlots = slotsByVehicle.get(vehicle.id) || []
+    if (!isExactTimeFreeOnVehicle(vehicleSlots, startAt, duration)) continue
+    return { vehicleId: vehicle.id, startAt }
+  }
+
+  return null
+}

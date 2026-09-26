@@ -6,15 +6,29 @@ import { OrderFormModal } from './OrderFormModal'
 import { OrderCardList } from './OrderCardList'
 import { VehicleOperationStatusModal } from './VehicleOperationStatusModal'
 import { DispatchHeader } from './DispatchBoard/DispatchHeader'
+import { DispatchNightReservations } from './DispatchBoard/DispatchNightReservations'
 import { DispatchStatusLegend } from './DispatchBoard/DispatchStatusLegend'
 import { VehicleSelectDialog } from './DispatchBoard/VehicleSelectDialog'
 import { useDispatchData } from '@/hooks/useDispatchData'
+import { useDispatchNight } from '@/hooks/useDispatchNight'
 import { useDispatchDnD } from '@/hooks/useDispatchDnD'
+import { useReservations } from '@/hooks/useReservations'
 import { useToast } from '@/contexts/ToastContext'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from '@/lib/queryClient'
 import { getOrderById } from '@/services/orderService'
-import { createSlot, getSlotsByOrderId } from '@/services/slotService'
-import { findAutoPlacementSlot } from '@/lib/orderPlacement'
+import { createSlot, getSlotsByOrderId, getSlotsInRange } from '@/services/slotService'
+import { placeReservationOnTimeline } from '@/lib/reservation/placeReservation'
+import { isReservationLinked } from '@/lib/reservation/reservationLink'
+import { getVehicleOperationStatuses } from '@/services/vehicleOperationService'
+import { computeDesiredStartTime, findAutoPlacementSlot } from '@/lib/orderPlacement'
 import { detectAllConflicts } from '@/lib/slotConflictUtils'
+import { filterOrdersForDispatchNight } from '@/lib/dispatch/filterOrdersForDispatchNight'
+import {
+  filterReservationsInReceptionNight,
+  getTonightListFilters,
+} from '@/lib/reservation/tonightReservations'
+import { getBusinessDayKey, getNightRangeFromWorkDateKey, parseWorkDateKey } from '@/utils/businessDayUtils'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Center } from '@astryxdesign/core/Center'
@@ -28,11 +42,21 @@ import './DispatchBoard.css'
 export function DispatchBoard() {
   const isMobile = useMediaQuery('(max-width: 767px)')
   const { showToast } = useToast()
+  const queryClient = useQueryClient()
+  const {
+    nightDate,
+    isCurrentNight,
+    setNightDate,
+    goPrev,
+    goNext,
+    goToday,
+  } = useDispatchNight()
 
   const {
     orders,
     vehicles,
     slots,
+    slotsNight,
     operationStatuses,
     loading,
     error,
@@ -40,20 +64,56 @@ export function DispatchBoard() {
     setSlots,
     loadData,
     loadSlots,
-    loadOperationStatuses,
+    syncNightOperations,
     earliestAvailableTime,
     businessDayText,
-  } = useDispatchData()
+  } = useDispatchData(nightDate)
+
+  const nightOrders = useMemo(
+    () => filterOrdersForDispatchNight(orders, nightDate, { isCurrentNight }),
+    [orders, nightDate, isCurrentNight]
+  )
+  const reservationFilters = useMemo(() => getTonightListFilters(nightDate), [nightDate])
+  const reservationsQuery = useReservations(reservationFilters, { enabled: Boolean(nightDate) })
+  const nightReservations = useMemo(
+    () => filterReservationsInReceptionNight(reservationsQuery.data, nightDate),
+    [reservationsQuery.data, nightDate]
+  )
+  const unplacedReservations = useMemo(
+    () => nightReservations.filter((row) => !isReservationLinked(row, orders)),
+    [nightReservations, orders]
+  )
+  const businessDay = useMemo(() => parseWorkDateKey(nightDate) || new Date(), [nightDate])
+  const nightReferenceTime = useMemo(() => {
+    if (isCurrentNight) return null
+    const date = parseWorkDateKey(nightDate)
+    if (!date) return null
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 20, 0, 0, 0)
+  }, [isCurrentNight, nightDate])
 
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (!selectedOrder?.id) return
+    const latest = orders.find((row) => row.id === selectedOrder.id)
+    if (!latest) return
+    if (
+      latest.scheduled_at !== selectedOrder.scheduled_at ||
+      latest.status !== selectedOrder.status
+    ) {
+      setSelectedOrder(latest)
+    }
+  }, [orders, selectedOrder])
   const [isOperationStatusModalOpen, setIsOperationStatusModalOpen] = useState(false)
   const [isVehicleSelectDialogOpen, setIsVehicleSelectDialogOpen] = useState(false)
   const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null)
 
   const pendingCount = useMemo(
-    () => orders.filter((o) => o.status === 'UNASSIGNED' || o.status === 'TENTATIVE').length,
-    [orders]
+    () =>
+      nightOrders.filter((o) => o.status === 'UNASSIGNED' || o.status === 'TENTATIVE').length +
+      unplacedReservations.length,
+    [nightOrders, unplacedReservations]
   )
 
   const conflictCount = useMemo(() => detectAllConflicts(slots).conflictIds.size, [slots])
@@ -64,6 +124,39 @@ export function DispatchBoard() {
     })
   )
 
+  const handleReservationDrop = async (reservation, vehicleId, startAt) => {
+    try {
+      const result = await placeReservationOnTimeline({
+        reservation,
+        vehicles,
+        slots,
+        operationStatuses,
+        startAt,
+        vehicleId,
+        existingOrders: orders,
+      })
+      if (result.error) throw result.error
+      if (result.order) {
+        setOrders((prev) => {
+          if (prev.some((row) => row.id === result.order.id)) {
+            return prev.map((row) => (row.id === result.order.id ? result.order : row))
+          }
+          return [result.order, ...prev]
+        })
+      }
+      if (result.slot) {
+        setSlots((prev) =>
+          prev.some((row) => row.id === result.slot.id) ? prev : [...prev, result.slot]
+        )
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.reservations.all })
+      return Boolean(result.slot)
+    } catch (error) {
+      showToast(error?.message || '予約の配置に失敗しました', 'error')
+      return false
+    }
+  }
+
   const {
     dragOverPosition,
     draggingSlotVehicleId,
@@ -71,7 +164,16 @@ export function DispatchBoard() {
     handleDragOver,
     handleDragEnd,
     handleDragCancel,
-  } = useDispatchDnD({ vehicles, slots, orders, operationStatuses, setSlots, setOrders })
+  } = useDispatchDnD({
+    vehicles,
+    slots,
+    orders: nightOrders,
+    operationStatuses,
+    setSlots,
+    setOrders,
+    businessDay,
+    onReservationDrop: handleReservationDrop,
+  })
 
   const autoPlaceAttemptedRef = useRef(new Set())
 
@@ -80,6 +182,11 @@ export function DispatchBoard() {
     try {
       const { data: existingSlots } = await getSlotsByOrderId(order.id)
       if (existingSlots?.length) {
+        const slotNight = getBusinessDayKey(existingSlots[0].start_at)
+        if (slotNight && slotNight !== nightDate) {
+          setNightDate(slotNight)
+          return true
+        }
         setSlots((prev) => {
           const next = [...prev]
           for (const slot of existingSlots) {
@@ -99,17 +206,33 @@ export function DispatchBoard() {
         return false
       }
 
+      const placementOrder = latestOrder ?? order
+      const targetNight = getBusinessDayKey(computeDesiredStartTime(placementOrder))
+      if (!targetNight) return false
+
+      const { start, end } = getNightRangeFromWorkDateKey(targetNight)
+      const [{ data: nightSlots }, opsResult] = await Promise.all([
+        getSlotsInRange(start, end),
+        getVehicleOperationStatuses(
+          vehicles.map((vehicle) => vehicle.id),
+          targetNight
+        ),
+      ])
+
       const { availableSlot, totalDuration } = findAutoPlacementSlot({
-        order: latestOrder ?? order,
+        order: placementOrder,
         vehicles,
-        slots,
-        operationStatuses,
+        slots: nightSlots || [],
+        operationStatuses: opsResult.data || {},
       })
 
       if (!availableSlot) {
         if (!silent) {
+          const scheduled = (latestOrder ?? order).order_type === 'SCHEDULED'
           showToast(
-            '配置可能な時間が見つかりませんでした。未確定一覧から手動で配置してください。',
+            scheduled
+              ? '指定時刻に空きがありません。別の時刻を選んでください。'
+              : '配置可能な時間が見つかりませんでした。未確定一覧から手動で配置してください。',
             'warning'
           )
         }
@@ -138,15 +261,19 @@ export function DispatchBoard() {
       }
       if (!slot) return false
 
-      setSlots((prev) => {
-        const existingIndex = prev.findIndex((row) => row.id === slot.id)
-        if (existingIndex >= 0) {
-          const updated = [...prev]
-          updated[existingIndex] = slot
-          return updated
-        }
-        return [...prev, slot]
-      })
+      if (targetNight === nightDate) {
+        setSlots((prev) => {
+          const existingIndex = prev.findIndex((row) => row.id === slot.id)
+          if (existingIndex >= 0) {
+            const updated = [...prev]
+            updated[existingIndex] = slot
+            return updated
+          }
+          return [...prev, slot]
+        })
+      } else {
+        setNightDate(targetNight)
+      }
       if (latestOrder) {
         setOrders((prev) =>
           prev.map((row) =>
@@ -154,7 +281,13 @@ export function DispatchBoard() {
           )
         )
       }
-      if (!silent) showToast('依頼をタイムラインに仮配置しました', 'success')
+      if (!silent) {
+        const scheduled = (latestOrder ?? order).order_type === 'SCHEDULED'
+        showToast(
+          scheduled ? '指定時刻に仮配置しました' : '依頼をタイムラインに仮配置しました',
+          'success'
+        )
+      }
       return true
     } catch (autoPlaceError) {
       if (import.meta.env.DEV) {
@@ -173,6 +306,7 @@ export function DispatchBoard() {
   })
 
   useEffect(() => {
+    if (!isCurrentNight) return
     if (loading || vehicles.length === 0) return
     const slotted = new Set(slots.map((slot) => slot.order_id))
     for (const order of orders) {
@@ -183,12 +317,81 @@ export function DispatchBoard() {
       autoPlaceAttemptedRef.current.add(order.id)
       void autoPlaceOrderRef.current(order, { silent: true })
     }
-  }, [loading, vehicles.length, orders, slots])
+  }, [isCurrentNight, loading, vehicles.length, orders, slots])
+
+  const reservationPlaceAttemptedRef = useRef(new Set())
+  useEffect(() => {
+    if (loading || vehicles.length === 0) return
+    if (slotsNight !== nightDate) return
+    const pending = unplacedReservations.filter(
+      (row) => !reservationPlaceAttemptedRef.current.has(row.id)
+    )
+    if (pending.length === 0) return
+
+    let cancelled = false
+    const run = async () => {
+      let workingSlots = slots
+      for (const reservation of pending) {
+        if (cancelled) return
+        reservationPlaceAttemptedRef.current.add(reservation.id)
+        try {
+          const result = await placeReservationOnTimeline({
+            reservation,
+            vehicles,
+            slots: workingSlots,
+            operationStatuses,
+            existingOrders: orders,
+          })
+          if (result.skipped || result.error) continue
+          if (result.order) {
+            setOrders((prev) => {
+              if (prev.some((row) => row.id === result.order.id)) return prev
+              return [result.order, ...prev]
+            })
+          }
+          if (result.slot) {
+            workingSlots = [...workingSlots, result.slot]
+            setSlots((prev) =>
+              prev.some((row) => row.id === result.slot.id) ? prev : [...prev, result.slot]
+            )
+          }
+        } catch (error) {
+          if (import.meta.env.DEV) console.error('Reservation auto-place failed:', error)
+        }
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.reservations.all })
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    loading,
+    vehicles,
+    slotsNight,
+    nightDate,
+    unplacedReservations,
+    slots,
+    orders,
+    operationStatuses,
+    queryClient,
+    setOrders,
+    setSlots,
+  ])
 
   const handleOrderCreated = async (newOrder) => {
     setOrders((prev) => [newOrder, ...prev])
     setIsModalOpen(false)
     await autoPlaceOrder(newOrder)
+  }
+
+  const handleReservationSaved = (reservation) => {
+    setIsModalOpen(false)
+    if (!reservation?.order_id) {
+      showToast('翌日以降の依頼を予約台帳に保存しました', 'success')
+    }
+    const key = getBusinessDayKey(reservation?.reserved_at)
+    if (key) setNightDate(key)
   }
 
   const handleOrderSelect = (order) => {
@@ -221,7 +424,7 @@ export function DispatchBoard() {
     }
     if (vehicles.length > 0) {
       await loadSlots(vehicles)
-      await loadOperationStatuses(vehicles)
+      await syncNightOperations(vehicles)
     }
   }
 
@@ -262,8 +465,12 @@ export function DispatchBoard() {
           <DispatchHeader
             businessDayText={businessDayText}
             earliestAvailableTime={earliestAvailableTime}
+            isCurrentNight={isCurrentNight}
             vehicles={vehicles}
             conflictCount={conflictCount}
+            onPrevNight={goPrev}
+            onNextNight={goNext}
+            onToday={goToday}
             onOpenSettings={() => {
               if (vehicles.length === 0) return
               if (vehicles.length === 1) {
@@ -292,8 +499,12 @@ export function DispatchBoard() {
           <div className="dispatch-body">
             {!isMobile && vehicles.length > 0 ? (
               <aside className="dispatch-sidebar">
+                <DispatchNightReservations
+                  reservations={unplacedReservations}
+                  nightDate={nightDate}
+                />
                 <OrderCardList
-                  orders={orders}
+                  orders={nightOrders}
                   onOrderSelect={handleOrderSelect}
                   selectedOrderId={selectedOrder?.id}
                   defaultExpanded
@@ -313,7 +524,7 @@ export function DispatchBoard() {
               ) : (
                 <TimelineGrid
                   vehicles={vehicles}
-                  orders={orders}
+                  orders={nightOrders}
                   slots={slots}
                   operationStatuses={operationStatuses}
                   dragOverPosition={dragOverPosition}
@@ -322,6 +533,9 @@ export function DispatchBoard() {
                   onOrderSelect={handleOrderSelect}
                   onOrderUpdate={handleOrderUpdate}
                   onSlotsUpdate={loadSlots}
+                  nightDate={nightDate}
+                  referenceTime={nightReferenceTime}
+                  showNowLine={isCurrentNight}
                 />
               )}
             </main>
@@ -333,8 +547,12 @@ export function DispatchBoard() {
 
           {isMobile && vehicles.length > 0 && pendingCount > 0 ? (
             <div className="dispatch-mobile-queue">
+              <DispatchNightReservations
+                reservations={unplacedReservations}
+                nightDate={nightDate}
+              />
               <OrderCardList
-                orders={orders}
+                orders={nightOrders}
                 onOrderSelect={handleOrderSelect}
                 selectedOrderId={selectedOrder?.id}
                 defaultExpanded
@@ -360,6 +578,7 @@ export function DispatchBoard() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onOrderCreated={handleOrderCreated}
+        onReservationSaved={handleReservationSaved}
       />
       <VehicleSelectDialog
         open={isVehicleSelectDialogOpen}
@@ -379,11 +598,12 @@ export function DispatchBoard() {
         }}
         onStatusUpdated={() => {
           if (vehicles.length > 0) {
-            loadOperationStatuses(vehicles)
+            syncNightOperations(vehicles)
           }
         }}
         vehicleId={selectedVehicleForStatus?.id}
         vehicleName={selectedVehicleForStatus?.name}
+        date={nightDate}
       />
     </>
   )

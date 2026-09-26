@@ -2,13 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/utils/slotUtils', () => ({
   findEarliestAvailableSlotAcrossVehicles: vi.fn(() => null),
+  findExactAvailableVehicle: vi.fn(() => null),
 }))
 vi.mock('@/services/routeService', () => ({
   calculateBuffer: vi.fn(() => 10),
 }))
 
 import { computeDesiredStartTime, findAutoPlacementSlot } from './orderPlacement'
-import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
+import {
+  findEarliestAvailableSlotAcrossVehicles,
+  findExactAvailableVehicle,
+} from '@/utils/slotUtils'
 
 describe('computeDesiredStartTime', () => {
   it('"NOW" within business hours -> next 15-min row', () => {
@@ -58,20 +62,22 @@ describe('findAutoPlacementSlot', () => {
     vi.clearAllMocks()
   })
 
-  it('passes preferExactTime=true only for SCHEDULED with scheduled_at', () => {
+  it('uses exact-time placement for SCHEDULED with scheduled_at', () => {
     findAutoPlacementSlot({
       order: { order_type: 'SCHEDULED', scheduled_at: '2025-06-02T13:30:00.000Z' },
-      vehicles: [],
+      vehicles: [{ id: 'v1' }],
       slots: [],
       operationStatuses: {},
       now: new Date(2025, 5, 1, 22, 0),
     })
-    expect(findEarliestAvailableSlotAcrossVehicles).toHaveBeenCalledTimes(1)
-    const args = findEarliestAvailableSlotAcrossVehicles.mock.calls[0]
-    expect(args[4]).toBe(true)
+    expect(findExactAvailableVehicle).toHaveBeenCalledTimes(1)
+    expect(findEarliestAvailableSlotAcrossVehicles).not.toHaveBeenCalled()
+    const args = findExactAvailableVehicle.mock.calls[0]
+    expect(args[2].toISOString()).toBe('2025-06-02T13:30:00.000Z')
+    expect(args[3]).toBe(40)
   })
 
-  it('preferExactTime=false for NOW orders', () => {
+  it('uses earliest-available for NOW orders', () => {
     findAutoPlacementSlot({
       order: { order_type: 'NOW' },
       vehicles: [],
@@ -79,6 +85,7 @@ describe('findAutoPlacementSlot', () => {
       operationStatuses: {},
       now: new Date(2025, 5, 1, 22, 0),
     })
+    expect(findExactAvailableVehicle).not.toHaveBeenCalled()
     expect(findEarliestAvailableSlotAcrossVehicles.mock.calls[0][4]).toBe(false)
   })
 
