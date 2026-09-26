@@ -11,6 +11,7 @@
  */
 
 import { getOperatingHours } from '@/lib/operatingHours'
+import { isUnfilledHold } from '@/lib/holdSlot'
 import { reservationIdFromOrder, withReservationMark } from '@/lib/reservation/reservationLink'
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { getRevertStatus } from '@/utils/orderStatusUtils'
@@ -221,6 +222,10 @@ export async function recalculateOrderRoute({ order, formData, relatedVehicle, d
  * @returns {Promise<Object>} 更新後の order
  */
 export async function confirmOrder({ order, vehicles, slots, deps }) {
+  if (isUnfilledHold(order)) {
+    throw new Error('出発地と目的地を入力してから確定してください')
+  }
+
   const { supabase, getOrderById, calculateBuffer, createSlot, confirmSlot, updateOrder } = deps
 
   const { data: existingSlots, error: slotsError } = await supabase

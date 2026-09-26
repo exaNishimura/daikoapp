@@ -16,7 +16,8 @@ import { useReservations } from '@/hooks/useReservations'
 import { useToast } from '@/contexts/ToastContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/queryClient'
-import { getOrderById } from '@/services/orderService'
+import { cancelOrder, createOrder, getOrderById } from '@/services/orderService'
+import { HOLD_ADDRESS } from '@/lib/holdSlot'
 import { createSlot, getSlotsByOrderId, getSlotsInRange } from '@/services/slotService'
 import { placeReservationOnTimeline } from '@/lib/reservation/placeReservation'
 import { isReservationLinked } from '@/lib/reservation/reservationLink'
@@ -29,7 +30,11 @@ import {
   filterReservationsInReceptionNight,
   getTonightListFilters,
 } from '@/lib/reservation/tonightReservations'
-import { getBusinessDayKey, getNightRangeFromWorkDateKey, parseWorkDateKey } from '@/utils/businessDayUtils'
+import {
+  getBusinessDayKey,
+  getNightRangeFromWorkDateKey,
+  parseWorkDateKey,
+} from '@/utils/businessDayUtils'
 import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Center } from '@astryxdesign/core/Center'
@@ -44,14 +49,7 @@ export function DispatchBoard() {
   const isMobile = useMediaQuery('(max-width: 767px)')
   const { showToast } = useToast()
   const queryClient = useQueryClient()
-  const {
-    nightDate,
-    isCurrentNight,
-    setNightDate,
-    goPrev,
-    goNext,
-    goToday,
-  } = useDispatchNight()
+  const { nightDate, isCurrentNight, setNightDate, goPrev, goNext, goToday } = useDispatchNight()
 
   const {
     orders,
@@ -185,9 +183,11 @@ export function DispatchBoard() {
   const slotsRef = useRef(slots)
   const ordersRef = useRef(orders)
   const operationStatusesRef = useRef(operationStatuses)
-  slotsRef.current = slots
-  ordersRef.current = orders
-  operationStatusesRef.current = operationStatuses
+  useEffect(() => {
+    slotsRef.current = slots
+    ordersRef.current = orders
+    operationStatusesRef.current = operationStatuses
+  })
 
   const autoPlaceOrder = async (order, { silent = false } = {}) => {
     if (vehicles.length === 0) return false
@@ -437,6 +437,46 @@ export function DispatchBoard() {
     setSelectedOrder(order)
   }
 
+  const handleHoldReject = (reason) => {
+    showToast(reason, 'error')
+  }
+
+  const handleHoldRange = async ({ vehicleId, startAt, endAt }) => {
+    const durationMin = Math.round((endAt.getTime() - startAt.getTime()) / 60000)
+    const { data: order, error } = await createOrder({
+      order_type: 'SCHEDULED',
+      scheduled_at: startAt.toISOString(),
+      pickup_address: HOLD_ADDRESS,
+      dropoff_address: HOLD_ADDRESS,
+      status: 'UNASSIGNED',
+      base_duration_min: durationMin,
+      buffer_min: 0,
+    })
+    if (error || !order) {
+      showToast('枠の作成に失敗しました', 'error')
+      return
+    }
+
+    const { data: slot, error: slotError } = await createSlot({
+      order_id: order.id,
+      vehicle_id: vehicleId,
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+      status: 'TENTATIVE',
+    })
+    if (slotError || !slot) {
+      await cancelOrder(order.id)
+      showToast('枠の作成に失敗しました', 'error')
+      return
+    }
+
+    const heldOrder = { ...order, status: 'TENTATIVE' }
+    setOrders((prev) => (prev.some((row) => row.id === heldOrder.id) ? prev : [heldOrder, ...prev]))
+    setSlots((prev) => (prev.some((row) => row.id === slot.id) ? prev : [...prev, slot]))
+    setSelectedOrder(heldOrder)
+    showToast('枠を押さえました。住所を入力してください', 'success')
+  }
+
   const handleOrderUpdate = async (updatedOrder) => {
     setOrders((prev) => prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o)))
     if (selectedOrder?.id === updatedOrder.id) {
@@ -575,6 +615,8 @@ export function DispatchBoard() {
                   nightDate={nightDate}
                   referenceTime={nightReferenceTime}
                   showNowLine={isCurrentNight}
+                  onHoldRange={handleHoldRange}
+                  onHoldReject={handleHoldReject}
                 />
               )}
             </main>

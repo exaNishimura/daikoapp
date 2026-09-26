@@ -234,10 +234,7 @@ export function InvoiceIssueTab({ year, month }) {
         <HStack gap={3} wrap="wrap" vAlign="start" hAlign="between">
           <HStack gap={3} wrap="wrap">
             <SummaryStat label="対象企業" value={`${selectedCount} / ${rows.length} 社`} />
-            <SummaryStat
-              label="合計金額"
-              value={`¥${totalAmount.toLocaleString('ja-JP')}`}
-            />
+            <SummaryStat label="合計金額" value={`¥${totalAmount.toLocaleString('ja-JP')}`} />
           </HStack>
           <Button
             variant="primary"

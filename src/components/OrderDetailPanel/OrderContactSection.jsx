@@ -19,6 +19,7 @@ function ContactEditFields({ formData, handleChange }) {
         htmlName="contact_phone"
         value={formData.contact_phone}
         onChange={namedChange(handleChange, 'contact_phone')}
+        placeholder="連絡先の電話番号"
         width="100%"
         size={FORM_FIELD_SIZE}
       />
@@ -27,6 +28,7 @@ function ContactEditFields({ formData, handleChange }) {
         htmlName="car_model"
         value={formData.car_model}
         onChange={namedChange(handleChange, 'car_model')}
+        placeholder="車の種類"
         width="100%"
         size={FORM_FIELD_SIZE}
       />
@@ -35,6 +37,7 @@ function ContactEditFields({ formData, handleChange }) {
         htmlName="car_plate"
         value={formData.car_plate}
         onChange={namedChange(handleChange, 'car_plate')}
+        placeholder="ナンバープレート"
         width="100%"
         size={FORM_FIELD_SIZE}
       />
@@ -43,6 +46,7 @@ function ContactEditFields({ formData, handleChange }) {
         htmlName="car_color"
         value={formData.car_color}
         onChange={namedChange(handleChange, 'car_color')}
+        placeholder="車体の色"
         width="100%"
         size={FORM_FIELD_SIZE}
       />
@@ -51,6 +55,7 @@ function ContactEditFields({ formData, handleChange }) {
         htmlName="parking_note"
         value={formData.parking_note}
         onChange={namedChange(handleChange, 'parking_note')}
+        placeholder="駐車位置や目印"
         rows={3}
         width="100%"
         size={FORM_FIELD_SIZE}

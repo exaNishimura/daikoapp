@@ -137,8 +137,7 @@ function otsuTaxFormula(taxableIncome) {
 }
 
 function otsuSubTax(scaledAmount) {
-  const taxable =
-    scaledAmount - salaryIncomeDeduction(scaledAmount) - basicDeduction(scaledAmount)
+  const taxable = scaledAmount - salaryIncomeDeduction(scaledAmount) - basicDeduction(scaledAmount)
   return floorYen(otsuTaxFormula(taxable))
 }
 

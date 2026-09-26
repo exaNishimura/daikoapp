@@ -11,6 +11,7 @@ import { OrderInfoSection } from './OrderDetailPanel/OrderInfoSection'
 import { OrderRouteSection } from './OrderDetailPanel/OrderRouteSection'
 import { OrderContactSection } from './OrderDetailPanel/OrderContactSection'
 import { OrderActionFooter } from './OrderDetailPanel/OrderActionFooter'
+import { isUnfilledHold } from '@/lib/holdSlot'
 
 export function OrderDetailPanel({
   order,
@@ -52,7 +53,7 @@ export function OrderDetailPanel({
       height="fill"
       padding={4}
       header={
-        <HStack paddingBlock={2} hAlign="between" vAlign="center">
+        <HStack paddingBlock={2} paddingInline={4} hAlign="between" vAlign="center">
           <Heading level={2}>依頼詳細</Heading>
           <IconButton
             size="sm"
@@ -105,6 +106,7 @@ export function OrderDetailPanel({
             loading={loading}
             advanceStatus={advanceStatus}
             hasConflict={conflictMessages.length > 0}
+            needsAddress={isUnfilledHold(order)}
             onSave={handleSave}
             onCancelEdit={() => setEditing(false)}
             onStartEdit={() => setEditing(true)}

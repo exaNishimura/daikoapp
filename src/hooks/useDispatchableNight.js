@@ -8,7 +8,11 @@ import { useShiftsByDate } from '@/hooks/useShifts'
 import { useSlotsInRange } from '@/hooks/useDispatchSlots'
 import { useVehicleOperationStatuses } from '@/hooks/useVehicleOperations'
 import { useVehicles } from '@/hooks/useVehicles'
-import { formatWorkDateKey, getBusinessDayBoundaries, getNightRangeFromWorkDateKey } from '@/utils/businessDayUtils'
+import {
+  formatWorkDateKey,
+  getBusinessDayBoundaries,
+  getNightRangeFromWorkDateKey,
+} from '@/utils/businessDayUtils'
 
 const EMPTY_VEHICLES = []
 const EMPTY_MAP = {}
@@ -27,9 +31,7 @@ export function useDispatchableNight(nightDate, options = {}) {
   const vehicles = vehiclesQuery.data ?? EMPTY_VEHICLES
   const vehicleIds = vehicles.map((vehicle) => vehicle.id)
 
-  const currentNightKey = formatWorkDateKey(
-    getBusinessDayBoundaries(now ?? new Date()).businessDay
-  )
+  const currentNightKey = formatWorkDateKey(getBusinessDayBoundaries(now ?? new Date()).businessDay)
   const isCurrentNight = Boolean(nightDate) && nightDate === currentNightKey
   const isFutureNight = Boolean(nightDate) && nightDate > currentNightKey
 

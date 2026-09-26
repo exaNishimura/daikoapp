@@ -9,7 +9,11 @@ import {
 import { getShiftsByDate } from '@/services/shiftService'
 import { supabase } from '@/lib/supabase'
 import { resolveNightOperationStatuses } from '@/lib/reservation/dispatchableNight'
-import { formatWorkDateKey, getBusinessDayBoundaries, getNightRangeFromWorkDateKey } from '@/utils/businessDayUtils'
+import {
+  formatWorkDateKey,
+  getBusinessDayBoundaries,
+  getNightRangeFromWorkDateKey,
+} from '@/utils/businessDayUtils'
 import { getEarliestAvailableTimeWithSlots } from '@/utils/earliestTimeUtils'
 import { formatBusinessDay } from '@/utils/timeUtils'
 
@@ -241,13 +245,7 @@ export function useDispatchData(nightDate) {
       operationStatusChannel.unsubscribe()
       shiftsChannel.unsubscribe()
     }
-  }, [
-    vehicles,
-    nightDate,
-    loadVehiclesAndOrders,
-    loadSlots,
-    syncNightOperations,
-  ])
+  }, [vehicles, nightDate, loadVehiclesAndOrders, loadSlots, syncNightOperations])
 
   return {
     orders,

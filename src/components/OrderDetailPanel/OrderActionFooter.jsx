@@ -11,6 +11,7 @@ export function OrderActionFooter({
   loading,
   advanceStatus,
   hasConflict = false,
+  needsAddress = false,
   onSave,
   onCancelEdit,
   onStartEdit,
@@ -54,9 +55,15 @@ export function OrderActionFooter({
             <Button
               variant="primary"
               onClick={onConfirm}
-              isDisabled={loading || hasConflict}
+              isDisabled={loading || hasConflict || needsAddress}
               width="100%"
-              tooltip={hasConflict ? '時間の重複を解消してから確定してください' : undefined}
+              tooltip={
+                needsAddress
+                  ? '出発地と目的地を入力してから確定してください'
+                  : hasConflict
+                    ? '時間の重複を解消してから確定してください'
+                    : undefined
+              }
               label="確定"
             />
           ) : null}

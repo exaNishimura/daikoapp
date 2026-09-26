@@ -347,8 +347,7 @@ export function useDispatchDnD({
         setOrders((prev) =>
           prev.map((row) => (row.id === order.id ? { ...row, scheduled_at: scheduledAt } : row))
         )
-        const reservationId =
-          reservationIdFromOrder(latestOrder) || reservationIdFromOrder(order)
+        const reservationId = reservationIdFromOrder(latestOrder) || reservationIdFromOrder(order)
         if (reservationId) {
           await updateReservation(reservationId, { reserved_at: scheduledAt })
         } else {

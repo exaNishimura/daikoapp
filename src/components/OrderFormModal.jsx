@@ -160,7 +160,7 @@ export function OrderFormModal({
                     ? { type: 'error', message: errors.pickup_location }
                     : undefined
                 }
-                placeholder="例: モンガータ"
+                placeholder="店名や施設名"
                 size={FORM_FIELD_SIZE}
                 width="100%"
               />
@@ -171,7 +171,7 @@ export function OrderFormModal({
                 value={formData.pickup_address}
                 onChange={handlePickupAddressChange}
                 error={errors.pickup_address}
-                placeholder="例: 三重県鈴鹿市..."
+                placeholder="市区町村から番地まで"
                 required
               />
 
@@ -181,7 +181,7 @@ export function OrderFormModal({
                 value={formData.dropoff_address}
                 onChange={handleDropoffAddressChange}
                 error={errors.dropoff_address}
-                placeholder="例: 三重県鈴鹿市..."
+                placeholder="市区町村から番地まで"
                 required
               />
 
@@ -203,7 +203,7 @@ export function OrderFormModal({
                         label={`経由地 ${index + 1}`}
                         value={waypoint}
                         onChange={(address) => updateWaypoint(index, address)}
-                        placeholder="例: 三重県鈴鹿市..."
+                        placeholder="市区町村から番地まで"
                       />
                     </StackItem>
                     <IconButton
@@ -225,7 +225,7 @@ export function OrderFormModal({
                 htmlName="contact_phone"
                 value={formData.contact_phone}
                 onChange={namedChange(handleChange, 'contact_phone')}
-                placeholder="例: 090-1234-5678"
+                placeholder="連絡先の電話番号"
                 isRequired={isFutureNight}
                 size={FORM_FIELD_SIZE}
                 width="100%"
@@ -245,7 +245,7 @@ export function OrderFormModal({
                       htmlName="car_model"
                       value={formData.car_model}
                       onChange={namedChange(handleChange, 'car_model')}
-                      placeholder="例: プリウス"
+                      placeholder="車の種類"
                       size={FORM_FIELD_SIZE}
                       width="100%"
                     />
@@ -256,7 +256,7 @@ export function OrderFormModal({
                       htmlName="car_color"
                       value={formData.car_color}
                       onChange={namedChange(handleChange, 'car_color')}
-                      placeholder="例: 白"
+                      placeholder="車体の色"
                       size={FORM_FIELD_SIZE}
                       width="100%"
                     />
@@ -267,7 +267,7 @@ export function OrderFormModal({
                   htmlName="car_plate"
                   value={formData.car_plate}
                   onChange={namedChange(handleChange, 'car_plate')}
-                  placeholder="例: 三重500あ1234"
+                  placeholder="ナンバープレート"
                   size={FORM_FIELD_SIZE}
                   width="100%"
                 />
@@ -277,7 +277,7 @@ export function OrderFormModal({
                   value={formData.parking_note}
                   onChange={namedChange(handleChange, 'parking_note')}
                   rows={3}
-                  placeholder="駐車位置やその他のメモ..."
+                  placeholder="駐車位置や目印"
                   size={FORM_FIELD_SIZE}
                   width="100%"
                 />

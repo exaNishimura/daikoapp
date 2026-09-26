@@ -34,12 +34,7 @@ export function ReservationTonightDialog({ open, workDate, reservations, onClose
   }
 
   return (
-    <Dialog
-      isOpen={open}
-      onOpenChange={handleOpenChange}
-      purpose="info"
-      maxHeight="90dvh"
-    >
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info" maxHeight="90dvh">
       <Layout
         padding={4}
         header={<DialogHeader title={`本日の予約 ${count}件`} onOpenChange={handleOpenChange} />}

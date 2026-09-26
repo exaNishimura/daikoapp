@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  isReservationLinked,
-  reservationIdFromOrder,
-  withReservationMark,
-} from './reservationLink'
+import { isReservationLinked, reservationIdFromOrder, withReservationMark } from './reservationLink'
 
 describe('reservationLink', () => {
   it('stamps and reads a reservation mark', () => {
@@ -17,10 +13,9 @@ describe('reservationLink', () => {
     expect(isReservationLinked({ id: 'r1', order_id: 'o1' }, [])).toBe(true)
     expect(isReservationLinked({ id: 'r1' }, [])).toBe(false)
     expect(
-      isReservationLinked(
-        { id: '11111111-1111-1111-1111-111111111111' },
-        [{ parking_note: '[RESERVATION:11111111-1111-1111-1111-111111111111]' }]
-      )
+      isReservationLinked({ id: '11111111-1111-1111-1111-111111111111' }, [
+        { parking_note: '[RESERVATION:11111111-1111-1111-1111-111111111111]' },
+      ])
     ).toBe(true)
   })
 })

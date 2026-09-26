@@ -22,6 +22,7 @@ import { useUpdateOrder, useCancelOrder } from '@/hooks/useOrders'
 import { useToast } from '@/contexts/ToastContext'
 import { getOrderConflictMessages } from '@/lib/slotConflictUtils'
 import { visibleParkingNote } from '@/lib/reservation/reservationLink'
+import { isUnfilledHold } from '@/lib/holdSlot'
 
 const buildInitialFormData = (order) => ({
   pickup_location: order.pickup_location || '',
@@ -51,7 +52,7 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
     return vehicles.find((v) => v.id === slots[0].vehicle_id) || null
   }, [vehicles, slots])
 
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(() => isUnfilledHold(order))
   const [formData, setFormData] = useState(() => buildInitialFormData(order))
   const [waitingLocationDuration, setWaitingLocationDuration] = useState(null)
   const [calculatingWaitingDuration, setCalculatingWaitingDuration] = useState(false)
@@ -60,7 +61,7 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
 
   useEffect(() => {
     setFormData(buildInitialFormData(order))
-    setEditing(false)
+    setEditing(isUnfilledHold(order))
   }, [order.id])
 
   const updateOrderMutation = useUpdateOrder()
@@ -189,6 +190,10 @@ export function useOrderDetail({ order, vehicles = [], slots = [], onUpdate, onD
   }, [order, formData, relatedVehicle, actionDeps, onUpdate])
 
   const handleConfirm = useCallback(async () => {
+    if (isUnfilledHold(order)) {
+      showToast('出発地と目的地を入力してから確定してください', 'error')
+      return
+    }
     const conflictMessages = getOrderConflictMessages(order.id, slots, vehicles)
     if (conflictMessages.length > 0) {
       showToast(conflictMessages[0], 'error')

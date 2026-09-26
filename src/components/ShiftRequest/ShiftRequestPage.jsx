@@ -87,7 +87,11 @@ function emptyPayload(defaultStart = defaultShiftStart(), defaultEnd = defaultSh
   }
 }
 
-function resolveBaseHours(payload, fallbackStart = defaultShiftStart(), fallbackEnd = defaultShiftEnd()) {
+function resolveBaseHours(
+  payload,
+  fallbackStart = defaultShiftStart(),
+  fallbackEnd = defaultShiftEnd()
+) {
   return {
     start: isValidTime(payload?.default_start) ? payload.default_start : fallbackStart,
     end: isValidTime(payload?.default_end) ? payload.default_end : fallbackEnd,
@@ -105,7 +109,9 @@ function ShiftRequestForm({ employee, onLogout }) {
   const [success, setSuccess] = useState(null)
 
   const dates = useMemo(() => daysInMonth(month), [month])
-  const defaultStart = isValidTime(payload.default_start) ? payload.default_start : defaultShiftStart()
+  const defaultStart = isValidTime(payload.default_start)
+    ? payload.default_start
+    : defaultShiftStart()
   const defaultEnd = isValidTime(payload.default_end) ? payload.default_end : defaultShiftEnd()
 
   const load = useCallback(async () => {

@@ -96,6 +96,8 @@ export default [
   },
   {
     files: [
+      'shared/**/*.{js,jsx}',
+      'src/lib/operatingHours.js',
       'src/lib/billing/dailyCloseMessage.test.js',
       'src/lib/reservation/buildReservationLineMessage.js',
       'src/lib/reservation/reservationWindowUtils.js',

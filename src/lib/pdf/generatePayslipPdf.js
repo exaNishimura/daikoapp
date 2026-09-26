@@ -111,7 +111,9 @@ export async function downloadPayslipPdf(slip, employeeName) {
   const blob = new Blob([buf], { type: 'application/pdf' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  const ym = String(slip.year_month || '').slice(0, 7).replace('-', '')
+  const ym = String(slip.year_month || '')
+    .slice(0, 7)
+    .replace('-', '')
   a.href = url
   a.download = `payslip-${ym}-${employeeName || 'employee'}.pdf`
   a.click()

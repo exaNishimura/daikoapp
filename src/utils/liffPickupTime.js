@@ -134,7 +134,15 @@ export function formatLiffPickupConfirmMessage(pickupAt, options = {}) {
  */
 export function nextLiffPickupAt(now = new Date()) {
   const { businessStartHour } = getOperatingHours()
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), businessStartHour, 0, 0, 0)
+  const next = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    businessStartHour,
+    0,
+    0,
+    0
+  )
   if (now.getHours() >= businessStartHour) next.setDate(next.getDate() + 1)
   return next
 }

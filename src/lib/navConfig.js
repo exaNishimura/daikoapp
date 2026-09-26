@@ -1,9 +1,4 @@
-import {
-  CalendarDays,
-  Settings2,
-  Truck,
-  Wallet,
-} from 'lucide-react'
+import { CalendarDays, Settings2, Truck, Wallet } from 'lucide-react'
 
 /**
  * ヘッダーメニュー・ダッシュボード共通のナビ構成

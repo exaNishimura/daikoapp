@@ -72,9 +72,7 @@ export function buildPayslipAmounts({
   const grossPay = basePay + allow
   const social = Math.max(0, Math.floor(Number(socialInsurance) || 0))
   const other = Math.max(0, Math.floor(Number(otherDeduction) || 0))
-  const table = normalizeTaxTableType(
-    taxTableType ?? employee?.tax_table_type ?? TAX_TABLE_OTSU
-  )
+  const table = normalizeTaxTableType(taxTableType ?? employee?.tax_table_type ?? TAX_TABLE_OTSU)
   const deps = Math.min(
     5,
     Math.max(0, Math.floor(Number(dependentsCount ?? employee?.dependents_count) || 0))
@@ -142,9 +140,7 @@ export function buildDraftPayslipsForMonth({
       otherDeduction: existing?.other_deduction ?? 0,
       taxTableType: existing?.tax_table_type ?? employee.tax_table_type,
       dependentsCount: existing?.dependents_count ?? employee.dependents_count,
-      withholdingOverride: existing?.withholding_overridden
-        ? existing.withholding_tax
-        : null,
+      withholdingOverride: existing?.withholding_overridden ? existing.withholding_tax : null,
     })
 
     return {

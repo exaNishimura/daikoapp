@@ -10,6 +10,7 @@ import { detectAllConflicts, getSlotConflictTooltip } from '@/lib/slotConflictUt
 import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
 import { getTimelineStartHour } from '@/lib/operatingHours'
 import { TIMELINE_ROW_HEIGHT_PX } from '@/utils/rowUtils'
+import { useTimelineHoldDraw } from '@/hooks/useTimelineHoldDraw'
 import { IconButton } from '@astryxdesign/core/IconButton'
 import { Maximize2, Minimize2 } from 'lucide-react'
 import './TimelineGrid.css'
@@ -28,6 +29,8 @@ export function TimelineGrid({
   nightDate = '',
   referenceTime = null,
   showNowLine = true,
+  onHoldRange,
+  onHoldReject,
 }) {
   const operatingHours = useOperatingHours()
   const timelineStart = getTimelineStartHour()
@@ -45,6 +48,15 @@ export function TimelineGrid({
 
   // スロットデータの取得（propsから取得、なければ内部で管理）
   const slots = propsSlots || []
+  const { preview: holdPreview, beginPointerDown } = useTimelineHoldDraw({
+    scrollerRef: bodyScrollRef,
+    slots,
+    operationStatuses,
+    nightDate,
+    enabled: !draggingSlotVehicleId,
+    onHoldRange,
+    onHoldReject,
+  })
 
   // 現在時刻を1分ごとに更新
   useEffect(() => {
@@ -344,6 +356,8 @@ export function TimelineGrid({
                     operationStatuses={operationStatuses[vehicle.id] || []}
                     columnWidth={isFocused ? '100%' : defaultVehicleColumnWidth}
                     isFocused={isFocused}
+                    holdPreview={holdPreview?.vehicleId === vehicle.id ? holdPreview : null}
+                    onColumnPointerDown={(event) => beginPointerDown(event, vehicle.id)}
                   />
                 )
               })}
@@ -381,6 +395,8 @@ function VehicleColumn({
   operationStatuses = [],
   columnWidth = 'min(40vw, 300px)',
   isFocused = false,
+  holdPreview = null,
+  onColumnPointerDown,
 }) {
   const { blockedBands, shiftStartTime } = useMemo(
     () => buildTimelinePlacementBands(operationStatuses),
@@ -427,6 +443,10 @@ function VehicleColumn({
         isDragPreviewInvalid ? 'drag-over-invalid' : ''
       }`}
       style={{ height: `${totalHeight}px`, width: columnWidth }}
+      onPointerDown={(event) => {
+        if (event.target.closest('.slot-component, button, a, input, textarea, select')) return
+        onColumnPointerDown?.(event)
+      }}
     >
       {timeSlots.map((ts, index) => (
         <div
@@ -441,6 +461,15 @@ function VehicleColumn({
           title: shiftStartTime ? `配置不可（出勤 ${shiftStartTime} 以降に配置可）` : '配置不可',
         })
       )}
+
+      {holdPreview && holdPreview.top >= 0 ? (
+        <div
+          className={`drop-preview-card${holdPreview.invalid ? ' drop-preview-card--invalid' : ''}`}
+          style={{ top: `${holdPreview.top}px`, height: `${holdPreview.height}px` }}
+        >
+          <span className="drop-preview-label">{holdPreview.label}</span>
+        </div>
+      ) : null}
 
       {dragOverPosition && dragOverPosition.top >= 0 && (
         <div

@@ -129,6 +129,11 @@
   color: var(--dsp-text-muted);
 }
 
+.timeline-content-wrapper.is-range-drawing {
+  touch-action: none;
+  user-select: none;
+}
+
 .timeline-content-wrapper {
   display: flex;
   position: relative;
@@ -313,6 +318,20 @@
   z-index: 15;
   pointer-events: none;
   box-sizing: border-box;
+}
+
+.drop-preview-label {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--dsp-primary);
+}
+
+.drop-preview-card--invalid .drop-preview-label {
+  color: var(--dsp-danger);
 }
 
 .drop-preview-card--snap-top {

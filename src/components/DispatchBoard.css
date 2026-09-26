@@ -119,3 +119,11 @@
   overflow: auto;
   z-index: 20;
 }
+
+.dispatch-detail-panel .astryx-field-label > span {
+  color: var(--dsp-danger);
+}
+
+.dispatch-detail-panel .astryx-field-label > span > span {
+  color: var(--color-text-secondary);
+}

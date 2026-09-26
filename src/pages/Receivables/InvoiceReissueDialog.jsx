@@ -421,10 +421,7 @@ export function InvoiceReissueDialog({ open, onClose, invoice, year, month }) {
                         </Text>
                       </Text>
                       <SummaryStat label="件数" value={lines.length} />
-                      <SummaryStat
-                        label="合計"
-                        value={`¥${totalAmount.toLocaleString('ja-JP')}`}
-                      />
+                      <SummaryStat label="合計" value={`¥${totalAmount.toLocaleString('ja-JP')}`} />
                       <DateInput
                         label="発行日"
                         value={issueDate || undefined}

@@ -5,6 +5,19 @@ import {
   getMieLocationRestriction,
   injectPlaceAutocompleteStyle,
 } from '@/lib/places'
+import { getAddressFromCity } from '@/utils/addressUtils'
+import { HOLD_ADDRESS } from '@/lib/holdSlot'
+
+function withoutHoldAddress(text) {
+  if (!text || text === HOLD_ADDRESS) return ''
+  if (text.startsWith(HOLD_ADDRESS)) return text.slice(HOLD_ADDRESS.length)
+  return text
+}
+
+function toCityAddress(address) {
+  if (!address) return ''
+  return getAddressFromCity(address) || address
+}
 
 const HOST_STYLE = {
   display: 'block',
@@ -21,7 +34,7 @@ const HOST_STYLE = {
  *
  * - 要素の生成はマウント時に一度だけ。以降 value の外部変更（reset 等）は同期用 effect で反映。
  * - ユーザー入力（input）と候補選択（gmp-select）の両方を onChange に流す。
- *   選択時は formattedAddress を fetch して確定値とする。
+ *   選択時は formattedAddress から郵便番号と都道府県を除き、市以降を確定値とする。
  *
  * @param {Object} props
  * @param {string} props.value - 現在値（親の formData と同期）
@@ -47,6 +60,7 @@ export function PlacesAutocompleteField({
   const containerRef = useRef(null)
   const elementRef = useRef(null)
   const onChangeRef = useRef(onChange)
+  const emittedRef = useRef(value)
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -56,6 +70,7 @@ export function PlacesAutocompleteField({
     let cancelled = false
     let selectListener
     let inputListener
+    let focusListener
     ;(async () => {
       const places = await importPlacesLibrary()
       if (cancelled || !places || !containerRef.current) return
@@ -73,14 +88,29 @@ export function PlacesAutocompleteField({
       el.requestedRegion = 'jp'
       if (placeholder) el.placeholder = placeholder
       if (name) el.name = name
-      if (value) el.value = value
+      const initial = toCityAddress(value)
+      if (initial) el.value = initial
 
       containerRef.current.appendChild(el)
       elementRef.current = el
+      if (value && initial !== value) {
+        emittedRef.current = initial
+        onChangeRef.current?.(initial)
+      }
 
+      focusListener = () => {
+        if (el.value !== HOLD_ADDRESS) return
+        el.value = ''
+        emittedRef.current = ''
+        onChangeRef.current?.('')
+      }
       inputListener = () => {
+        const next = withoutHoldAddress(el.value)
+        if (next !== el.value) el.value = next
+        emittedRef.current = el.value
         onChangeRef.current?.(el.value)
       }
+      el.addEventListener('focusin', focusListener)
       el.addEventListener('input', inputListener)
 
       selectListener = async (event) => {
@@ -90,8 +120,9 @@ export function PlacesAutocompleteField({
           const place = prediction.toPlace()
           await place.fetchFields({ fields: ['formattedAddress'] })
           if (cancelled) return
-          const address = place.formattedAddress || el.value
+          const address = toCityAddress(place.formattedAddress || el.value)
           el.value = address
+          emittedRef.current = address
           onChangeRef.current?.(address)
         } catch (err) {
           console.error('Failed to fetch place fields:', err)
@@ -106,6 +137,7 @@ export function PlacesAutocompleteField({
       if (el) {
         if (selectListener) el.removeEventListener('gmp-select', selectListener)
         if (inputListener) el.removeEventListener('input', inputListener)
+        if (focusListener) el.removeEventListener('focusin', focusListener)
         el.remove()
       }
       elementRef.current = null
@@ -116,9 +148,16 @@ export function PlacesAutocompleteField({
 
   useEffect(() => {
     const el = elementRef.current
-    if (el && el.value !== value) {
-      el.value = value || ''
-    }
+    if (el && placeholder) el.placeholder = placeholder
+  }, [placeholder])
+
+  useEffect(() => {
+    const el = elementRef.current
+    if (!el || value === emittedRef.current) return
+    const display = toCityAddress(value)
+    emittedRef.current = display
+    if (el.value !== display) el.value = display
+    if (display !== value) onChangeRef.current?.(display)
   }, [value])
 
   return (

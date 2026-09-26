@@ -180,9 +180,7 @@ export function InvoiceUnpaidTab() {
                     variant={c.max_days_overdue > 60 ? 'red' : 'muted'}
                   >
                     <VStack gap={0}>
-                      <Text type="supporting">
-                        {c.invoice_display_name || c.company_name}
-                      </Text>
+                      <Text type="supporting">{c.invoice_display_name || c.company_name}</Text>
                       <Text type="large" hasTabularNumbers>
                         ¥{c.total_unpaid.toLocaleString('ja-JP')}
                       </Text>

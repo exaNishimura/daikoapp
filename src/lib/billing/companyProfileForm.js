@@ -8,7 +8,7 @@ import {
   DEFAULT_RESERVATION_START_HOUR,
   MAX_START_HOUR,
   MIN_START_HOUR,
-} from '../../../shared/operatingHours.js'
+} from '@/lib/operatingHours'
 
 export const BANK_ACCOUNT_TYPES = ['普通', '当座', '貯蓄']
 
@@ -102,7 +102,8 @@ export function validateCompanyProfileForm(form = {}) {
   for (const field of OPERATING_HOUR_FIELDS) {
     const hour = Number(form[field])
     if (!Number.isInteger(hour) || hour < MIN_START_HOUR || hour > MAX_START_HOUR) {
-      errors[field] = `${FIELD_LABELS[field]}は ${MIN_START_HOUR}時から ${MAX_START_HOUR}時で指定してください`
+      errors[field] =
+        `${FIELD_LABELS[field]}は ${MIN_START_HOUR}時から ${MAX_START_HOUR}時で指定してください`
     }
   }
 

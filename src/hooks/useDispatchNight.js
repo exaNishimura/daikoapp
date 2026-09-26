@@ -14,10 +14,7 @@ export function useDispatchNight() {
   const [searchParams, setSearchParams] = useSearchParams()
   const dateParam = searchParams.get('date')
   const currentNight = formatWorkDateKey(getBusinessDayBoundaries().businessDay)
-  const nightDate = useMemo(
-    () => resolveDispatchNightKey(dateParam),
-    [dateParam, currentNight]
-  )
+  const nightDate = useMemo(() => resolveDispatchNightKey(dateParam), [dateParam, currentNight])
   const isCurrentNight = nightDate === currentNight
   const isFutureNight = nightDate > currentNight
 

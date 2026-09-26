@@ -215,10 +215,7 @@ function PayslipList({ employee, onLogout }) {
 
 export function PayslipMemberPage() {
   return (
-    <ShiftPinGate
-      title="給与明細"
-      subtitle="シフト希望と同じ6桁のPINを入力してください。"
-    >
+    <ShiftPinGate title="給与明細" subtitle="シフト希望と同じ6桁のPINを入力してください。">
       {({ employee }) => (
         <PageFrame>
           <PayslipList

@@ -354,9 +354,7 @@ function MobileDisplayCard({ row, onEdit, onDelete, disabled }) {
   const locked = row.invoice_id != null
   const companyName = companyNameOf(row)
   const route =
-    row.departure || row.destination
-      ? `${row.departure || '—'} → ${row.destination || '—'}`
-      : null
+    row.departure || row.destination ? `${row.departure || '—'} → ${row.destination || '—'}` : null
 
   return (
     <Card padding={3} style={{ opacity: row.companies?.is_active === false ? 0.6 : 1 }}>

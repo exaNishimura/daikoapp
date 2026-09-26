@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { hasRouteChanged, normalizeWaypoints, saveOrderEdit } from './orderActions'
+import { confirmOrder, hasRouteChanged, normalizeWaypoints, saveOrderEdit } from './orderActions'
+import { HOLD_ADDRESS } from './holdSlot'
 
 function createSupabaseMock(slots = []) {
   const eqSelect = vi.fn().mockResolvedValue({ data: slots, error: null })
@@ -219,5 +220,28 @@ describe('saveOrderEdit', () => {
     expect(updateCall).toHaveBeenCalledWith({
       end_at: new Date('2026-08-13T10:50:00.000Z').toISOString(),
     })
+  })
+})
+
+describe('confirmOrder', () => {
+  it('does not confirm a hold that still has placeholder addresses', async () => {
+    const supabase = {
+      from: vi.fn(() => {
+        throw new Error('should not query')
+      }),
+    }
+    await expect(
+      confirmOrder({
+        order: {
+          id: 'order-1',
+          pickup_address: HOLD_ADDRESS,
+          dropoff_address: HOLD_ADDRESS,
+        },
+        vehicles: [],
+        slots: [],
+        deps: { supabase },
+      })
+    ).rejects.toThrow('出発地と目的地を入力してから確定してください')
+    expect(supabase.from).not.toHaveBeenCalled()
   })
 })

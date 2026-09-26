@@ -6,7 +6,7 @@ import { Text } from '@astryxdesign/core/Text'
 import { Token } from '@astryxdesign/core/Token'
 import { shortenAddress } from '@/utils/addressUtils'
 import { parseReservationMemo } from '@/lib/reservation/reservationMemo'
-import '../OrderCard.css'
+import '@/components/OrderCard.css'
 
 function formatReservationRoute(parsed) {
   if (parsed.pickup || parsed.dropoff) {
@@ -114,11 +114,7 @@ export function DispatchNightReservations({ reservations, nightDate }) {
   if (!reservations?.length) return null
 
   return (
-    <VStack
-      className="order-card-list"
-      minHeight={0}
-      style={{ overflow: 'hidden', flexShrink: 0 }}
-    >
+    <VStack className="order-card-list" minHeight={0} style={{ overflow: 'hidden', flexShrink: 0 }}>
       <HStack
         className="order-list-title"
         padding={1}

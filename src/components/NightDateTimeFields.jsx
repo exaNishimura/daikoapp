@@ -73,8 +73,10 @@ export function NightDateTimeFields({
   })
   const onChangeRef = useRef(onChange)
   const onAvailabilityChangeRef = useRef(onAvailabilityChange)
-  onChangeRef.current = onChange
-  onAvailabilityChangeRef.current = onAvailabilityChange
+  useEffect(() => {
+    onChangeRef.current = onChange
+    onAvailabilityChangeRef.current = onAvailabilityChange
+  })
 
   const reservedAtError = error ? { type: 'error', message: error } : undefined
   const reservedAtIso = buildReservationIso(date, hour, minute)

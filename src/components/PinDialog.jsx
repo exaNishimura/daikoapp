@@ -22,9 +22,7 @@ export function PinDialog({
     <Dialog isOpen onOpenChange={(isOpen) => !isOpen && onCancel()} purpose="form">
       <Layout
         padding={4}
-        header={
-          <DialogHeader title={title} subtitle={subtitle} onOpenChange={() => onCancel()} />
-        }
+        header={<DialogHeader title={title} subtitle={subtitle} onOpenChange={() => onCancel()} />}
         content={
           <LayoutContent>
             <TextInput

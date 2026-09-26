@@ -198,7 +198,7 @@ export async function submitFutureNightOrder({
     order,
     reservation: {
       ...reservation,
-      order_id: orderLinkFailed ? reservation.order_id ?? null : order.id,
+      order_id: orderLinkFailed ? (reservation.order_id ?? null) : order.id,
     },
     nightKey: getBusinessDayKey(formData.scheduled_at),
     orderLinkFailed,

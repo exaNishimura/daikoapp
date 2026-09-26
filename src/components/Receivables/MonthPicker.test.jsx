@@ -54,9 +54,7 @@ describe('MonthPicker (smoke)', () => {
 
   it('keeps the stacked layout when full width and selectors are open', async () => {
     const user = userEvent.setup()
-    renderWithTheme(
-      <MonthPicker value="2026-05" onChange={() => {}} label="対象月" width="100%" />
-    )
+    renderWithTheme(<MonthPicker value="2026-05" onChange={() => {}} label="対象月" width="100%" />)
     expect(screen.getByText('2026年5月')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '2026年5月' }))
     expect(screen.getByRole('combobox', { name: '年' })).toBeInTheDocument()

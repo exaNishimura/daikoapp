@@ -1,10 +1,6 @@
 import { createContext, useContext, useMemo } from 'react'
 import { useCompanyProfile } from '@/hooks/billing/useCompanyProfile'
-import {
-  getOperatingHours,
-  resolveOperatingHours,
-  setOperatingHours,
-} from '@/lib/operatingHours'
+import { getOperatingHours, resolveOperatingHours, setOperatingHours } from '@/lib/operatingHours'
 
 const OperatingHoursContext = createContext(getOperatingHours())
 

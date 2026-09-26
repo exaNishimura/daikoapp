@@ -20,6 +20,10 @@ describe('getAddressFromCity', () => {
     expect(getAddressFromCity('〒100-0005 東京都千代田区丸の内1-1')).toBe('千代田区丸の内1-1')
   })
 
+  it('strips postal code and prefecture so the address starts at the city', () => {
+    expect(getAddressFromCity('〒513-0847 三重県鈴鹿市平田町')).toBe('鈴鹿市平田町')
+  })
+
   it('strips postal code without prefix mark', () => {
     expect(getAddressFromCity('100-0005 東京都千代田区丸の内1-1')).toBe('千代田区丸の内1-1')
   })

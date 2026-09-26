@@ -31,7 +31,14 @@ function defaultWorkDate(year, month) {
  * - 「行追加」ボタンを押すとフォームが展開
  * - 保存後はリセットして連続入力できるようにする
  */
-export function ReceivablesAddRow({ companies, year, month, onCreate, isSaving, controlSize = 'sm' }) {
+export function ReceivablesAddRow({
+  companies,
+  year,
+  month,
+  onCreate,
+  isSaving,
+  controlSize = 'sm',
+}) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(() => ({
     ...EMPTY_RECEIVABLE_FORM,

@@ -4,9 +4,13 @@ import { parseReservationMemo, waypointListFromMemo } from './reservationMemo'
 describe('parseReservationMemo', () => {
   it('splits order-form memo lines', () => {
     const parsed = parseReservationMemo(
-      ['出発: 鈴鹿市A', '目的: 鈴鹿市B', '経由: 経由1 → 経由2', '車: プリウス 白', '駐車: 入口'].join(
-        '\n'
-      )
+      [
+        '出発: 鈴鹿市A',
+        '目的: 鈴鹿市B',
+        '経由: 経由1 → 経由2',
+        '車: プリウス 白',
+        '駐車: 入口',
+      ].join('\n')
     )
     expect(parsed.pickup).toBe('鈴鹿市A')
     expect(parsed.dropoff).toBe('鈴鹿市B')

@@ -14,7 +14,7 @@ export const DEV_BYPASS_USER = {
 }
 
 export function isLocalHostname(
-  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+  hostname = typeof window !== 'undefined' ? window.location.hostname : ''
 ) {
   return LOCAL_HOSTS.has(hostname)
 }
@@ -29,9 +29,7 @@ export function canUseDevAuthBypass({
   return isDev && isLocalHostname(hostname)
 }
 
-export function isDevAuthBypassAutoEnabled(
-  flag = import.meta.env.VITE_DEV_AUTH_BYPASS,
-) {
+export function isDevAuthBypassAutoEnabled(flag = import.meta.env.VITE_DEV_AUTH_BYPASS) {
   return flag === 'true'
 }
 

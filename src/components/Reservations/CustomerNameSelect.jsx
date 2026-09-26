@@ -73,10 +73,7 @@ export function CustomerNameSelect({
     onChangeQuery?.(next)
   }
 
-  const options = useMemo(
-    () => (companies || []).filter((c) => c.is_active !== false),
-    [companies]
-  )
+  const options = useMemo(() => (companies || []).filter((c) => c.is_active !== false), [companies])
 
   const trimmedValue = String(value || '').trim()
   const selectedCompany = findExactMatch(options, trimmedValue)

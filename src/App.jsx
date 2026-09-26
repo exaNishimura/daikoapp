@@ -277,12 +277,7 @@ function AppFrame() {
   const shellHeight = FILL_SHELL_PATHS.has(location.pathname) ? 'fill' : 'auto'
 
   return (
-    <AppShell
-      height={shellHeight}
-      contentPadding={0}
-      variant="section"
-      topNav={<AppTopNav />}
-    >
+    <AppShell height={shellHeight} contentPadding={0} variant="section" topNav={<AppTopNav />}>
       <LineHoldingAlertHost />
       <AppRoutes />
     </AppShell>

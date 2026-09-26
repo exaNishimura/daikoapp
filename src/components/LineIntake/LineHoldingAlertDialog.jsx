@@ -34,12 +34,7 @@ export function LineHoldingAlertDialog({ open, units, onClose }) {
   }
 
   return (
-    <Dialog
-      isOpen={open}
-      onOpenChange={handleOpenChange}
-      purpose="info"
-      maxHeight="90dvh"
-    >
+    <Dialog isOpen={open} onOpenChange={handleOpenChange} purpose="info" maxHeight="90dvh">
       <Layout
         padding={4}
         header={<DialogHeader title={`LINE仮受付 ${count}件`} onOpenChange={handleOpenChange} />}

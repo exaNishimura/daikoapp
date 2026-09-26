@@ -38,20 +38,14 @@ describe('devAuth', () => {
 
   it('activates from sessionStorage on localhost dev', () => {
     markDevAuthBypass()
-    expect(
-      shouldActivateDevAuthBypass({ isDev: true, hostname: 'localhost' }),
-    ).toBe(true)
+    expect(shouldActivateDevAuthBypass({ isDev: true, hostname: 'localhost' })).toBe(true)
     clearDevAuthBypass()
-    expect(
-      shouldActivateDevAuthBypass({ isDev: true, hostname: 'localhost' }),
-    ).toBe(false)
+    expect(shouldActivateDevAuthBypass({ isDev: true, hostname: 'localhost' })).toBe(false)
   })
 
   it('does not activate stored bypass in production', () => {
     markDevAuthBypass()
-    expect(
-      shouldActivateDevAuthBypass({ isDev: false, hostname: 'localhost' }),
-    ).toBe(false)
+    expect(shouldActivateDevAuthBypass({ isDev: false, hostname: 'localhost' })).toBe(false)
   })
 
   it('activates from env flag on localhost dev', () => {
@@ -60,7 +54,7 @@ describe('devAuth', () => {
         isDev: true,
         hostname: 'localhost',
         flag: 'true',
-      }),
+      })
     ).toBe(true)
   })
 
@@ -71,7 +65,7 @@ describe('devAuth', () => {
         isDev: true,
         hostname: 'localhost',
         flag: 'true',
-      }),
+      })
     ).toBe(false)
   })
 })

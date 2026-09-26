@@ -167,10 +167,7 @@ export function useOrderForm({ onSuccess, onScheduledSaved } = {}) {
       if (!validate()) return
 
       try {
-        if (
-          formData.order_type === 'SCHEDULED' &&
-          isFutureBusinessNight(formData.scheduled_at)
-        ) {
+        if (formData.order_type === 'SCHEDULED' && isFutureBusinessNight(formData.scheduled_at)) {
           const saved = await submitFutureNightOrder({
             formData,
             createReservation: (payload) => createReservationMutation.mutateAsync(payload),

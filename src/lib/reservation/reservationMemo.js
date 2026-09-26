@@ -21,6 +21,9 @@ export function parseReservationMemo(memo) {
 
 export function waypointListFromMemo(parsed) {
   if (!parsed?.via) return null
-  const hops = parsed.via.split(' → ').map((part) => part.trim()).filter(Boolean)
+  const hops = parsed.via
+    .split(' → ')
+    .map((part) => part.trim())
+    .filter(Boolean)
   return hops.length ? hops : null
 }

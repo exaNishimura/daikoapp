@@ -96,7 +96,7 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
         htmlName="pickup_location"
         value={formData.pickup_location}
         onChange={namedChange(handleChange, 'pickup_location')}
-        placeholder="例: モンガータ"
+        placeholder="店名や施設名"
         width="100%"
         size={FORM_FIELD_SIZE}
       />
@@ -105,7 +105,7 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
         name="pickup_address"
         value={formData.pickup_address}
         onChange={(address) => updateField('pickup_address', address)}
-        placeholder="例: 三重県鈴鹿市..."
+        placeholder="市区町村から番地まで"
         required
       />
       <VStack gap={1.5}>
@@ -128,7 +128,7 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
                 label={`経由地 ${index + 1}`}
                 value={waypoint}
                 onChange={(address) => updateWaypoint(index, address)}
-                placeholder="例: 三重県鈴鹿市..."
+                placeholder="市区町村から番地まで"
               />
             </StackItem>
             <IconButton
@@ -151,7 +151,7 @@ function RouteEditFields({ formData, handleChange, setFormData }) {
         name="dropoff_address"
         value={formData.dropoff_address}
         onChange={(address) => updateField('dropoff_address', address)}
-        placeholder="例: 三重県鈴鹿市..."
+        placeholder="市区町村から番地まで"
         required
       />
     </>
