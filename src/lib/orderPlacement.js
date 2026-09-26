@@ -16,6 +16,19 @@ import {
 } from '@/utils/slotUtils'
 import { calculateBuffer } from '@/services/routeService'
 
+/** ルート未計算のときの所要時間。空き判定・DnD・予約配置で共通。 */
+export const DEFAULT_ORDER_DURATION_MIN = 30
+
+/**
+ * @param {object | null | undefined} order
+ * @returns {{ baseDuration: number, buffer: number, totalDuration: number }}
+ */
+export function resolveOrderDuration(order) {
+  const baseDuration = Number(order?.base_duration_min) || DEFAULT_ORDER_DURATION_MIN
+  const buffer = order?.buffer_min ?? calculateBuffer(baseDuration)
+  return { baseDuration, buffer, totalDuration: baseDuration + buffer }
+}
+
 /**
  * 営業日の開始日 (ローカル日付) を返す。
  * 06:00 未満は前日扱い。

@@ -7,14 +7,13 @@ import {
   snapDateTimeTo15Minutes,
 } from '@/utils/businessDayUtils'
 import { useCreateOrder, useUpdateOrder } from '@/hooks/useOrders'
-import { useCreateReservation } from '@/hooks/useReservations'
-import { updateReservation } from '@/services/reservationService'
-import { getVehicles } from '@/services/vehicleService'
-import { withReservationMark } from '@/lib/reservation/reservationLink'
 import {
-  buildReservationPayloadFromOrderForm,
-  submitOrderWithRouteCalculation,
-} from '@/lib/orderSubmission'
+  useCreateReservation,
+  useDeleteReservation,
+  useUpdateReservation,
+} from '@/hooks/useReservations'
+import { getVehicles } from '@/services/vehicleService'
+import { submitFutureNightOrder, submitOrderWithRouteCalculation } from '@/lib/orderSubmission'
 
 const INITIAL_FORM_DATA = {
   order_type: 'NOW',
@@ -45,20 +44,24 @@ function scheduledOutOfHoursMessage() {
  *
  * @param {Object} options
  * @param {(order: Object) => void} [options.onSuccess]
- * @param {(reservation: Object) => void} [options.onReservationSaved]
+ * @param {(result: { order: Object, reservation: Object, nightKey: string, orderLinkFailed: boolean }) => void} [options.onScheduledSaved]
  * @returns {Object}
  */
-export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
+export function useOrderForm({ onSuccess, onScheduledSaved } = {}) {
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [errors, setErrors] = useState({})
 
   const createOrderMutation = useCreateOrder()
   const updateOrderMutation = useUpdateOrder()
   const createReservationMutation = useCreateReservation()
+  const updateReservationMutation = useUpdateReservation()
+  const deleteReservationMutation = useDeleteReservation()
   const loading =
     createOrderMutation.isPending ||
     updateOrderMutation.isPending ||
-    createReservationMutation.isPending
+    createReservationMutation.isPending ||
+    updateReservationMutation.isPending ||
+    deleteReservationMutation.isPending
 
   const reset = useCallback(() => {
     setFormData(INITIAL_FORM_DATA)
@@ -168,30 +171,20 @@ export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
           formData.order_type === 'SCHEDULED' &&
           isFutureBusinessNight(formData.scheduled_at)
         ) {
-          const reservation = await createReservationMutation.mutateAsync(
-            buildReservationPayloadFromOrderForm(formData)
-          )
-          if (!reservation) throw new Error('予約の保存に失敗しました')
-          const order = await submitOrderWithRouteCalculation({
-            formData: {
-              ...formData,
-              parking_note: withReservationMark(formData.parking_note, reservation.id),
-            },
+          const saved = await submitFutureNightOrder({
+            formData,
+            createReservation: (payload) => createReservationMutation.mutateAsync(payload),
             createOrder: (payload) => createOrderMutation.mutateAsync(payload),
             updateOrder: (args) => updateOrderMutation.mutateAsync(args),
+            updateReservation: (id, patch) => updateReservationMutation.mutateAsync({ id, patch }),
+            deleteReservation: (id) => deleteReservationMutation.mutateAsync(id),
             fetchVehicles: async () => {
               const { data, error } = await getVehicles()
               if (error) throw error
               return data || []
             },
           })
-          try {
-            await updateReservation(reservation.id, { order_id: order.id })
-          } catch {
-            // order_id 未適用でも parking_note で紐付く
-          }
-          onSuccess?.(order)
-          onReservationSaved?.({ ...reservation, order_id: order.id })
+          onScheduledSaved?.(saved)
           return
         }
 
@@ -217,8 +210,10 @@ export function useOrderForm({ onSuccess, onReservationSaved } = {}) {
       createOrderMutation,
       updateOrderMutation,
       createReservationMutation,
+      updateReservationMutation,
+      deleteReservationMutation,
       onSuccess,
-      onReservationSaved,
+      onScheduledSaved,
     ]
   )
 

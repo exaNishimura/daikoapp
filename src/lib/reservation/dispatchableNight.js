@@ -1,3 +1,4 @@
+import { DEFAULT_ORDER_DURATION_MIN } from '@/lib/orderPlacement'
 import { combineOvernightPickup } from '@/utils/liffPickupTime'
 import { getOperationalVehicles } from '@/utils/operationStatusUtils'
 import { findExactAvailableVehicle } from '@/utils/slotUtils'
@@ -62,8 +63,8 @@ function isGrandfathered(allowSlot, nightDate, hour, minute) {
   return Number(allowSlot.hour) === Number(hour) && Number(allowSlot.minute) === Number(minute)
 }
 
-/** 空き判定に使う所要時間（ルート未計算時のデフォルトと揃える） */
-export const OCCUPANCY_DURATION_MIN = 30
+/** 空き判定に使う所要時間。resolveOrderDuration の初期値と同じ。 */
+export const OCCUPANCY_DURATION_MIN = DEFAULT_ORDER_DURATION_MIN
 
 /**
  * その夜の 15 分枠が配車可能か。

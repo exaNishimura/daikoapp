@@ -21,6 +21,7 @@ import { createSlot, getSlotsByOrderId, getSlotsInRange } from '@/services/slotS
 import { placeReservationOnTimeline } from '@/lib/reservation/placeReservation'
 import { isReservationLinked } from '@/lib/reservation/reservationLink'
 import { getVehicleOperationStatuses } from '@/services/vehicleOperationService'
+import { getOperatingHours } from '@/lib/operatingHours'
 import { computeDesiredStartTime, findAutoPlacementSlot } from '@/lib/orderPlacement'
 import { detectAllConflicts } from '@/lib/slotConflictUtils'
 import { filterOrdersForDispatchNight } from '@/lib/dispatch/filterOrdersForDispatchNight'
@@ -88,7 +89,8 @@ export function DispatchBoard() {
     if (isCurrentNight) return null
     const date = parseWorkDateKey(nightDate)
     if (!date) return null
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 20, 0, 0, 0)
+    const startHour = getOperatingHours().businessStartHour
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), startHour, 0, 0, 0)
   }, [isCurrentNight, nightDate])
 
   const [selectedOrder, setSelectedOrder] = useState(null)
@@ -149,6 +151,9 @@ export function DispatchBoard() {
           prev.some((row) => row.id === result.slot.id) ? prev : [...prev, result.slot]
         )
       }
+      if (result.linkError) {
+        showToast('配置しましたが、予約との紐付けに失敗しました', 'error')
+      }
       void queryClient.invalidateQueries({ queryKey: queryKeys.reservations.all })
       return Boolean(result.slot)
     } catch (error) {
@@ -176,6 +181,13 @@ export function DispatchBoard() {
   })
 
   const autoPlaceAttemptedRef = useRef(new Set())
+  const autoPlaceInFlightRef = useRef(new Set())
+  const slotsRef = useRef(slots)
+  const ordersRef = useRef(orders)
+  const operationStatusesRef = useRef(operationStatuses)
+  slotsRef.current = slots
+  ordersRef.current = orders
+  operationStatusesRef.current = operationStatuses
 
   const autoPlaceOrder = async (order, { silent = false } = {}) => {
     if (vehicles.length === 0) return false
@@ -308,42 +320,55 @@ export function DispatchBoard() {
   useEffect(() => {
     if (!isCurrentNight) return
     if (loading || vehicles.length === 0) return
-    const slotted = new Set(slots.map((slot) => slot.order_id))
+    const slotted = new Set(slotsRef.current.map((slot) => slot.order_id))
     for (const order of orders) {
       if (slotted.has(order.id)) continue
       if (autoPlaceAttemptedRef.current.has(order.id)) continue
+      if (autoPlaceInFlightRef.current.has(order.id)) continue
       if (order.status !== 'UNASSIGNED' && order.status !== 'CONFIRMED') continue
       if (typeof order.parking_note !== 'string' || !order.parking_note.includes('[LINE]')) continue
-      autoPlaceAttemptedRef.current.add(order.id)
-      void autoPlaceOrderRef.current(order, { silent: true })
+      autoPlaceInFlightRef.current.add(order.id)
+      void autoPlaceOrderRef.current(order, { silent: true }).then((placed) => {
+        if (placed) autoPlaceAttemptedRef.current.add(order.id)
+        autoPlaceInFlightRef.current.delete(order.id)
+      })
     }
-  }, [isCurrentNight, loading, vehicles.length, orders, slots])
+  }, [isCurrentNight, loading, vehicles.length, orders])
 
   const reservationPlaceAttemptedRef = useRef(new Set())
+  const reservationPlaceInFlightRef = useRef(new Set())
   useEffect(() => {
     if (loading || vehicles.length === 0) return
     if (slotsNight !== nightDate) return
     const pending = unplacedReservations.filter(
-      (row) => !reservationPlaceAttemptedRef.current.has(row.id)
+      (row) =>
+        !reservationPlaceAttemptedRef.current.has(row.id) &&
+        !reservationPlaceInFlightRef.current.has(row.id)
     )
     if (pending.length === 0) return
 
     let cancelled = false
     const run = async () => {
-      let workingSlots = slots
+      let workingSlots = slotsRef.current
       for (const reservation of pending) {
         if (cancelled) return
-        reservationPlaceAttemptedRef.current.add(reservation.id)
+        reservationPlaceInFlightRef.current.add(reservation.id)
         try {
           const result = await placeReservationOnTimeline({
             reservation,
             vehicles,
             slots: workingSlots,
-            operationStatuses,
-            existingOrders: orders,
+            operationStatuses: operationStatusesRef.current,
+            existingOrders: ordersRef.current,
           })
-          if (result.skipped || result.error) continue
+          if (result.skipped || (result.order && !result.error)) {
+            reservationPlaceAttemptedRef.current.add(reservation.id)
+          }
           if (result.order) {
+            const prevOrders = ordersRef.current
+            if (!prevOrders.some((row) => row.id === result.order.id)) {
+              ordersRef.current = [result.order, ...prevOrders]
+            }
             setOrders((prev) => {
               if (prev.some((row) => row.id === result.order.id)) return prev
               return [result.order, ...prev]
@@ -351,15 +376,26 @@ export function DispatchBoard() {
           }
           if (result.slot) {
             workingSlots = [...workingSlots, result.slot]
+            slotsRef.current = workingSlots
             setSlots((prev) =>
               prev.some((row) => row.id === result.slot.id) ? prev : [...prev, result.slot]
             )
           }
+          if (result.linkError) {
+            showToast('配置しましたが、予約との紐付けに失敗しました', 'error')
+          }
+          if (result.error && import.meta.env.DEV) {
+            console.error('Reservation auto-place failed:', result.error)
+          }
         } catch (error) {
           if (import.meta.env.DEV) console.error('Reservation auto-place failed:', error)
+        } finally {
+          reservationPlaceInFlightRef.current.delete(reservation.id)
         }
       }
-      void queryClient.invalidateQueries({ queryKey: queryKeys.reservations.all })
+      if (!cancelled) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.reservations.all })
+      }
     }
     void run()
     return () => {
@@ -371,12 +407,10 @@ export function DispatchBoard() {
     slotsNight,
     nightDate,
     unplacedReservations,
-    slots,
-    orders,
-    operationStatuses,
     queryClient,
     setOrders,
     setSlots,
+    showToast,
   ])
 
   const handleOrderCreated = async (newOrder) => {
@@ -385,13 +419,18 @@ export function DispatchBoard() {
     await autoPlaceOrder(newOrder)
   }
 
-  const handleReservationSaved = (reservation) => {
+  const handleScheduledSaved = async ({ order, nightKey, orderLinkFailed }) => {
+    if (order) {
+      setOrders((prev) => (prev.some((row) => row.id === order.id) ? prev : [order, ...prev]))
+    }
     setIsModalOpen(false)
-    if (!reservation?.order_id) {
+    if (orderLinkFailed) {
+      showToast('依頼は保存しましたが、予約との紐付けに失敗しました', 'error')
+    } else {
       showToast('翌日以降の依頼を予約台帳に保存しました', 'success')
     }
-    const key = getBusinessDayKey(reservation?.reserved_at)
-    if (key) setNightDate(key)
+    if (nightKey) setNightDate(nightKey)
+    if (order) await autoPlaceOrder(order)
   }
 
   const handleOrderSelect = (order) => {
@@ -578,7 +617,7 @@ export function DispatchBoard() {
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onOrderCreated={handleOrderCreated}
-        onReservationSaved={handleReservationSaved}
+        onScheduledSaved={handleScheduledSaved}
       />
       <VehicleSelectDialog
         open={isVehicleSelectDialogOpen}

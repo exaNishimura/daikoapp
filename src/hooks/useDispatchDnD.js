@@ -3,7 +3,7 @@ import { getOrderById, updateOrder } from '@/services/orderService'
 import { createSlot, updateSlot } from '@/services/slotService'
 import { getReservationByOrderId, updateReservation } from '@/services/reservationService'
 import { reservationIdFromOrder } from '@/lib/reservation/reservationLink'
-import { calculateBuffer } from '@/services/routeService'
+import { resolveOrderDuration } from '@/lib/orderPlacement'
 import { exceedsBusinessHours } from '@/utils/timeUtils'
 import { useToast } from '@/contexts/ToastContext'
 import {
@@ -309,9 +309,7 @@ export function useDispatchDnD({
 
       const newStartAt = calcTimeFromDropPosition({ targetVehicleId: newVehicleId, ...dropContext })
 
-      const baseDuration = latestOrder?.base_duration_min || 30
-      const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
-      const totalDuration = baseDuration + buffer
+      const { totalDuration } = resolveOrderDuration(latestOrder)
 
       const startAt = newStartAt || new Date(slot.start_at)
       const endAt = new Date(startAt)
@@ -380,10 +378,9 @@ export function useDispatchDnD({
         showToast(getOperationalPlacementMessage(statuses, newStartAt), 'warning')
         return
       }
-      const baseDuration = 30
-      const buffer = calculateBuffer(baseDuration)
+      const { totalDuration } = resolveOrderDuration(null)
       const endAt = new Date(newStartAt)
-      endAt.setMinutes(endAt.getMinutes() + baseDuration + buffer)
+      endAt.setMinutes(endAt.getMinutes() + totalDuration)
       if (exceedsBusinessHours(endAt)) {
         showToast('06:00を超えるため配置できません。開始時刻を前にずらしてください。', 'warning')
         return
@@ -423,9 +420,7 @@ export function useDispatchDnD({
         return
       }
 
-      const baseDuration = order.base_duration_min || 30
-      const buffer = order.buffer_min || calculateBuffer(baseDuration)
-      const totalDuration = baseDuration + buffer
+      const { totalDuration } = resolveOrderDuration(order)
 
       const endAt = new Date(newStartAt)
       endAt.setMinutes(endAt.getMinutes() + totalDuration)

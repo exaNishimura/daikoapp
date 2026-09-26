@@ -8,10 +8,9 @@ describe('filterOrdersForDispatchNight', () => {
     { id: 'tomorrow', scheduled_at: new Date(2026, 8, 26, 20, 0, 0, 0).toISOString() },
   ]
 
-  it('keeps every order on the current night', () => {
-    expect(filterOrdersForDispatchNight(orders, '2026-09-25', { isCurrentNight: true })).toHaveLength(
-      3
-    )
+  it('keeps immediate jobs and same-night schedules on the current night', () => {
+    const current = filterOrdersForDispatchNight(orders, '2026-09-25', { isCurrentNight: true })
+    expect(current.map((row) => row.id)).toEqual(['now', 'today'])
   })
 
   it('keeps only scheduled jobs for a future night', () => {

@@ -32,7 +32,7 @@ function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
 }
 
-export function OrderFormModal({ onClose, onOrderCreated, onReservationSaved, open }) {
+export function OrderFormModal({ onClose, onOrderCreated, onScheduledSaved, open }) {
   const {
     formData,
     errors,
@@ -45,7 +45,7 @@ export function OrderFormModal({ onClose, onOrderCreated, onReservationSaved, op
     removeWaypoint,
     handleSubmit,
     reset,
-  } = useOrderForm({ onSuccess: onOrderCreated, onReservationSaved })
+  } = useOrderForm({ onSuccess: onOrderCreated, onScheduledSaved })
   const [nightAvailability, setNightAvailability] = useState({
     available: true,
     isLoading: false,

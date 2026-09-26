@@ -16,7 +16,7 @@ const EMPTY_SLOTS = []
 
 /**
  * 指定した営業夜の配車可能 15 分枠。
- * 当営業夜は配車スロットの空きも見る。翌日以降は稼働状況のみ。
+ * 当夜も翌日以降も、稼働状況とスロットの重なりを見る。
  * @param {string} nightDate YYYY-MM-DD
  * @param {{ allowSlot?: { date: string, hour: number, minute: number } | null, now?: Date }} [options]
  */
@@ -73,8 +73,7 @@ export function useDispatchableNight(nightDate, options = {}) {
     statusesMap,
     now,
     allowSlot,
-    occupancyQuery.data,
-    isCurrentNight,
+      occupancyQuery.data,
   ])
 
   return {

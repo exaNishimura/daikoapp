@@ -79,8 +79,14 @@ describe('placeReservationOnTimeline', () => {
     expect(createOrder).not.toHaveBeenCalled()
     expect(findLinkedOrder).not.toHaveBeenCalled()
     expect(createSlot).toHaveBeenCalledOnce()
+    expect(updateReservation).toHaveBeenCalledOnce()
+    expect(updateReservation).toHaveBeenCalledWith(reservationId, {
+      reserved_at: startAt.toISOString(),
+      order_id: 'order-1',
+    })
     expect(result.order.id).toBe('order-1')
     expect(result.slot.id).toBe('slot-1')
+    expect(result.linkError).toBeNull()
   })
 
   it('skips when the linked order already has a slot', async () => {

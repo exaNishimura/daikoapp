@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { buildReservationPayloadFromOrderForm } from './orderSubmission'
+import { describe, expect, it, vi } from 'vitest'
+import { buildReservationPayloadFromOrderForm, submitFutureNightOrder } from './orderSubmission'
 
 describe('buildReservationPayloadFromOrderForm', () => {
   it('maps order form fields onto the reservation ledger', () => {
@@ -35,5 +35,36 @@ describe('buildReservationPayloadFromOrderForm', () => {
       dropoff_address: 'B',
     })
     expect(payload.customer_name).toBe('電話依頼')
+  })
+})
+
+describe('submitFutureNightOrder', () => {
+  const formData = {
+    order_type: 'SCHEDULED',
+    scheduled_at: '2026-09-27T20:00',
+    pickup_location: '電話依頼',
+    pickup_address: 'A',
+    dropoff_address: 'B',
+    waypoints: [],
+    contact_phone: '090-0000-0000',
+    parking_note: '',
+  }
+
+  it('deletes the reservation when creating the order fails', async () => {
+    const deleteReservation = vi.fn()
+    await expect(
+      submitFutureNightOrder({
+        formData,
+        createReservation: async () => ({ id: 'res-1' }),
+        createOrder: async () => {
+          throw new Error('order failed')
+        },
+        updateOrder: async () => {},
+        fetchVehicles: async () => [],
+        updateReservation: async () => {},
+        deleteReservation,
+      })
+    ).rejects.toThrow('order failed')
+    expect(deleteReservation).toHaveBeenCalledWith('res-1')
   })
 })

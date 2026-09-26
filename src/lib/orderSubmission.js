@@ -1,4 +1,6 @@
+import { withReservationMark } from '@/lib/reservation/reservationLink'
 import { calculateBuffer, estimateDuration } from '@/services/routeService'
+import { getBusinessDayKey } from '@/utils/businessDayUtils'
 
 /**
  * フォーム値から DB に渡す orderData を組み立てる。
@@ -142,4 +144,63 @@ export async function submitOrderWithRouteCalculation({
   }
 
   return order
+}
+
+/**
+ * 翌日以降の日時指定。予約を作ってから依頼を作る。
+ * 依頼作成に失敗したら予約を消す。order_id の更新失敗は注文を残し、フラグで返す。
+ */
+export async function submitFutureNightOrder({
+  formData,
+  createReservation,
+  createOrder,
+  updateOrder,
+  fetchVehicles,
+  updateReservation,
+  deleteReservation,
+}) {
+  const reservation = await createReservation(buildReservationPayloadFromOrderForm(formData))
+  if (!reservation?.id) throw new Error('予約の保存に失敗しました')
+
+  let order
+  try {
+    order = await submitOrderWithRouteCalculation({
+      formData: {
+        ...formData,
+        parking_note: withReservationMark(formData.parking_note, reservation.id),
+      },
+      createOrder,
+      updateOrder,
+      fetchVehicles,
+    })
+  } catch (error) {
+    try {
+      await deleteReservation(reservation.id)
+    } catch (deleteError) {
+      if (import.meta.env.DEV) {
+        console.error('Failed to roll back reservation:', deleteError)
+      }
+    }
+    throw error
+  }
+
+  let orderLinkFailed = false
+  try {
+    await updateReservation(reservation.id, { order_id: order.id })
+  } catch (error) {
+    orderLinkFailed = true
+    if (import.meta.env.DEV) {
+      console.error('Failed to link reservation to order:', error)
+    }
+  }
+
+  return {
+    order,
+    reservation: {
+      ...reservation,
+      order_id: orderLinkFailed ? reservation.order_id ?? null : order.id,
+    },
+    nightKey: getBusinessDayKey(formData.scheduled_at),
+    orderLinkFailed,
+  }
 }

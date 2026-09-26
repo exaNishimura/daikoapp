@@ -1,11 +1,10 @@
-import { calculateBuffer } from '@/services/routeService'
+import { findAutoPlacementSlot, resolveOrderDuration } from '@/lib/orderPlacement'
 import {
   createOrder as createOrderService,
   findOrderByReservationMark as findOrderByReservationMarkService,
 } from '@/services/orderService'
 import { createSlot as createSlotService } from '@/services/slotService'
 import { updateReservation as updateReservationService } from '@/services/reservationService'
-import { findAutoPlacementSlot } from '@/lib/orderPlacement'
 import { reservationIdFromOrder, withReservationMark } from '@/lib/reservation/reservationLink'
 import { parseReservationMemo, waypointListFromMemo } from '@/lib/reservation/reservationMemo'
 
@@ -67,12 +66,6 @@ export function buildOrderPayloadFromReservation(reservation, startAt) {
   }
 }
 
-function resolveDuration(order) {
-  const baseDuration = order?.base_duration_min || 30
-  const buffer = order?.buffer_min || calculateBuffer(baseDuration)
-  return { baseDuration, buffer, totalDuration: baseDuration + buffer }
-}
-
 /**
  * 予約を SCHEDULED 依頼にして指定時刻に仮配置する。
  * 空きがなければ order だけ作り、手動 DnD に任せる。
@@ -110,7 +103,7 @@ export async function placeReservationOnTimeline({
   }
   if (!order?.id) return { error: new Error('依頼の作成に失敗しました') }
 
-  const { totalDuration } = resolveDuration(order)
+  const { totalDuration } = resolveOrderDuration(order)
   let availableSlot = null
 
   if (vehicleId && startAt) {
@@ -145,16 +138,20 @@ export async function placeReservationOnTimeline({
     ? availableSlot.startAt.toISOString()
     : order.scheduled_at
 
+  let linkError = null
   try {
-    await updateReservation(reservation.id, { reserved_at: reservedAt })
-  } catch {
-    // reserved_at 以外の更新失敗は配置自体は成功扱い
-  }
-  try {
-    await updateReservation(reservation.id, { order_id: order.id })
-  } catch {
-    // order_id カラム未適用でも parking_note マークで紐付ける
+    await updateReservation(reservation.id, {
+      reserved_at: reservedAt,
+      order_id: order.id,
+    })
+  } catch (error) {
+    linkError = error
   }
 
-  return { order, slot, reservation: { ...reservation, order_id: order.id } }
+  return {
+    order,
+    slot,
+    linkError,
+    reservation: { ...reservation, order_id: order.id },
+  }
 }
