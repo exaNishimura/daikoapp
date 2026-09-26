@@ -210,10 +210,12 @@ export async function estimateDuration(
   }
 }
 
+/** 依頼作成時の初期バッファ（分）。所要時間には依存しない。 */
+export const DEFAULT_BUFFER_MIN = 10
+
 /**
- * バッファ計算（一律0分）
+ * バッファの初期値。LINE 投影の `DISPATCH_BUFFER_MIN` と同じ 10 分。
  */
-export function calculateBuffer(baseDuration) {
-  // バッファは一律0分
-  return 0
+export function calculateBuffer(_baseDuration) {
+  return DEFAULT_BUFFER_MIN
 }

@@ -3,6 +3,7 @@
  */
 
 import { getLineBusinessDayKey } from './availability.js'
+import { DISPATCH_BUFFER_MIN } from './buffer.js'
 
 /**
  * @param {Date|string} pickupAt
@@ -22,7 +23,7 @@ export const DISPATCH_FALLBACK_DURATION_MIN = 30
 
 /**
  * LINE 台の Maps 所要を配車 `orders` 向けに正規化する。
- * 配車 SPA の `calculateBuffer` は一律 0。LINE 可否用バッファは orders に載せない。
+ * 配車の初期バッファは `DISPATCH_BUFFER_MIN`。LINE 可否用の加算式は orders に載せない。
  * @param {{ base_duration_min?: number|null }} unit
  * @returns {{ base_duration_min: number, buffer_min: number }}
  */
@@ -31,7 +32,7 @@ export function toBoardRouteFields(unit) {
   return {
     base_duration_min:
       Number.isFinite(base) && base > 0 ? Math.round(base) : DISPATCH_FALLBACK_DURATION_MIN,
-    buffer_min: 0,
+    buffer_min: DISPATCH_BUFFER_MIN,
   }
 }
 

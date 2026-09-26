@@ -23,6 +23,7 @@ import { placeReservationOnTimeline } from '@/lib/reservation/placeReservation'
 import { isReservationLinked } from '@/lib/reservation/reservationLink'
 import { getVehicleOperationStatuses } from '@/services/vehicleOperationService'
 import { getOperatingHours } from '@/lib/operatingHours'
+import { calculateBuffer } from '@/services/routeService'
 import { computeDesiredStartTime, findAutoPlacementSlot } from '@/lib/orderPlacement'
 import { detectAllConflicts } from '@/lib/slotConflictUtils'
 import { filterOrdersForDispatchNight } from '@/lib/dispatch/filterOrdersForDispatchNight'
@@ -450,7 +451,7 @@ export function DispatchBoard() {
       dropoff_address: HOLD_ADDRESS,
       status: 'UNASSIGNED',
       base_duration_min: durationMin,
-      buffer_min: 0,
+      buffer_min: calculateBuffer(durationMin),
     })
     if (error || !order) {
       showToast('枠の作成に失敗しました', 'error')

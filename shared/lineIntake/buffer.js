@@ -1,6 +1,9 @@
+/** 配車 orders に載せる初期バッファ。SPA `calculateBuffer` と同じ 10 分。 */
+export const DISPATCH_BUFFER_MIN = 10
+
 /**
  * LINE 受注向けバッファ計算（Directions 所要に加算）
- * 現行 SPA `calculateBuffer` は一律 0 のため、LINE 可否判定は本式を使う。
+ * 配車の初期値とは別。可否判定だけ本式を使い、orders には載せない。
  *
  * @param {number|null|undefined} baseDurationMinutes
  * @returns {number}

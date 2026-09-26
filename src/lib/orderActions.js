@@ -247,7 +247,7 @@ export async function confirmOrder({ order, vehicles, slots, deps }) {
     if (orderError) throw orderError
 
     const baseDuration = latestOrder?.base_duration_min || 30
-    const buffer = latestOrder?.buffer_min || calculateBuffer(baseDuration)
+    const buffer = latestOrder?.buffer_min ?? calculateBuffer(baseDuration)
     const totalDuration = baseDuration + buffer
 
     const now = new Date()

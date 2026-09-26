@@ -20,17 +20,17 @@ describe('resolveProjectionTarget', () => {
 })
 
 describe('toBoardRouteFields', () => {
-  it('keeps Maps minutes and zeros dispatch buffer', () => {
+  it('keeps Maps minutes and uses the dispatch buffer default', () => {
     expect(toBoardRouteFields({ base_duration_min: 48, buffer_min: 12 })).toEqual({
       base_duration_min: 48,
-      buffer_min: 0,
+      buffer_min: 10,
     })
   })
 
   it('falls back to 30 when Maps is missing', () => {
     expect(toBoardRouteFields({ base_duration_min: null })).toEqual({
       base_duration_min: 30,
-      buffer_min: 0,
+      buffer_min: 10,
     })
   })
 })

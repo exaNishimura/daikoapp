@@ -88,7 +88,7 @@ export function findAutoPlacementSlot({
   now = new Date(),
 }) {
   const baseDuration = order.base_duration_min || 30
-  const buffer = order.buffer_min || calculateBuffer(baseDuration)
+  const buffer = order.buffer_min ?? calculateBuffer(baseDuration)
   const totalDuration = baseDuration + buffer
 
   const orderStartTime = computeDesiredStartTime(order, now)
