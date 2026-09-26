@@ -5,12 +5,9 @@ import { Banner } from '@astryxdesign/core/Banner'
 import { Button } from '@astryxdesign/core/Button'
 import { Card } from '@astryxdesign/core/Card'
 import { Center } from '@astryxdesign/core/Center'
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
-import { HStack, Layout, LayoutContent, LayoutFooter, VStack } from '@astryxdesign/core/Layout'
+import { HStack, VStack } from '@astryxdesign/core/Layout'
 import { IconButton } from '@astryxdesign/core/IconButton'
-import { Selector } from '@astryxdesign/core/Selector'
 import { Spinner } from '@astryxdesign/core/Spinner'
-import { Switch } from '@astryxdesign/core/Switch'
 import {
   Table,
   TableBody,
@@ -20,8 +17,9 @@ import {
   TableRow,
 } from '@astryxdesign/core/Table'
 import { Text } from '@astryxdesign/core/Text'
-import { TextInput } from '@astryxdesign/core/TextInput'
 import { Token } from '@astryxdesign/core/Token'
+import { EmployeeFormDialog } from '@/components/EmployeeFormDialog'
+import { EmployeePinDialog } from '@/components/EmployeePinDialog'
 import { PageFrame } from '@/components/PageFrame'
 import { PageHeader } from '@/components/PageHeader'
 import { useIsMobile } from '@/hooks/useMediaQuery'
@@ -35,20 +33,6 @@ import {
 import { setEmployeeShiftPin, clearEmployeeShiftPin } from '@/services/employeeShiftService'
 import { TAX_TABLE_KOU, TAX_TABLE_OTSU, TAX_TABLE_LABELS } from '@/lib/payroll/withholdingTax'
 
-const LICENSE_TYPES = ['一種', '二種']
-const EMPLOYMENT_TYPE_OPTIONS = [
-  { value: 'EMPLOYED', label: '雇用' },
-  { value: 'CONTRACT', label: '業務委託' },
-]
-const TAX_TABLE_OPTIONS = [
-  { value: TAX_TABLE_OTSU, label: TAX_TABLE_LABELS[TAX_TABLE_OTSU] },
-  { value: TAX_TABLE_KOU, label: TAX_TABLE_LABELS[TAX_TABLE_KOU] },
-]
-const DEPENDENT_OPTIONS = [0, 1, 2, 3, 4, 5].map((n) => ({
-  value: String(n),
-  label: `${n}人`,
-}))
-
 const EMPTY_FORM = {
   name: '',
   license_type: '一種',
@@ -60,18 +44,6 @@ const EMPTY_FORM = {
   tax_table_type: TAX_TABLE_OTSU,
   dependents_count: 0,
 }
-const DEFAULT_COLORS = [
-  { name: 'オレンジ', value: '#FFA500' },
-  { name: '黄', value: '#FFD700' },
-  { name: '紫', value: '#8A2BE2' },
-  { name: '水色', value: '#00BFFF' },
-  { name: 'ピンク', value: '#FF69B4' },
-  { name: '緑', value: '#32CD32' },
-  { name: '赤', value: '#FF0000' },
-  { name: '青', value: '#0000FF' },
-  { name: '茶', value: '#A52A2A' },
-  { name: 'グレー', value: '#808080' },
-]
 
 const COLOR_SWATCH_STYLE = {
   display: 'inline-block',
@@ -524,238 +496,36 @@ export function EmployeeManagement() {
         ) : null}
       </VStack>
 
-      <Dialog
-        isOpen={dialogOpen}
+      <EmployeeFormDialog
+        open={dialogOpen}
         onOpenChange={handleFormOpenChange}
-        purpose="form"
-        maxHeight="90dvh"
-      >
-        <Layout
-          padding={4}
-          header={
-            <DialogHeader
-              title={editingId ? '従業員編集' : '新規従業員追加'}
-              onOpenChange={handleFormOpenChange}
-            />
-          }
-          content={
-            <LayoutContent>
-              <VStack gap={4}>
-                <TextInput
-                  label="名前"
-                  value={formData.name}
-                  onChange={(value) => setFormData({ ...formData, name: value })}
-                  isRequired
-                  isDisabled={loading}
-                  size={fieldSize}
-                  width="100%"
-                />
-                {editingId ? (
-                  <TextInput
-                    label="売上データに残っている旧スタッフ名（任意）"
-                    value={legacyStaffName}
-                    onChange={setLegacyStaffName}
-                    isDisabled={loading}
-                    placeholder="例: 北島"
-                    description="売上インポート等で古い表記のまま残っている場合に入力（シフトは従業員IDで連携）"
-                    size={fieldSize}
-                    width="100%"
-                  />
-                ) : null}
-                <Selector
-                  label="免許種別"
-                  isRequired
-                  value={formData.license_type}
-                  onChange={(value) => setFormData({ ...formData, license_type: value })}
-                  isDisabled={loading}
-                  size={fieldSize}
-                  width="100%"
-                  options={LICENSE_TYPES.map((type) => ({ value: type, label: type }))}
-                />
-                <Selector
-                  label="色"
-                  isRequired
-                  value={formData.color}
-                  onChange={(value) => setFormData({ ...formData, color: value })}
-                  isDisabled={loading}
-                  size={fieldSize}
-                  width="100%"
-                  options={DEFAULT_COLORS.map((color) => ({
-                    value: color.value,
-                    label: `${color.name} (${color.value})`,
-                  }))}
-                />
-                <TextInput
-                  label="時給"
-                  value={String(formData.hourly_wage)}
-                  onChange={(value) => setFormData({ ...formData, hourly_wage: value })}
-                  description="円単位で入力してください"
-                  isDisabled={loading}
-                  size={fieldSize}
-                  width="100%"
-                />
-                <Selector
-                  label="雇用形態"
-                  isRequired
-                  value={formData.employment_type}
-                  onChange={(value) => setFormData({ ...formData, employment_type: value })}
-                  isDisabled={loading}
-                  size={fieldSize}
-                  width="100%"
-                  options={EMPLOYMENT_TYPE_OPTIONS}
-                />
-                {formData.employment_type !== 'CONTRACT' ? (
-                  <>
-                    <Selector
-                      label="税額表区分"
-                      value={formData.tax_table_type}
-                      onChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          tax_table_type: value,
-                          dependents_count: value === TAX_TABLE_KOU ? formData.dependents_count : 0,
-                        })
-                      }
-                      isDisabled={loading}
-                      size={fieldSize}
-                      width="100%"
-                      options={TAX_TABLE_OPTIONS}
-                    />
-                    <Selector
-                      label="扶養親族等の数"
-                      value={String(formData.dependents_count)}
-                      onChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          dependents_count: parseInt(value, 10) || 0,
-                        })
-                      }
-                      isDisabled={loading || formData.tax_table_type !== TAX_TABLE_KOU}
-                      size={fieldSize}
-                      width="100%"
-                      options={DEPENDENT_OPTIONS}
-                      description={
-                        formData.tax_table_type === TAX_TABLE_KOU ? undefined : '甲欄のときのみ有効'
-                      }
-                    />
-                  </>
-                ) : null}
-                <TextInput
-                  label="並び順"
-                  value={String(formData.sort_order)}
-                  onChange={(value) =>
-                    setFormData({ ...formData, sort_order: parseInt(value, 10) || 0 })
-                  }
-                  description="数値が小さいほど上に表示されます"
-                  isDisabled={loading}
-                  size={fieldSize}
-                  width="100%"
-                />
-                <Switch
-                  label="有効"
-                  value={formData.is_active}
-                  onChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  isDisabled={loading}
-                />
-              </VStack>
-            </LayoutContent>
-          }
-          footer={
-            <LayoutFooter>
-              <HStack gap={2} hAlign={isMobile ? undefined : 'end'} wrap="wrap">
-                <Button
-                  label="キャンセル"
-                  variant="secondary"
-                  onClick={handleCloseDialog}
-                  isDisabled={loading}
-                  {...actionButtonProps}
-                />
-                <Button
-                  label="保存"
-                  variant="primary"
-                  onClick={handleSave}
-                  isDisabled={loading}
-                  isLoading={isMutating}
-                  {...actionButtonProps}
-                />
-              </HStack>
-            </LayoutFooter>
-          }
-        />
-      </Dialog>
+        editingId={editingId}
+        formData={formData}
+        setFormData={setFormData}
+        legacyStaffName={legacyStaffName}
+        setLegacyStaffName={setLegacyStaffName}
+        loading={loading}
+        isMutating={isMutating}
+        isMobile={isMobile}
+        fieldSize={fieldSize}
+        actionButtonProps={actionButtonProps}
+        onClose={handleCloseDialog}
+        onSave={handleSave}
+      />
 
-      <Dialog isOpen={pinDialogOpen} onOpenChange={handlePinOpenChange} purpose="form">
-        <Layout
-          padding={4}
-          header={
-            <DialogHeader
-              title={`シフト希望PIN — ${pinTarget?.name ?? ''}`}
-              onOpenChange={handlePinOpenChange}
-            />
-          }
-          content={
-            <LayoutContent>
-              <VStack gap={4}>
-                <Text color="secondary">
-                  配車画面のPINとは別です。従業員に本人のみ通知してください。
-                </Text>
-                {issuedPin ? (
-                  <Banner
-                    status="warning"
-                    title={`発行したPIN: ${issuedPin}`}
-                    description="この画面を閉じると再表示できません。"
-                    collapsible={false}
-                  />
-                ) : null}
-                {!issuedPin ? (
-                  <Button
-                    variant="primary"
-                    width="100%"
-                    label="ランダムPINを発行"
-                    onClick={() => handleIssuePin(false)}
-                    isDisabled={pinSubmitting}
-                    isLoading={pinSubmitting}
-                  />
-                ) : null}
-                {!issuedPin ? (
-                  <TextInput
-                    label="手動指定（6桁）"
-                    value={customPin}
-                    onChange={(value) => setCustomPin(value.replace(/\D/g, '').slice(0, 6))}
-                    size={fieldSize}
-                    width="100%"
-                  />
-                ) : null}
-                {!issuedPin ? (
-                  <Button
-                    variant="secondary"
-                    width="100%"
-                    label="指定PINを設定"
-                    onClick={() => handleIssuePin(true)}
-                    isDisabled={pinSubmitting || customPin.length !== 6}
-                  />
-                ) : null}
-                {pinTarget?.shift_pin_configured ? (
-                  <Button
-                    variant="destructive"
-                    width="100%"
-                    label="PINを解除"
-                    onClick={handleClearPin}
-                    isDisabled={pinSubmitting}
-                  />
-                ) : null}
-              </VStack>
-            </LayoutContent>
-          }
-          footer={
-            <LayoutFooter>
-              <HStack hAlign="end">
-                <Button label="閉じる" variant="secondary" onClick={handleClosePinDialog} />
-              </HStack>
-            </LayoutFooter>
-          }
-        />
-      </Dialog>
+      <EmployeePinDialog
+        open={pinDialogOpen}
+        onOpenChange={handlePinOpenChange}
+        pinTarget={pinTarget}
+        issuedPin={issuedPin}
+        customPin={customPin}
+        onCustomPinChange={setCustomPin}
+        pinSubmitting={pinSubmitting}
+        fieldSize={fieldSize}
+        onIssuePin={handleIssuePin}
+        onClearPin={handleClearPin}
+        onClose={handleClosePinDialog}
+      />
     </PageFrame>
   )
 }

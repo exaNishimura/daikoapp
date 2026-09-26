@@ -1,70 +1,11 @@
 import { Text } from '@astryxdesign/core/Text'
-import { TIMELINE_START, TIMELINE_END, timeToMinutes, minutesToPixels } from '@/lib/shiftEditUtils'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
+import { timeToMinutes, minutesToPixels } from '@/lib/shiftEditUtils'
 import { getContrastTextColor } from '@/lib/colorContrast'
 import { getStaffColorForShift, getStaffDisplayName } from '@/lib/staffFromEmployees'
 
-/**
- * 19:00 -> 翌 06:00 を 12 時間 (960px) に展開する時間軸。
- * 23:00–02:00 はピーク帯としてうっすら色付け。
- */
-export function TimeAxis() {
-  const markers = []
-
-  const peakStart = minutesToPixels(timeToMinutes('23:00'))
-  const peakEnd = minutesToPixels(timeToMinutes('02:00'))
-
-  for (let hour = TIMELINE_START; hour <= 23; hour++) {
-    markers.push({
-      type: 'major',
-      left: minutesToPixels((hour - TIMELINE_START) * 60),
-      label: String(hour).padStart(2, '0') + ':00',
-    })
-  }
-  for (let hour = 0; hour <= TIMELINE_END; hour++) {
-    markers.push({
-      type: 'major',
-      left: minutesToPixels((24 - TIMELINE_START + hour) * 60),
-      label: String(hour).padStart(2, '0') + ':00',
-    })
-  }
-  for (let hour = TIMELINE_START; hour <= 23; hour++) {
-    markers.push({
-      type: 'minor',
-      left: minutesToPixels((hour - TIMELINE_START) * 60 + 30),
-      label: '',
-    })
-  }
-  for (let hour = 0; hour <= TIMELINE_END; hour++) {
-    markers.push({
-      type: 'minor',
-      left: minutesToPixels((24 - TIMELINE_START + hour) * 60 + 30),
-      label: '',
-    })
-  }
-
-  return (
-    <header className="time-axis">
-      <div
-        className="peak-zone"
-        style={{
-          left: `${peakStart}px`,
-          width: `${peakEnd - peakStart}px`,
-        }}
-      />
-      {markers.map((marker, idx) => (
-        <div
-          key={idx}
-          className={`time-marker ${marker.type}`}
-          style={{ left: `${marker.left}px` }}
-        >
-          {marker.label}
-        </div>
-      ))}
-    </header>
-  )
-}
-
 function ShiftBar({ shift, staffColorByName, employees }) {
+  useOperatingHours()
   const startMinutes = timeToMinutes(shift.start)
   const endMinutes = timeToMinutes(shift.end)
   const left = minutesToPixels(startMinutes)

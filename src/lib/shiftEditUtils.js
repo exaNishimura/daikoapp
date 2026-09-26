@@ -1,36 +1,53 @@
 /**
- * シフト編集画面で使う定数 + 純粋関数
- *
- * - タイムラインは 19:00 開始 / 翌 06:00 終了の 12 時間を 960px に展開
- * - DOW_MAP は new Date().getDay() の 0(日)〜6(土) と対応
+ * シフト編集・シフトカレンダーで使う定数 + 純粋関数。
+ * タイムライン開始は自社情報（予約開始と営業開始の早い方）。終了は翌営業終了。幅は 960px。
+ * DOW_MAP は new Date().getDay() の 0(日)〜6(土) と対応。
  */
+
+import { getOperatingHours, getTimelineStartHour } from '@/lib/operatingHours'
 
 export const CAR_OPTIONS = ['1', '2']
 export const ROLE_OPTIONS = ['代行', '随伴']
 export const STATUS_OPTIONS = ['休業', '定休日']
 export const DOW_MAP = ['日', '月', '火', '水', '木', '金', '土']
 
-export const TIMELINE_START = 19
-export const TIMELINE_END = 6
 export const TIMELINE_WIDTH = 960
-export const PIXELS_PER_HOUR = TIMELINE_WIDTH / 12
+
+export function timelineStartHour() {
+  return getTimelineStartHour()
+}
+
+export function timelineEndHour() {
+  return getOperatingHours().businessEndHour
+}
+
+export function timelineSpanHours() {
+  return 24 - timelineStartHour() + timelineEndHour()
+}
+
+export function pixelsPerHour() {
+  return TIMELINE_WIDTH / timelineSpanHours()
+}
 
 /**
- * 時刻文字列 "HH:MM" を 19:00 を 0 とした分に変換。
- * 翌日扱いの 0:00–6:00 は (24 - 19 + h)*60 に展開する。
+ * 時刻文字列 "HH:MM" をタイムライン開始を 0 とした分に変換する。
+ * 終了時未満は翌日扱いで (24 - 開始 + h) * 60。
  */
 export function timeToMinutes(timeStr) {
   if (!timeStr) return 0
   const [hours, minutes] = timeStr.split(':').map(Number)
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return 0
-  if (hours >= TIMELINE_START) {
-    return (hours - TIMELINE_START) * 60 + minutes
+  const start = timelineStartHour()
+  if (hours >= start) {
+    return (hours - start) * 60 + minutes
   }
-  return (24 - TIMELINE_START + hours) * 60 + minutes
+  return (24 - start + hours) * 60 + minutes
 }
 
 export function minutesToPixels(minutes) {
-  return (minutes / 60) * PIXELS_PER_HOUR
+  const span = timelineSpanHours()
+  if (span <= 0) return 0
+  return (minutes * TIMELINE_WIDTH) / (span * 60)
 }
 
 /**

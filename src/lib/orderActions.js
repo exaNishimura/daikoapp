@@ -11,6 +11,7 @@
  */
 
 import { getOperatingHours } from '@/lib/operatingHours'
+import { reservationIdFromOrder, withReservationMark } from '@/lib/reservation/reservationLink'
 import { findEarliestAvailableSlotAcrossVehicles } from '@/utils/slotUtils'
 import { getRevertStatus } from '@/utils/orderStatusUtils'
 
@@ -137,7 +138,12 @@ export async function saveOrderEdit({ order, formData, relatedVehicle = null, de
     car_model: formData.car_model || null,
     car_plate: formData.car_plate || null,
     car_color: formData.car_color || null,
-    parking_note: formData.parking_note || null,
+    parking_note: (() => {
+      const reservationId = reservationIdFromOrder(order)
+      const note = formData.parking_note || ''
+      if (!reservationId) return note || null
+      return withReservationMark(note, reservationId)
+    })(),
     base_duration_min: baseDurationMin,
     buffer_min: bufferMin,
     buffer_manual: bufferManual,

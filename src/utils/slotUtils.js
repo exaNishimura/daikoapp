@@ -2,6 +2,7 @@
  * スロット関連のユーティリティ関数（行番号ベース）
  */
 
+import { getOperatingHours } from '@/lib/operatingHours'
 import { exceedsBusinessHours } from './timeUtils'
 import {
   dateToRowIndex,
@@ -27,22 +28,12 @@ export function findEarliestAvailableSlot(
   duration,
   preferExactTime = false
 ) {
-  // 営業日の基準日を計算
-  // orderStartTimeの日付を使用（営業時間外の場合は18:00に設定されている）
   const orderDate = new Date(orderStartTime)
   const orderHours = orderDate.getHours()
   let businessDay = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate())
 
-  // 18:00以降の場合は当日、それ以外（06:00未満）の場合は前日
-  if (orderHours < 6) {
+  if (orderHours < getOperatingHours().businessEndHour) {
     businessDay.setDate(businessDay.getDate() - 1)
-  } else if (orderHours >= 18) {
-    // 18:00以降の場合は当日
-    // businessDayは既に当日
-  } else {
-    // 営業時間外（6:00-18:00）の場合、orderStartTimeは18:00に設定されているはず
-    // その場合は当日の18:00として扱う
-    // businessDayは既に当日
   }
 
   // 希望開始時刻を行番号に変換

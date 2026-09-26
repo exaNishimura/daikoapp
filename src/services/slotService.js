@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { checkConflictInDatabase } from '@/services/conflictDetectionService'
 
 /**
  * 依頼に紐づくスロット
@@ -72,6 +73,24 @@ export async function updateSlot(id, updates) {
  */
 export async function confirmSlot(id) {
   try {
+    const { data: current, error: fetchError } = await supabase
+      .from('dispatch_slots')
+      .select('id, vehicle_id, start_at, end_at, order_id')
+      .eq('id', id)
+      .single()
+    if (fetchError) throw fetchError
+
+    const conflict = await checkConflictInDatabase(
+      current.vehicle_id,
+      current.start_at,
+      current.end_at,
+      current.id
+    )
+    if (conflict.error) return { data: null, error: conflict.error }
+    if (conflict.hasConflict) {
+      return { data: null, error: new Error('確定済みの配車と時間が重なっています') }
+    }
+
     const { data, error } = await supabase
       .from('dispatch_slots')
       .update({ status: 'CONFIRMED' })

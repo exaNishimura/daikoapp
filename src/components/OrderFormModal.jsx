@@ -32,7 +32,14 @@ function namedChange(handleChange, name) {
   return (value) => handleChange({ target: { name, value: value ?? '' } })
 }
 
-export function OrderFormModal({ onClose, onOrderCreated, onScheduledSaved, open }) {
+export function OrderFormModal({
+  onClose,
+  onOrderCreated,
+  onScheduledSaved,
+  open,
+  boardSlots = null,
+  boardNight = null,
+}) {
   const {
     formData,
     errors,
@@ -138,6 +145,8 @@ export function OrderFormModal({ onClose, onOrderCreated, onScheduledSaved, open
                   minDate={minDate}
                   onChange={handleNightChange}
                   onAvailabilityChange={setNightAvailability}
+                  boardSlots={boardSlots}
+                  boardNight={boardNight}
                 />
               ) : null}
 

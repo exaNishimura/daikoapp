@@ -4,9 +4,11 @@ import {
   ROLE_OPTIONS,
   STATUS_OPTIONS,
   DOW_MAP,
-  TIMELINE_START,
-  TIMELINE_END,
-  PIXELS_PER_HOUR,
+  TIMELINE_WIDTH,
+  pixelsPerHour,
+  timelineEndHour,
+  timelineSpanHours,
+  timelineStartHour,
   timeToMinutes,
   minutesToPixels,
   getDaysInMonth,
@@ -20,9 +22,11 @@ describe('constants', () => {
     expect(ROLE_OPTIONS).toEqual(['代行', '随伴'])
     expect(STATUS_OPTIONS).toEqual(['休業', '定休日'])
     expect(DOW_MAP).toEqual(['日', '月', '火', '水', '木', '金', '土'])
-    expect(TIMELINE_START).toBe(19)
-    expect(TIMELINE_END).toBe(6)
-    expect(PIXELS_PER_HOUR).toBe(80)
+    expect(timelineStartHour()).toBe(19)
+    expect(timelineEndHour()).toBe(6)
+    expect(timelineSpanHours()).toBe(11)
+    expect(TIMELINE_WIDTH).toBe(960)
+    expect(pixelsPerHour()).toBe(960 / 11)
   })
 })
 
@@ -47,14 +51,14 @@ describe('timeToMinutes', () => {
 })
 
 describe('minutesToPixels', () => {
-  it('60 min -> 80px', () => {
-    expect(minutesToPixels(60)).toBe(80)
+  it('60 min is one hour of the 11-hour axis', () => {
+    expect(minutesToPixels(60)).toBe(960 / 11)
   })
-  it('30 min -> 40px', () => {
-    expect(minutesToPixels(30)).toBe(40)
+  it('30 min is half an hour', () => {
+    expect(minutesToPixels(30)).toBe(960 / 22)
   })
-  it('660 min -> 880px (whole timeline minus the leading hour)', () => {
-    expect(minutesToPixels(660)).toBe(880)
+  it('06:00 lands on the right edge', () => {
+    expect(minutesToPixels(660)).toBe(960)
   })
 })
 

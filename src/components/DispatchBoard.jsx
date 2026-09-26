@@ -618,6 +618,8 @@ export function DispatchBoard() {
         onClose={() => setIsModalOpen(false)}
         onOrderCreated={handleOrderCreated}
         onScheduledSaved={handleScheduledSaved}
+        boardSlots={slots}
+        boardNight={nightDate}
       />
       <VehicleSelectDialog
         open={isVehicleSelectDialogOpen}

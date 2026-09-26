@@ -21,6 +21,7 @@ import {
 import { useUpdateOrder, useCancelOrder } from '@/hooks/useOrders'
 import { useToast } from '@/contexts/ToastContext'
 import { getOrderConflictMessages } from '@/lib/slotConflictUtils'
+import { visibleParkingNote } from '@/lib/reservation/reservationLink'
 
 const buildInitialFormData = (order) => ({
   pickup_location: order.pickup_location || '',
@@ -31,7 +32,7 @@ const buildInitialFormData = (order) => ({
   car_model: order.car_model || '',
   car_plate: order.car_plate || '',
   car_color: order.car_color || '',
-  parking_note: order.parking_note || '',
+  parking_note: visibleParkingNote(order.parking_note),
   base_duration_min: order.base_duration_min || 30,
   buffer_min: order.buffer_min || 0,
 })

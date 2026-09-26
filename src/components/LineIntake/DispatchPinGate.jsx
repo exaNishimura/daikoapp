@@ -1,13 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '@astryxdesign/core/Button'
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
-import { HStack, Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout'
-import { TextInput } from '@astryxdesign/core/TextInput'
+import { PinDialog } from '@/components/PinDialog'
 import { callLineIntakeApi } from '@/services/lineIntakeService'
 import { isDispatchPinUnlocked, markDispatchPinUnlocked } from '@/lib/lineIntake/dispatchPinSession'
-import { FORM_FIELD_SIZE } from '@/lib/ui/formFieldSize'
-
 /**
  * 配車画面はセッション中 1 回だけ PIN。予約ごとの承認には使わない。
  */
@@ -24,10 +19,6 @@ export function DispatchPinGate({ children }) {
       return
     }
     navigate('/')
-  }
-
-  const handleOpenChange = (isOpen) => {
-    if (!isOpen) handleCancel()
   }
 
   const submit = async (event) => {
@@ -62,49 +53,15 @@ export function DispatchPinGate({ children }) {
   if (unlocked) return children
 
   return (
-    <Dialog isOpen onOpenChange={handleOpenChange} purpose="form">
-      <Layout
-        padding={4}
-        header={<DialogHeader title="配車画面のロック解除" onOpenChange={handleOpenChange} />}
-        content={
-          <LayoutContent>
-            <TextInput
-              label="PIN（6桁）"
-              value={pin}
-              onChange={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
-              isRequired
-              hasAutoFocus
-              isDisabled={submitting}
-              htmlName="pin"
-              size={FORM_FIELD_SIZE}
-              width="100%"
-              status={error ? { type: 'error', message: error } : undefined}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && pin.length === 6 && !submitting) submit()
-              }}
-            />
-          </LayoutContent>
-        }
-        footer={
-          <LayoutFooter>
-            <HStack gap={2} hAlign="end">
-              <Button
-                variant="secondary"
-                isDisabled={submitting}
-                label="キャンセル"
-                onClick={handleCancel}
-              />
-              <Button
-                variant="primary"
-                isDisabled={pin.length !== 6 || submitting}
-                isLoading={submitting}
-                label="解除"
-                onClick={submit}
-              />
-            </HStack>
-          </LayoutFooter>
-        }
-      />
-    </Dialog>
+    <PinDialog
+      title="配車画面のロック解除"
+      pin={pin}
+      onPinChange={setPin}
+      error={error}
+      submitting={submitting}
+      onSubmit={submit}
+      onCancel={handleCancel}
+      submitLabel="解除"
+    />
   )
 }

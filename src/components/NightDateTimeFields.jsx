@@ -60,12 +60,16 @@ export function NightDateTimeFields({
   minDate,
   allowSlot = null,
   onAvailabilityChange,
+  boardSlots = null,
+  boardNight = null,
 }) {
   const operatingHours = useOperatingHours()
   const reservationHours = getReservationHours()
   const reservationHint = `予約は ${formatHourClock(operatingHours.reservationStartHour)}〜翌${formatHourClock(operatingHours.businessEndHour)}。0時〜${operatingHours.businessEndHour - 1}時は翌朝です。`
   const { slots, isLoading, isCurrentNight, isFutureNight } = useDispatchableNight(date, {
     allowSlot,
+    boardSlots,
+    boardNight,
   })
   const onChangeRef = useRef(onChange)
   const onAvailabilityChangeRef = useRef(onAvailabilityChange)

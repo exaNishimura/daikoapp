@@ -43,41 +43,9 @@ import { Pencil, Search } from 'lucide-react'
 import { PageFrame } from '@/components/PageFrame'
 import { MonthNavBar } from '@/components/MonthNav'
 import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
-import { getOperatingHours, getTimelineStartHour } from '@/lib/operatingHours'
+import { minutesToPixels, timeToMinutes, TIMELINE_WIDTH } from '@/lib/shiftEditUtils'
+import { NightTimeAxis } from '@/components/NightTimeAxis'
 import './ShiftCalendar.css'
-
-const TIMELINE_WIDTH = 960
-
-function timelineStart() {
-  return getTimelineStartHour()
-}
-
-function timelineEnd() {
-  return getOperatingHours().businessEndHour
-}
-
-function pixelsPerHour() {
-  const span = 24 - timelineStart() + timelineEnd()
-  return TIMELINE_WIDTH / span
-}
-
-// ============================================
-// ユーティリティ関数
-// ============================================
-
-// 時間文字列（HH:MM）を分に変換（19:00基準）
-function timeToMinutes(timeStr) {
-  const [hours, minutes] = timeStr.split(':').map(Number)
-  const start = timelineStart()
-  if (hours >= start) {
-    return (hours - start) * 60 + minutes
-  }
-  return (24 - start + hours) * 60 + minutes
-}
-
-function minutesToPixels(minutes) {
-  return (minutes / 60) * pixelsPerHour()
-}
 
 // 日付をグループ化
 function groupByDate(data) {
@@ -520,7 +488,7 @@ function DayBlock({
       {!dayData.status && (
         <div className="day-timeline-scroll">
           <div className="timeline-container" style={{ width: TIMELINE_WIDTH + 'px' }}>
-            <TimeAxis />
+            <NightTimeAxis />
             {[...new Set(dayData.shifts.map((s) => s.car))].sort().map((carNum) => (
               <CarBlock
                 key={carNum}
@@ -539,69 +507,6 @@ function DayBlock({
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function TimeAxis() {
-  useOperatingHours()
-  const markers = []
-  const startHour = timelineStart()
-  const endHour = timelineEnd()
-
-  // ピーク帯（23:00〜02:00）の背景
-  const peakStart = minutesToPixels(timeToMinutes('23:00'))
-  const peakEnd = minutesToPixels(timeToMinutes('02:00'))
-
-  // 1時間刻みのマーカー
-  for (let hour = startHour; hour <= 23; hour++) {
-    markers.push({
-      type: 'major',
-      left: minutesToPixels((hour - startHour) * 60),
-      label: String(hour).padStart(2, '0') + ':00',
-    })
-  }
-  for (let hour = 0; hour <= endHour; hour++) {
-    markers.push({
-      type: 'major',
-      left: minutesToPixels((24 - startHour + hour) * 60),
-      label: String(hour).padStart(2, '0') + ':00',
-    })
-  }
-
-  for (let hour = startHour; hour <= 23; hour++) {
-    markers.push({
-      type: 'minor',
-      left: minutesToPixels((hour - startHour) * 60 + 30),
-      label: '',
-    })
-  }
-  for (let hour = 0; hour <= endHour; hour++) {
-    markers.push({
-      type: 'minor',
-      left: minutesToPixels((24 - startHour + hour) * 60 + 30),
-      label: '',
-    })
-  }
-
-  return (
-    <div className="time-axis">
-      <div
-        className="peak-zone"
-        style={{
-          left: peakStart + 'px',
-          width: peakEnd - peakStart + 'px',
-        }}
-      />
-      {markers.map((marker, idx) => (
-        <div
-          key={idx}
-          className={`time-marker ${marker.type}`}
-          style={{ left: marker.left + 'px' }}
-        >
-          {marker.label}
-        </div>
-      ))}
     </div>
   )
 }

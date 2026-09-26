@@ -21,7 +21,8 @@ const EMPTY_SLOTS = []
  * @param {{ allowSlot?: { date: string, hour: number, minute: number } | null, now?: Date }} [options]
  */
 export function useDispatchableNight(nightDate, options = {}) {
-  const { allowSlot = null, now } = options
+  const { allowSlot = null, now, boardSlots = null, boardNight = null } = options
+  const useBoardSlots = Array.isArray(boardSlots) && boardNight === nightDate
   const vehiclesQuery = useVehicles()
   const vehicles = vehiclesQuery.data ?? EMPTY_VEHICLES
   const vehicleIds = vehicles.map((vehicle) => vehicle.id)
@@ -35,14 +36,16 @@ export function useDispatchableNight(nightDate, options = {}) {
   const statusesQuery = useVehicleOperationStatuses(vehicleIds, nightDate)
   const shiftsQuery = useShiftsByDate(nightDate)
   const { start, end } = getNightRangeFromWorkDateKey(nightDate)
-  const occupancyQuery = useSlotsInRange(start, end, { enabled: Boolean(nightDate) })
+  const occupancyQuery = useSlotsInRange(start, end, {
+    enabled: Boolean(nightDate) && !useBoardSlots,
+  })
 
   const isLoading =
     Boolean(nightDate) &&
     (vehiclesQuery.isPending ||
       shiftsQuery.isPending ||
       (vehicleIds.length > 0 && statusesQuery.isPending) ||
-      occupancyQuery.isLoading)
+      (!useBoardSlots && occupancyQuery.isLoading))
 
   const statusesMap = useMemo(() => {
     if (!nightDate || isLoading) return {}
@@ -62,7 +65,7 @@ export function useDispatchableNight(nightDate, options = {}) {
       statusesMap,
       now: now ?? new Date(),
       allowSlot,
-      existingSlots: occupancyQuery.data ?? EMPTY_SLOTS,
+      existingSlots: useBoardSlots ? boardSlots : (occupancyQuery.data ?? EMPTY_SLOTS),
       durationMin: OCCUPANCY_DURATION_MIN,
       checkOccupancy: true,
     })
@@ -73,7 +76,9 @@ export function useDispatchableNight(nightDate, options = {}) {
     statusesMap,
     now,
     allowSlot,
-      occupancyQuery.data,
+    useBoardSlots,
+    boardSlots,
+    occupancyQuery.data,
   ])
 
   return {

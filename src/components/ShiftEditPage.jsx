@@ -25,7 +25,9 @@ import {
   getDefaultShiftEditYearMonth,
 } from '@/lib/shiftEditUtils'
 import { getStaffDisplayName } from '@/lib/staffFromEmployees'
-import { TimeAxis, CarBlock } from './ShiftEditPage/Timeline'
+import { CarBlock } from './ShiftEditPage/Timeline'
+import { NightTimeAxis } from '@/components/NightTimeAxis'
+import { useOperatingHours } from '@/contexts/OperatingHoursProvider'
 import { CopyShiftDialog } from './ShiftEditPage/CopyShiftDialog'
 import { BulkCopyShiftDialog } from './ShiftEditPage/BulkCopyShiftDialog'
 import { DayAvailabilityTokens, RequestPicker } from './ShiftEditPage/RequestPicker'
@@ -139,6 +141,7 @@ function statusTokenColor(status) {
 }
 
 export function ShiftEditPage() {
+  useOperatingHours()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const defaultYM = getDefaultShiftEditYearMonth()
@@ -437,7 +440,7 @@ export function ShiftEditPage() {
                                       className="timeline-container"
                                       style={{ width: `${TIMELINE_WIDTH}px` }}
                                     >
-                                      <TimeAxis />
+                                      <NightTimeAxis />
                                       {[...new Set(dateShifts.map((s) => s.car))]
                                         .sort()
                                         .map((carNum) => (

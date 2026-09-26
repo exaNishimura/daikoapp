@@ -7,6 +7,7 @@ import {
   TIMELINE_ROW_HEIGHT_PX,
 } from '@/utils/rowUtils'
 import { getAddressFromCity } from '@/utils/addressUtils'
+import { visibleParkingNote } from '@/lib/reservation/reservationLink'
 import './SlotComponent.css'
 import { Button } from '@astryxdesign/core/Button'
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog'
@@ -258,10 +259,10 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
                     <Link href={`tel:${order.contact_phone}`}>📞 {order.contact_phone}</Link>
                   </VStack>
                 ) : null}
-                {order.parking_note ? (
+                {visibleParkingNote(order.parking_note) ? (
                   <VStack gap={1}>
                     <Text color="secondary">駐車メモ</Text>
-                    <Text>📝 {order.parking_note}</Text>
+                    <Text>📝 {visibleParkingNote(order.parking_note)}</Text>
                   </VStack>
                 ) : null}
                 {order.buffer_manual ? (
@@ -272,7 +273,7 @@ export function SlotComponent({ slot, order, isConflict, isSelected, conflictToo
                 ) : null}
                 {!order.pickup_location &&
                 !order.contact_phone &&
-                !order.parking_note &&
+                !visibleParkingNote(order.parking_note) &&
                 !order.buffer_manual ? (
                   <Text color="secondary">追加情報はありません</Text>
                 ) : null}
